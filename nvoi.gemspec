@@ -27,7 +27,6 @@ Gem::Specification.new do |spec|
 
   # Cloud providers
   spec.add_dependency "aws-sdk-ec2", "~> 1.400"
-  spec.add_dependency "hcloud", "~> 1.3"
 
   # HTTP client
   spec.add_dependency "faraday", "~> 2.7"

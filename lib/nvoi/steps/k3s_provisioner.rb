@@ -60,14 +60,15 @@ module Nvoi
         @log.info "Waiting for cloud-init to complete"
 
         60.times do
-          output = @ssh.execute("test -f /var/lib/cloud/instance/boot-finished && echo 'ready'")
-          if output.include?("ready")
-            @log.success "Cloud-init complete"
-            return
+          begin
+            output = @ssh.execute("test -f /var/lib/cloud/instance/boot-finished && echo 'ready'")
+            if output.include?("ready")
+              @log.success "Cloud-init complete"
+              return
+            end
+          rescue SSHCommandError
+            # Not ready yet
           end
-        rescue SSHCommandError
-          # Not ready yet
-        ensure
           sleep(5)
         end
 
@@ -75,17 +76,17 @@ module Nvoi
       end
 
       def install_k3s_server
-        @log.info "Installing K3s server"
-
-        # Check if K3s is already installed
+        # Check if K3s is already running
         begin
-          @ssh.execute("which k3s")
-          @log.info "K3s already installed, skipping installation"
+          @ssh.execute("systemctl is-active k3s")
+          @log.info "K3s already running, skipping installation"
           setup_kubeconfig
           return
         rescue SSHCommandError
-          # Not installed, continue
+          # Not running, continue
         end
+
+        @log.info "Installing K3s server"
 
         # Detect private IP and interface
         private_ip = get_private_ip
@@ -122,6 +123,15 @@ module Nvoi
       end
 
       def install_k3s_agent
+        # Check if K3s agent is already running
+        begin
+          @ssh.execute("systemctl is-active k3s-agent")
+          @log.info "K3s agent already running, skipping installation"
+          return
+        rescue SSHCommandError
+          # Not running, continue
+        end
+
         @log.info "Installing K3s agent"
 
         private_ip = get_private_ip
@@ -141,14 +151,21 @@ module Nvoi
       end
 
       def install_docker(private_ip)
-        docker_install = <<~CMD
-          sudo apt-get update && sudo apt-get install -y docker.io
-          sudo systemctl start docker
-          sudo systemctl enable docker
-          sudo usermod -aG docker deploy
-        CMD
+        # Check if Docker is already installed and running
+        begin
+          @ssh.execute("systemctl is-active docker")
+          @log.info "Docker already running, skipping installation"
+        rescue SSHCommandError
+          # Not running, install it
+          docker_install = <<~CMD
+            sudo apt-get update && sudo apt-get install -y docker.io
+            sudo systemctl start docker
+            sudo systemctl enable docker
+            sudo usermod -aG docker deploy
+          CMD
 
-        @ssh.execute(docker_install, stream: true)
+          @ssh.execute(docker_install, stream: true)
+        end
 
         # Configure Docker for insecure registry
         docker_config = <<~CMD
@@ -206,14 +223,15 @@ module Nvoi
         @log.info "Waiting for K3s to be ready"
 
         60.times do
-          output = @ssh.execute("kubectl get nodes")
-          if output.include?("Ready")
-            @log.success "K3s is ready"
-            return
+          begin
+            output = @ssh.execute("kubectl get nodes")
+            if output.include?("Ready")
+              @log.success "K3s is ready"
+              return
+            end
+          rescue SSHCommandError
+            # Not ready yet
           end
-        rescue SSHCommandError
-          # Not ready yet
-        ensure
           sleep(5)
         end
 
@@ -289,14 +307,15 @@ module Nvoi
         # Wait for registry to be ready
         @log.info "Waiting for registry to be ready"
         24.times do
-          output = @ssh.execute("kubectl get deployment nvoi-registry -n default -o jsonpath='{.status.readyReplicas}'")
-          if output.strip == "1"
-            @log.success "In-cluster registry running on :30500"
-            return
+          begin
+            output = @ssh.execute("kubectl get deployment nvoi-registry -n default -o jsonpath='{.status.readyReplicas}'")
+            if output.strip == "1"
+              @log.success "In-cluster registry running on :30500"
+              return
+            end
+          rescue SSHCommandError
+            # Not ready
           end
-        rescue SSHCommandError
-          # Not ready
-        ensure
           sleep(5)
         end
 
@@ -311,16 +330,17 @@ module Nvoi
         # Wait for ingress controller
         @log.info "Waiting for NGINX Ingress Controller to be ready"
         60.times do
-          ready = @ssh.execute("kubectl get deployment ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.readyReplicas}'").strip
-          desired = @ssh.execute("kubectl get deployment ingress-nginx-controller -n ingress-nginx -o jsonpath='{.spec.replicas}'").strip
+          begin
+            ready = @ssh.execute("kubectl get deployment ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.readyReplicas}'").strip
+            desired = @ssh.execute("kubectl get deployment ingress-nginx-controller -n ingress-nginx -o jsonpath='{.spec.replicas}'").strip
 
-          if !ready.empty? && !desired.empty? && ready == desired
-            @log.success "NGINX Ingress Controller is ready"
-            return
+            if !ready.empty? && !desired.empty? && ready == desired
+              @log.success "NGINX Ingress Controller is ready"
+              return
+            end
+          rescue SSHCommandError
+            # Not ready
           end
-        rescue SSHCommandError
-          # Not ready
-        ensure
           sleep(10)
         end
 

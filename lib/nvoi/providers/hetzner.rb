@@ -1,31 +1,22 @@
 # frozen_string_literal: true
 
-require "hcloud"
+require_relative "hetzner_client"
 
 module Nvoi
   module Providers
     # Hetzner provider implements the compute provider interface for Hetzner Cloud
     class Hetzner < Base
       def initialize(token)
-        @client = Hcloud::Client.new(token: token)
+        @client = HetznerClient.new(token)
       end
 
       # Network operations
 
       def find_or_create_network(name)
-        # Try to find existing network
-        network = @client.networks.to_a.find { |n| n.name == name }
+        network = find_network_by_name(name)
+        return to_network(network) if network
 
-        if network
-          return Network.new(
-            id: network.id.to_s,
-            name: network.name,
-            ip_range: network.ip_range
-          )
-        end
-
-        # Create new network
-        network = @client.networks.create(
+        network = @client.create_network(
           name: name,
           ip_range: Constants::NETWORK_CIDR,
           subnets: [{
@@ -35,43 +26,27 @@ module Nvoi
           }]
         )
 
-        Network.new(
-          id: network.id.to_s,
-          name: network.name,
-          ip_range: network.ip_range
-        )
+        to_network(network)
       end
 
       def get_network_by_name(name)
-        network = @client.networks.to_a.find { |n| n.name == name }
+        network = find_network_by_name(name)
         raise NetworkError, "network not found: #{name}" unless network
 
-        Network.new(
-          id: network.id.to_s,
-          name: network.name,
-          ip_range: network.ip_range
-        )
+        to_network(network)
       end
 
       def delete_network(id)
-        @client.networks.find(id.to_i).destroy
+        @client.delete_network(id.to_i)
       end
 
       # Firewall operations
 
       def find_or_create_firewall(name)
-        # Try to find existing firewall
-        firewall = @client.firewalls.to_a.find { |f| f.name == name }
+        firewall = find_firewall_by_name(name)
+        return to_firewall(firewall) if firewall
 
-        if firewall
-          return Firewall.new(
-            id: firewall.id.to_s,
-            name: firewall.name
-          )
-        end
-
-        # Create new firewall with SSH access
-        firewall = @client.firewalls.create(
+        firewall = @client.create_firewall(
           name: name,
           rules: [{
             direction: "in",
@@ -81,66 +56,49 @@ module Nvoi
           }]
         )
 
-        Firewall.new(
-          id: firewall.id.to_s,
-          name: firewall.name
-        )
+        to_firewall(firewall)
       end
 
       def get_firewall_by_name(name)
-        firewall = @client.firewalls.to_a.find { |f| f.name == name }
+        firewall = find_firewall_by_name(name)
         raise FirewallError, "firewall not found: #{name}" unless firewall
 
-        Firewall.new(
-          id: firewall.id.to_s,
-          name: firewall.name
-        )
+        to_firewall(firewall)
       end
 
       def delete_firewall(id)
-        @client.firewalls.find(id.to_i).destroy
+        @client.delete_firewall(id.to_i)
       end
 
       # Server operations
 
       def find_server(name)
-        server = @client.servers.to_a.find { |s| s.name == name }
+        server = find_server_by_name(name)
         return nil unless server
 
-        Server.new(
-          id: server.id.to_s,
-          name: server.name,
-          status: server.status,
-          public_ipv4: server.public_net&.ipv4&.ip
-        )
+        to_server(server)
       end
 
       def list_servers
-        @client.servers.map do |server|
-          Server.new(
-            id: server.id.to_s,
-            name: server.name,
-            status: server.status,
-            public_ipv4: server.public_net&.ipv4&.ip
-          )
-        end
+        @client.list_servers.map { |s| to_server(s) }
       end
 
       def create_server(opts)
-        server_type = @client.server_types.to_a.find { |t| t.name == opts.type }
+        # Resolve IDs
+        server_type = find_server_type(opts.type)
         raise ValidationError, "invalid server type: #{opts.type}" unless server_type
 
-        image = @client.images.to_a.find { |i| i.name == opts.image }
+        image = find_image(opts.image)
         raise ValidationError, "invalid image: #{opts.image}" unless image
 
-        location = @client.locations.to_a.find { |l| l.name == opts.location }
+        location = find_location(opts.location)
         raise ValidationError, "invalid location: #{opts.location}" unless location
 
         create_opts = {
           name: opts.name,
-          server_type: server_type.id,
-          image: image.id,
-          location: location.id,
+          server_type: server_type["name"],
+          image: image["name"],
+          location: location["name"],
           user_data: opts.user_data,
           start_after_create: true
         }
@@ -155,28 +113,16 @@ module Nvoi
           create_opts[:firewalls] = [{ firewall: opts.firewall_id.to_i }]
         end
 
-        result = @client.servers.create(**create_opts)
-        server = result.is_a?(Hash) ? result[:server] : result
-
-        Server.new(
-          id: server.id.to_s,
-          name: server.name,
-          status: server.status,
-          public_ipv4: server.public_net&.ipv4&.ip
-        )
+        server = @client.create_server(create_opts)
+        to_server(server)
       end
 
       def wait_for_server(server_id, max_attempts)
-        max_attempts.times do |i|
-          server = @client.servers.find(server_id.to_i)
+        max_attempts.times do
+          server = @client.get_server(server_id.to_i)
 
-          if server.status == "running"
-            return Server.new(
-              id: server.id.to_s,
-              name: server.name,
-              status: server.status,
-              public_ipv4: server.public_net&.ipv4&.ip
-            )
+          if server["status"] == "running"
+            return to_server(server)
           end
 
           sleep(Constants::SERVER_READY_INTERVAL)
@@ -186,118 +132,156 @@ module Nvoi
       end
 
       def delete_server(id)
-        server = @client.servers.find(id.to_i)
+        server = @client.get_server(id.to_i)
 
         # Remove from firewalls
-        @client.firewalls.each do |fw|
-          fw.applied_to&.each do |applied|
-            next unless applied[:type] == "server" && applied.dig(:server, :id) == id.to_i
+        @client.list_firewalls.each do |fw|
+          fw["applied_to"]&.each do |applied|
+            next unless applied["type"] == "server" && applied.dig("server", "id") == id.to_i
 
-            fw.remove_target(type: "server", server: { id: id.to_i })
+            @client.remove_firewall_from_server(fw["id"], id.to_i)
           rescue StandardError
             # Ignore cleanup errors
           end
         end
 
         # Detach from networks
-        server.private_net&.each do |pn|
-          server.detach_from_network(network: pn[:network][:id])
+        server["private_net"]&.each do |pn|
+          @client.detach_server_from_network(id.to_i, pn["network"])
         rescue StandardError
           # Ignore cleanup errors
         end
 
-        server.destroy
+        @client.delete_server(id.to_i)
       end
 
       # Volume operations
 
       def create_volume(opts)
-        server = @client.servers.find(opts.server_id.to_i)
+        server = @client.get_server(opts.server_id.to_i)
         raise VolumeError, "server not found: #{opts.server_id}" unless server
 
-        volume = @client.volumes.create(
+        volume = @client.create_volume(
           name: opts.name,
           size: opts.size,
-          location: server.datacenter.location.name,
+          location: server.dig("datacenter", "location", "name"),
           format: "xfs"
         )
 
-        Volume.new(
-          id: volume.id.to_s,
-          name: volume.name,
-          size: volume.size,
-          location: volume.location.name,
-          status: volume.status
-        )
+        to_volume(volume)
       end
 
       def get_volume(id)
-        volume = @client.volumes.find(id.to_i)
+        volume = @client.get_volume(id.to_i)
         return nil unless volume
 
-        Volume.new(
-          id: volume.id.to_s,
-          name: volume.name,
-          size: volume.size,
-          location: volume.location.name,
-          status: volume.status,
-          server_id: volume.server&.id&.to_s,
-          device_path: volume.linux_device
-        )
+        to_volume(volume)
       end
 
       def get_volume_by_name(name)
-        volume = @client.volumes.to_a.find { |v| v.name == name }
+        volume = @client.list_volumes.find { |v| v["name"] == name }
         return nil unless volume
 
-        Volume.new(
-          id: volume.id.to_s,
-          name: volume.name,
-          size: volume.size,
-          location: volume.location.name,
-          status: volume.status,
-          server_id: volume.server&.id&.to_s,
-          device_path: volume.linux_device
-        )
+        to_volume(volume)
       end
 
       def delete_volume(id)
-        @client.volumes.find(id.to_i).destroy
+        @client.delete_volume(id.to_i)
       end
 
       def attach_volume(volume_id, server_id)
-        volume = @client.volumes.find(volume_id.to_i)
-        server = @client.servers.find(server_id.to_i)
-        volume.attach(server: server)
+        @client.attach_volume(volume_id.to_i, server_id.to_i)
       end
 
       def detach_volume(volume_id)
-        volume = @client.volumes.find(volume_id.to_i)
-        volume.detach
+        @client.detach_volume(volume_id.to_i)
       end
 
       # Validation operations
 
       def validate_instance_type(instance_type)
-        server_type = @client.server_types.to_a.find { |t| t.name == instance_type }
+        server_type = find_server_type(instance_type)
         raise ValidationError, "invalid hetzner server type: #{instance_type}" unless server_type
 
         true
       end
 
       def validate_region(region)
-        location = @client.locations.to_a.find { |l| l.name == region }
+        location = find_location(region)
         raise ValidationError, "invalid hetzner location: #{region}" unless location
 
         true
       end
 
       def validate_credentials
-        # Test credentials by listing server types
-        @client.server_types.to_a
+        @client.list_server_types
         true
-      rescue StandardError => e
+      rescue AuthenticationError => e
         raise ValidationError, "hetzner credentials invalid: #{e.message}"
+      end
+
+      private
+
+      def find_network_by_name(name)
+        @client.list_networks.find { |n| n["name"] == name }
+      end
+
+      def find_firewall_by_name(name)
+        @client.list_firewalls.find { |f| f["name"] == name }
+      end
+
+      def find_server_by_name(name)
+        @client.list_servers.find { |s| s["name"] == name }
+      end
+
+      def find_server_type(name)
+        @client.list_server_types.find { |t| t["name"] == name }
+      end
+
+      def find_image(name)
+        # Images endpoint requires filtering
+        response = @client.get("/images?name=#{name}")
+        response["images"]&.first
+      end
+
+      def find_location(name)
+        @client.list_locations.find { |l| l["name"] == name }
+      end
+
+      def to_network(data)
+        Network.new(
+          id: data["id"].to_s,
+          name: data["name"],
+          ip_range: data["ip_range"]
+        )
+      end
+
+      def to_firewall(data)
+        Firewall.new(
+          id: data["id"].to_s,
+          name: data["name"]
+        )
+      end
+
+      def to_server(data)
+        Server.new(
+          id: data["id"].to_s,
+          name: data["name"],
+          status: data["status"],
+          public_ipv4: data.dig("public_net", "ipv4", "ip")
+        )
+      end
+
+      def to_volume(data)
+        Volume.new(
+          id: data["id"].to_s,
+          name: data["name"],
+          size: data["size"],
+          location: data.dig("location", "name"),
+          status: data["status"],
+          server_id: data["server"]&.to_s,
+          device_path: data["linux_device"]
+        )
       end
     end
   end

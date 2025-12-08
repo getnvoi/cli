@@ -15,7 +15,13 @@ module Nvoi
         db_config = @config.deploy.application.database
         return unless db_config
 
-        @log.info "Provisioning database"
+        # SQLite is handled by app deployment with PVC volumes
+        if db_config.adapter == "sqlite3"
+          @log.info "SQLite database will be provisioned with app deployment"
+          return
+        end
+
+        @log.info "Provisioning %s database via K8s", db_config.adapter
 
         db_spec = db_config.to_service_spec(@config.namer)
         @service_deployer.deploy_database(db_spec)
@@ -33,14 +39,16 @@ module Nvoi
 
         start_time = Time.now
         loop do
-          output = @ssh.execute("kubectl get pods -l app=#{name} -o jsonpath='{.items[0].status.phase}'")
-          if output.strip == "Running"
-            @log.success "Database is running"
-            return
+          begin
+            output = @ssh.execute("kubectl get pods -l app=#{name} -o jsonpath='{.items[0].status.phase}'")
+            if output.strip == "Running"
+              @log.success "Database is running"
+              return
+            end
+          rescue SSHCommandError
+            # Not ready yet
           end
-        rescue SSHCommandError
-          # Not ready yet
-        ensure
+
           elapsed = Time.now - start_time
           raise K8sError, "database failed to start within #{timeout}s" if elapsed > timeout
 

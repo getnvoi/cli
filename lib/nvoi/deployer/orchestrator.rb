@@ -54,9 +54,10 @@ module Nvoi
         # Deploy app secret
         service_deployer.deploy_app_secret(all_env)
 
-        # Deploy database if configured
-        if @config.deploy.application.database
-          db_spec = @config.deploy.application.database.to_service_spec(@config.namer)
+        # Deploy database if configured (skip SQLite - handled by app volumes)
+        db_config = @config.deploy.application.database
+        if db_config && db_config.adapter != "sqlite3"
+          db_spec = db_config.to_service_spec(@config.namer)
           service_deployer.deploy_database(db_spec)
         end
 

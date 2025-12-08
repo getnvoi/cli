@@ -29,6 +29,9 @@ module Nvoi
   class FirewallError < ProviderError; end
   class VolumeError < ProviderError; end
   class ValidationError < ProviderError; end
+  class APIError < ProviderError; end
+  class AuthenticationError < ProviderError; end
+  class NotFoundError < ProviderError; end
 
   # Cloudflare errors
   class CloudflareError < Error; end

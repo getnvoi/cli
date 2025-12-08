@@ -85,15 +85,16 @@ module Nvoi
       def label_worker_from_master(master_ssh, worker_name, group_name)
         # Wait for node to join cluster
         30.times do
-          output = master_ssh.execute("kubectl get nodes -o name")
-          if output.include?(worker_name)
-            master_ssh.execute("kubectl label node #{worker_name} nvoi.io/server-name=#{group_name} --overwrite")
-            @log.success "Worker labeled: %s", worker_name
-            return
+          begin
+            output = master_ssh.execute("kubectl get nodes -o name")
+            if output.include?(worker_name)
+              master_ssh.execute("kubectl label node #{worker_name} nvoi.io/server-name=#{group_name} --overwrite")
+              @log.success "Worker labeled: %s", worker_name
+              return
+            end
+          rescue SSHCommandError
+            # Not ready
           end
-        rescue SSHCommandError
-          # Not ready
-        ensure
           sleep(5)
         end
 
