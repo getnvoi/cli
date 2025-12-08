@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.description   = "A deployment tool that automates application deployment to cloud providers (Hetzner, AWS) with K3s orchestration and Cloudflare tunnels."
   spec.homepage      = "https://github.com/getnvoi/nvoi"
   spec.license       = "MIT"
-  spec.required_ruby_version = ">= 3.0.0"
+  spec.required_ruby_version = ">= 3.1.0"
 
   spec.files = Dir.chdir(__dir__) do
     `git ls-files -z`.split("\x0").reject do |f|
