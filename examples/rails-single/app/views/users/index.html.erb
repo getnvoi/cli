@@ -1,0 +1,38 @@
+<div class="min-h-screen bg-gray-100 py-8">
+  <div class="max-w-4xl mx-auto px-4">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8">Rails Single Server Demo</h1>
+
+    <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-8">
+      <h2 class="text-lg font-semibold text-green-800 mb-2">✨ New User Created!</h2>
+      <p class="text-green-700">
+        <strong><%= @new_user.name %></strong> (<%= @new_user.email %>)
+      </p>
+    </div>
+
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
+      <h2 class="text-lg font-semibold text-blue-800 mb-2">🖥️ Server Info</h2>
+      <p class="text-blue-700">Hostname: <strong><%= Socket.gethostname %></strong></p>
+      <p class="text-blue-700">Rails: <strong><%= Rails.version %></strong></p>
+      <p class="text-blue-700">Ruby: <strong><%= RUBY_VERSION %></strong></p>
+    </div>
+
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+      <div class="px-4 py-5 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">All Users (<%= @users.count %>)</h2>
+      </div>
+      <ul class="divide-y divide-gray-200">
+        <% @users.each do |user| %>
+          <li class="px-4 py-4 flex justify-between items-center <%= user.id == @new_user.id ? 'bg-green-50' : '' %>">
+            <div>
+              <p class="font-medium text-gray-900"><%= user.name %></p>
+              <p class="text-sm text-gray-500"><%= user.email %></p>
+            </div>
+            <span class="text-xs text-gray-400"><%= time_ago_in_words(user.created_at) %> ago</span>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+
+    <p class="mt-8 text-center text-gray-500 text-sm">Refresh the page to create another user!</p>
+  </div>
+</div>

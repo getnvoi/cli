@@ -1,0 +1,274 @@
+# frozen_string_literal: true
+
+module Nvoi
+  module Config
+    # DeployConfig represents the root deployment configuration
+    class DeployConfig
+      attr_accessor :application
+
+      def initialize(data = {})
+        @application = Application.new(data["application"] || {})
+      end
+    end
+
+    # Application contains application-level configuration
+    class Application
+      attr_accessor :name, :environment, :domain_provider, :compute_provider,
+                    :keep_count, :servers, :app, :database, :services, :env,
+                    :secrets, :ssh_key_path
+
+      def initialize(data = {})
+        @name = data["name"]
+        @environment = data["environment"] || "production"
+        @domain_provider = DomainProviderConfig.new(data["domain_provider"] || {})
+        @compute_provider = ComputeProviderConfig.new(data["compute_provider"] || {})
+        @keep_count = data["keep_count"]&.to_i
+        @servers = parse_servers(data["servers"] || {})
+        @app = parse_app_config(data["app"] || {})
+        @database = data["database"] ? DatabaseConfig.new(data["database"]) : nil
+        @services = parse_services(data["services"] || {})
+        @env = data["env"] || {}
+        @secrets = data["secrets"] || {}
+        @ssh_key_path = data["ssh_key_path"] ? SSHKeyPathConfig.new(data["ssh_key_path"]) : nil
+      end
+
+      private
+
+      def parse_servers(data)
+        data.transform_values { |v| ServerConfig.new(v || {}) }
+      end
+
+      def parse_app_config(data)
+        data.transform_values { |v| AppServiceConfig.new(v || {}) }
+      end
+
+      def parse_services(data)
+        data.transform_values { |v| ServiceConfig.new(v || {}) }
+      end
+    end
+
+    # DomainProviderConfig contains domain provider configuration
+    class DomainProviderConfig
+      attr_accessor :cloudflare
+
+      def initialize(data = {})
+        @cloudflare = data["cloudflare"] ? CloudflareConfig.new(data["cloudflare"]) : nil
+      end
+    end
+
+    # ComputeProviderConfig contains compute provider configuration
+    class ComputeProviderConfig
+      attr_accessor :hetzner, :aws
+
+      def initialize(data = {})
+        @hetzner = data["hetzner"] ? HetznerConfig.new(data["hetzner"]) : nil
+        @aws = data["aws"] ? AWSConfig.new(data["aws"]) : nil
+      end
+    end
+
+    # CloudflareConfig contains Cloudflare-specific configuration
+    class CloudflareConfig
+      attr_accessor :api_token, :account_id
+
+      def initialize(data = {})
+        @api_token = data["api_token"]
+        @account_id = data["account_id"]
+      end
+    end
+
+    # HetznerConfig contains Hetzner-specific configuration
+    class HetznerConfig
+      attr_accessor :api_token, :server_type, :server_location
+
+      def initialize(data = {})
+        @api_token = data["api_token"]
+        @server_type = data["server_type"]
+        @server_location = data["server_location"]
+      end
+    end
+
+    # AWSConfig contains AWS-specific configuration
+    class AWSConfig
+      attr_accessor :access_key_id, :secret_access_key, :region, :instance_type
+
+      def initialize(data = {})
+        @access_key_id = data["access_key_id"]
+        @secret_access_key = data["secret_access_key"]
+        @region = data["region"]
+        @instance_type = data["instance_type"]
+      end
+    end
+
+    # ServerConfig contains server instance configuration
+    class ServerConfig
+      attr_accessor :master, :type, :location, :count
+
+      def initialize(data = {})
+        @master = data["master"] || false
+        @type = data["type"]
+        @location = data["location"]
+        @count = data["count"]&.to_i || 1
+      end
+    end
+
+    # AppServiceConfig defines a service in the app section
+    class AppServiceConfig
+      attr_accessor :servers, :domain, :subdomain, :port, :healthcheck,
+                    :command, :pre_run_command, :env, :volumes
+
+      def initialize(data = {})
+        @servers = data["servers"] || []
+        @domain = data["domain"]
+        @subdomain = data["subdomain"]
+        @port = data["port"]&.to_i
+        @healthcheck = data["healthcheck"] ? HealthCheckConfig.new(data["healthcheck"]) : nil
+        @command = data["command"]
+        @pre_run_command = data["pre_run_command"]
+        @env = data["env"] || {}
+        @volumes = data["volumes"] || {}
+      end
+
+      # Convert to ServiceSpec
+      def to_service_spec(app_name, service_name, image_tag)
+        cmd = @command ? @command.split : []
+
+        spec = ServiceSpec.new(
+          name: "#{app_name}-#{service_name}",
+          image: image_tag,
+          port: @port,
+          command: cmd,
+          env: @env,
+          volumes: @volumes,
+          replicas: @port.nil? || @port.zero? ? 1 : 2,
+          healthcheck: @healthcheck,
+          stateful_set: false,
+          servers: @servers
+        )
+        spec
+      end
+    end
+
+    # HealthCheckConfig defines health check configuration
+    class HealthCheckConfig
+      attr_accessor :type, :path, :port, :command, :interval, :timeout, :retries
+
+      def initialize(data = {})
+        @type = data["type"]
+        @path = data["path"]
+        @port = data["port"]&.to_i
+        @command = data["command"]
+        @interval = data["interval"]
+        @timeout = data["timeout"]
+        @retries = data["retries"]&.to_i
+      end
+    end
+
+    # DatabaseConfig defines database configuration
+    class DatabaseConfig
+      attr_accessor :servers, :adapter, :url, :image, :volume, :secrets
+
+      def initialize(data = {})
+        @servers = data["servers"] || []
+        @adapter = data["adapter"]
+        @url = data["url"]
+        @image = data["image"]
+        @volume = data["volume"]
+        @secrets = data["secrets"] || {}
+      end
+
+      # Convert to ServiceSpec
+      def to_service_spec(namer)
+        port = case @adapter&.downcase
+               when "mysql" then 3306
+               else 5432
+               end
+
+        vols = {}
+        vols["data"] = @volume if @volume
+
+        ServiceSpec.new(
+          name: namer.database_service_name,
+          image: @image,
+          port: port,
+          env: nil,
+          volumes: vols,
+          replicas: 1,
+          stateful_set: true,
+          secrets: @secrets,
+          servers: @servers
+        )
+      end
+    end
+
+    # ServiceConfig defines a generic service
+    class ServiceConfig
+      attr_accessor :servers, :image, :command, :env, :volume
+
+      def initialize(data = {})
+        @servers = data["servers"] || []
+        @image = data["image"]
+        @command = data["command"]
+        @env = data["env"] || {}
+        @volume = data["volume"]
+      end
+
+      # Convert to ServiceSpec
+      def to_service_spec(app_name, service_name)
+        cmd = @command ? @command.split : []
+        vols = {}
+        vols["data"] = @volume if @volume
+
+        # Infer port from image
+        port = case @image
+               when /redis/ then 6379
+               when /postgres/ then 5432
+               when /mysql/ then 3306
+               else 0
+               end
+
+        ServiceSpec.new(
+          name: "#{app_name}-#{service_name}",
+          image: @image,
+          port: port,
+          command: cmd,
+          env: @env,
+          volumes: vols,
+          replicas: 1,
+          stateful_set: false,
+          servers: @servers
+        )
+      end
+    end
+
+    # SSHKeyPathConfig defines SSH key paths
+    class SSHKeyPathConfig
+      attr_accessor :private, :public
+
+      def initialize(data = {})
+        @private = data["private"]
+        @public = data["public"]
+      end
+    end
+
+    # ServiceSpec is the CORE primitive - pure K8s deployment specification
+    class ServiceSpec
+      attr_accessor :name, :image, :port, :command, :env, :volumes, :replicas,
+                    :healthcheck, :stateful_set, :secrets, :servers
+
+      def initialize(name:, image:, port: 0, command: [], env: nil, volumes: nil,
+                     replicas: 1, healthcheck: nil, stateful_set: false, secrets: nil, servers: [])
+        @name = name
+        @image = image
+        @port = port
+        @command = command || []
+        @env = env || {}
+        @volumes = volumes || {}
+        @replicas = replicas
+        @healthcheck = healthcheck
+        @stateful_set = stateful_set
+        @secrets = secrets || {}
+        @servers = servers || []
+      end
+    end
+  end
+end

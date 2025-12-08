@@ -1,0 +1,68 @@
+# Example: Apex domain and wildcard subdomain support
+#
+# This example demonstrates three subdomain patterns:
+# - "@" or "" : Apex domain (example.com)
+# - "*"       : Wildcard (*.example.com)
+# - "app"     : Standard subdomain (app.example.com)
+
+application:
+  name: apex-wildcard-demo
+  environment: production
+
+  domain_provider:
+    cloudflare:
+      api_token: $CLOUDFLARE_API_TOKEN
+      account_id: $CLOUDFLARE_ACCOUNT_ID
+
+  compute_provider:
+    hetzner:
+      api_token: $HETZNER_API_TOKEN
+      server_type: cx22
+      server_location: fsn1
+
+  servers:
+    master:
+      type: cx22
+      location: fsn1
+
+  keep_count: 2
+
+  app:
+    # Apex domain: accessible at example.com (no subdomain)
+    # Use "@" or "" for apex/root domain
+    main:
+      servers: [master]
+      domain: example.com
+      subdomain: "@" # or use: subdomain: ""
+      port: 3000
+      healthcheck:
+        type: http
+        path: /health
+        port: 3000
+
+    # Wildcard subdomain: accessible at *.example.com
+    # Catches all subdomains not explicitly defined
+    wildcard:
+      servers: [master]
+      domain: example.com
+      subdomain: "*"
+      port: 3001
+      healthcheck:
+        type: http
+        path: /health
+        port: 3001
+
+    # Standard subdomain: accessible at api.example.com
+    api:
+      servers: [master]
+      domain: example.com
+      subdomain: api
+      port: 3002
+      healthcheck:
+        type: http
+        path: /health
+        port: 3002
+
+  env:
+    APP_NAME: apex-wildcard-demo
+    LOG_LEVEL: info

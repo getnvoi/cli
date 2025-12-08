@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: <%= name %>
+  namespace: default
+spec:
+  replicas: <%= replicas %>
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: <%= name %>
+  template:
+    metadata:
+      labels:
+        app: <%= name %>
+    spec:
+<% if affinity_server_names && !affinity_server_names.empty? %>
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: nvoi.io/server-name
+                operator: In
+                values:
+<% affinity_server_names.each do |server| %>
+                - <%= server %>
+<% end %>
+<% end %>
+      containers:
+      - name: app
+        image: <%= image %>
+<% if command && !command.empty? %>
+        command:
+<% command.each do |cmd| %>
+        - <%= cmd.inspect %>
+<% end %>
+<% end %>
+<% if port && port > 0 %>
+        ports:
+        - containerPort: <%= port %>
+<% end %>
+        env:
+<% env_keys.each do |key| %>
+        - name: <%= key %>
+          valueFrom:
+            secretKeyRef:
+              name: <%= secret_name %>
+              key: <%= key %>
+<% end %>
+<% if readiness_probe %>
+        readinessProbe:
+          httpGet:
+            path: <%= readiness_probe[:path] %>
+            port: <%= readiness_probe[:port] %>
+          initialDelaySeconds: <%= readiness_probe[:initial_delay] %>
+          periodSeconds: <%= readiness_probe[:period] %>
+          timeoutSeconds: <%= readiness_probe[:timeout] %>
+          failureThreshold: <%= readiness_probe[:failure_threshold] %>
+<% end %>
+<% if liveness_probe %>
+        livenessProbe:
+          httpGet:
+            path: <%= liveness_probe[:path] %>
+            port: <%= liveness_probe[:port] %>
+          initialDelaySeconds: <%= liveness_probe[:initial_delay] %>
+          periodSeconds: <%= liveness_probe[:period] %>
+          timeoutSeconds: <%= liveness_probe[:timeout] %>
+          failureThreshold: <%= liveness_probe[:failure_threshold] %>
+<% end %>
+        resources:
+          requests:
+            memory: <%= resources[:request_memory] %>
+            cpu: <%= resources[:request_cpu] %>
+          limits:
+            memory: <%= resources[:limit_memory] %>
+            cpu: <%= resources[:limit_cpu] %>
+<% if volume_mounts && !volume_mounts.empty? %>
+        volumeMounts:
+<% volume_mounts.each do |vol| %>
+        - name: <%= vol[:name] %>
+          mountPath: <%= vol[:mount_path] %>
+<% end %>
+<% end %>
+<% if (host_path_volumes && !host_path_volumes.empty?) || (volumes && !volumes.empty?) %>
+      volumes:
+<% (host_path_volumes || []).each do |vol| %>
+      - name: <%= vol[:name] %>
+        hostPath:
+          path: <%= vol[:host_path] %>
+          type: DirectoryOrCreate
+<% end %>
+<% (volumes || []).each do |vol| %>
+      - name: <%= vol[:name] %>
+        persistentVolumeClaim:
+          claimName: <%= vol[:claim_name] %>
+<% end %>
+<% end %>

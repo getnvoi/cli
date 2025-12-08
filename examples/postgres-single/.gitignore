@@ -1,0 +1,15 @@
+# Binaries
+app
+*.exe
+
+# Environment files (except examples)
+.env
+!.env.production.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store

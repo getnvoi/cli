@@ -1,0 +1,56 @@
+application:
+  name: example-postgres
+  environment: production
+
+  # Provider configuration
+  domain_provider:
+    cloudflare:
+      api_token: $CLOUDFLARE_API_TOKEN
+      account_id: $CLOUDFLARE_ACCOUNT_ID
+
+  compute_provider:
+    hetzner:
+      api_token: $HETZNER_API_TOKEN
+      server_type: cx22
+      server_location: fsn1
+
+  # Server configuration (single server, master: true is implicit)
+  servers:
+    master:
+      type: cx22
+      location: fsn1
+
+  # Container retention
+  keep_count: 2
+
+  # Application service
+  app:
+    web:
+      servers: [master]
+      domain: rb.run
+      subdomain: go-pg
+      port: 3000
+      healthcheck:
+        type: http
+        path: /health
+        port: 3000
+        interval: 10s
+        timeout: 5s
+        retries: 3
+
+  # PostgreSQL database (runs on same server)
+  database:
+    servers: [master]
+    adapter: postgres
+    image: postgres:16-alpine
+    volume: postgres_data
+    secrets:
+      POSTGRES_DB: app_production
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: $DB_PASSWORD
+
+  # Environment variables (DATABASE_URL auto-injected from database config)
+  env:
+    APP_NAME: go-postgres-demo
+    LOG_LEVEL: info
+    GIN_MODE: release

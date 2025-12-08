@@ -1,0 +1,30 @@
+# Ruby / Bundler
+/.bundle/
+/vendor/bundle
+*.gem
+pkg/
+
+# Testing
+/coverage/
+/tmp/
+
+# IDE / Editor
+.idea/
+*.swp
+*.swo
+*~
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Sensitive files - NEVER commit these
+deploy.key
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Logs
+*.log

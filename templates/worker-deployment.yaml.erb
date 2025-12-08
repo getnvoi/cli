@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: <%= name %>
+  namespace: default
+spec:
+  replicas: <%= replicas %>
+  selector:
+    matchLabels:
+      app: <%= name %>
+  template:
+    metadata:
+      labels:
+        app: <%= name %>
+    spec:
+<% if affinity_server_names && !affinity_server_names.empty? %>
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: nvoi.io/server-name
+                operator: In
+                values:
+<% affinity_server_names.each do |server| %>
+                - <%= server %>
+<% end %>
+<% end %>
+      containers:
+      - name: worker
+        image: <%= image %>
+        command:
+<% command.each do |cmd| %>
+        - <%= cmd.inspect %>
+<% end %>
+        env:
+<% env_keys.each do |key| %>
+        - name: <%= key %>
+          valueFrom:
+            secretKeyRef:
+              name: <%= secret_name %>
+              key: <%= key %>
+<% end %>
+        resources:
+          requests:
+            memory: <%= resources[:request_memory] %>
+            cpu: <%= resources[:request_cpu] %>
+          limits:
+            memory: <%= resources[:limit_memory] %>
+            cpu: <%= resources[:limit_cpu] %>

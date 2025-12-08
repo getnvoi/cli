@@ -1,0 +1,74 @@
+application:
+  name: example-postgres-multinode
+  environment: production
+
+  # Provider configuration
+  domain_provider:
+    cloudflare:
+      api_token: $CLOUDFLARE_API_TOKEN
+      account_id: $CLOUDFLARE_ACCOUNT_ID
+
+  compute_provider:
+    hetzner:
+      api_token: $HETZNER_API_TOKEN
+      server_type: cx22 # Default for all servers
+      server_location: nbg1
+
+  # Multi-instance server configuration: 4 servers total
+  servers:
+    master:
+      master: true
+      type: cx22 # Control plane only, no workloads
+      location: nbg1
+
+    workers:
+      type: cx32 # App servers
+      count: 2
+      location: nbg1
+
+    database:
+      type: cx42 # Dedicated database server
+      location: nbg1
+
+  # Container retention
+  keep_count: 2
+
+  # Application secrets
+  secrets:
+    SECRET_KEY_BASE: $SECRET_KEY_BASE
+    JWT_SECRET: $JWT_SECRET
+
+  # Application service (runs on workers with 2 replicas)
+  app:
+    web:
+      servers: [workers]
+      domain: rb.run
+      subdomain: postgres-multi
+      port: 3000
+      healthcheck:
+        type: http
+        path: /health
+        port: 3000
+        interval: 10s
+        timeout: 5s
+        retries: 3
+      env:
+        # PostgreSQL connection via K3s service DNS
+        DATABASE_URL: postgresql://appuser:$DB_PASSWORD@db-example-postgres-multinode:5432/app_production
+        RAILS_ENV: production
+
+  # PostgreSQL database (runs on dedicated database server)
+  database:
+    servers: [database]
+    adapter: postgres
+    image: postgres:16-alpine
+    volume: postgres_data
+    secrets:
+      POSTGRES_DB: app_production
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: $DB_PASSWORD
+
+  # Environment variables
+  env:
+    APP_NAME: postgres-multi-demo
+    LOG_LEVEL: info

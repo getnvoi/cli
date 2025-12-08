@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: <%= name %>-secret
+  namespace: default
+type: Opaque
+stringData:
+<% env_vars.each do |key, value| %>
+  <%= key %>: <%= value.inspect %>
+<% end %>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: <%= name %>
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: <%= name %>
+  template:
+    metadata:
+      labels:
+        app: <%= name %>
+    spec:
+<% if affinity_server_names && !affinity_server_names.empty? %>
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: nvoi.io/server-name
+                operator: In
+                values:
+<% affinity_server_names.each do |server| %>
+                - <%= server %>
+<% end %>
+<% end %>
+      containers:
+      - name: service
+        image: <%= image %>
+<% if command && !command.empty? %>
+        command:
+<% command.each do |cmd| %>
+        - <%= cmd.inspect %>
+<% end %>
+<% end %>
+<% if port && port > 0 %>
+        ports:
+        - containerPort: <%= port %>
+<% end %>
+        env:
+<% env_keys.each do |key| %>
+        - name: <%= key %>
+          valueFrom:
+            secretKeyRef:
+              name: <%= name %>-secret
+              key: <%= key %>
+<% end %>
+<% if volume_path %>
+        volumeMounts:
+        - name: data
+          mountPath: <%= volume_path %>
+<% end %>
+<% if host_path %>
+      volumes:
+      - name: data
+        hostPath:
+          path: <%= host_path %>
+          type: DirectoryOrCreate
+<% elsif volume_path %>
+      volumes:
+      - name: data
+        emptyDir: {}
+<% end %>
+---
+<% if port && port > 0 %>
+apiVersion: v1
+kind: Service
+metadata:
+  name: <%= name %>
+  namespace: default
+spec:
+  selector:
+    app: <%= name %>
+  ports:
+  - port: <%= port %>
+    targetPort: <%= port %>
+  type: ClusterIP
+<% end %>

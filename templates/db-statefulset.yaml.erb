@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: <%= service_name %>
+  namespace: default
+spec:
+  serviceName: <%= service_name %>
+  replicas: 1
+  selector:
+    matchLabels:
+      app: <%= service_name %>
+  template:
+    metadata:
+      labels:
+        app: <%= service_name %>
+    spec:
+<% if affinity_server_names && !affinity_server_names.empty? %>
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: nvoi.io/server-name
+                operator: In
+                values:
+<% affinity_server_names.each do |server| %>
+                - <%= server %>
+<% end %>
+<% end %>
+      containers:
+      - name: <%= adapter %>
+        image: <%= image %>
+        env:
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+<% secret_keys.each do |key| %>
+        - name: <%= key %>
+          valueFrom:
+            secretKeyRef:
+              name: <%= secret_name %>
+              key: <%= key %>
+<% end %>
+        ports:
+        - containerPort: <%= port %>
+        volumeMounts:
+        - name: data
+          mountPath: <%= data_path %>
+<% if host_path %>
+      volumes:
+      - name: data
+        hostPath:
+          path: <%= host_path %>
+          type: DirectoryOrCreate
+<% else %>
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: <%= storage_size %>
+<% end %>
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: <%= service_name %>
+  namespace: default
+spec:
+  clusterIP: None
+  selector:
+    app: <%= service_name %>
+  ports:
+  - port: <%= port %>
+    targetPort: <%= port %>

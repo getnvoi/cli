@@ -1,0 +1,19 @@
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Database files
+data/
+*.db
+*.sqlite3
+
+# Build artifacts
+app
+*.exe
+
+# Go workspace
+go.work
+
+# NVOI master key (do not commit)
+deploy.key

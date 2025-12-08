@@ -1,0 +1,67 @@
+application:
+  name: example-golang-pg-multi
+  environment: production
+
+  # Provider configuration
+  domain_provider:
+    cloudflare:
+      api_token: $CLOUDFLARE_API_TOKEN
+      account_id: $CLOUDFLARE_ACCOUNT_ID
+
+  compute_provider:
+    hetzner:
+      api_token: $HETZNER_API_TOKEN
+      server_type: cx22 # Default for all servers
+      server_location: nbg1
+
+  # Multi-instance server configuration: 3 servers total
+  # 1 master (K3s control plane) + 2 workers (app + database)
+  servers:
+    master:
+      master: true
+      type: cx22 # Main server (control plane)
+      location: nbg1
+
+    workers:
+      type: cx32 # Larger instances for workloads
+      count: 2 # Two workers: one for app, one for database
+      location: nbg1
+
+  # Container retention
+  keep_count: 2
+
+  # Application service (Golang + Gin)
+  # Connects to PostgreSQL via K3s service DNS
+  app:
+    web:
+      servers: [workers]
+      domain: rb.run # Change to your domain
+      subdomain: golang-pg-multi # Change to your subdomain
+      port: 3000
+      healthcheck:
+        type: http
+        path: /health
+        port: 3000
+        interval: 10s
+        timeout: 5s
+        retries: 3
+      env:
+        # Database connection vars auto-injected by CLI
+        GIN_MODE: release
+
+  # PostgreSQL database (runs on WORKER via K3s scheduling)
+  # Deployed as StatefulSet with persistent volume
+  database:
+    servers: [workers]
+    adapter: postgres
+    image: postgres:16-alpine
+    volume: postgres_data
+    secrets:
+      POSTGRES_DB: app_production
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: $DB_PASSWORD
+
+  # Environment variables (non-sensitive)
+  env:
+    APP_NAME: golang-pg-multi-demo
+    LOG_LEVEL: info
