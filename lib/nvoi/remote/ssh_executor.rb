@@ -53,20 +53,20 @@ module Nvoi
 
       private
 
-      def build_ssh_args
-        args = ["-o", "LogLevel=ERROR", "-i", @ssh_key]
+        def build_ssh_args
+          args = ["-o", "LogLevel=ERROR", "-i", @ssh_key]
 
-        if @strict_mode
-          # Use known_hosts verification
-          known_hosts_path = File.join(Dir.home, ".ssh", "known_hosts")
-          args += ["-o", "StrictHostKeyChecking=accept-new", "-o", "UserKnownHostsFile=#{known_hosts_path}"]
-        else
-          # Disable host key checking (default for cloud environments)
-          args += ["-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null"]
+          if @strict_mode
+            # Use known_hosts verification
+            known_hosts_path = File.join(Dir.home, ".ssh", "known_hosts")
+            args += ["-o", "StrictHostKeyChecking=accept-new", "-o", "UserKnownHostsFile=#{known_hosts_path}"]
+          else
+            # Disable host key checking (default for cloud environments)
+            args += ["-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null"]
+          end
+
+          args
         end
-
-        args
-      end
     end
   end
 end

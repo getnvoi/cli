@@ -22,7 +22,7 @@ module Nvoi
         if vpc
           return Network.new(
             id: vpc.vpc_id,
-            name: name,
+            name:,
             ip_range: vpc.cidr_block
           )
         end
@@ -39,13 +39,13 @@ module Nvoi
 
         # Enable DNS hostnames
         @client.modify_vpc_attribute(
-          vpc_id: vpc_id,
+          vpc_id:,
           enable_dns_hostnames: { value: true }
         )
 
         # Create subnet
         subnet_resp = @client.create_subnet(
-          vpc_id: vpc_id,
+          vpc_id:,
           cidr_block: "10.0.1.0/24",
           tag_specifications: [{
             resource_type: "subnet",
@@ -63,11 +63,11 @@ module Nvoi
         igw_id = igw_resp.internet_gateway.internet_gateway_id
 
         # Attach internet gateway to VPC
-        @client.attach_internet_gateway(vpc_id: vpc_id, internet_gateway_id: igw_id)
+        @client.attach_internet_gateway(vpc_id:, internet_gateway_id: igw_id)
 
         # Create route table
         rtb_resp = @client.create_route_table(
-          vpc_id: vpc_id,
+          vpc_id:,
           tag_specifications: [{
             resource_type: "route-table",
             tags: [{ key: "Name", value: "#{name}-rtb" }]
@@ -90,7 +90,7 @@ module Nvoi
 
         Network.new(
           id: vpc_id,
-          name: name,
+          name:,
           ip_range: create_resp.vpc.cidr_block
         )
       end
@@ -101,7 +101,7 @@ module Nvoi
 
         Network.new(
           id: vpc.vpc_id,
-          name: name,
+          name:,
           ip_range: vpc.cidr_block
         )
       end
@@ -116,7 +116,7 @@ module Nvoi
         # Find existing security group
         sg = find_security_group_by_name(name)
         if sg
-          return Firewall.new(id: sg.group_id, name: name)
+          return Firewall.new(id: sg.group_id, name:)
         end
 
         # Get default VPC
@@ -145,14 +145,14 @@ module Nvoi
           }]
         )
 
-        Firewall.new(id: create_resp.group_id, name: name)
+        Firewall.new(id: create_resp.group_id, name:)
       end
 
       def get_firewall_by_name(name)
         sg = find_security_group_by_name(name)
         raise FirewallError, "firewall not found: #{name}" unless sg
 
-        Firewall.new(id: sg.group_id, name: name)
+        Firewall.new(id: sg.group_id, name:)
       end
 
       def delete_firewall(id)
@@ -290,14 +290,14 @@ module Nvoi
 
       def attach_volume(volume_id, server_id)
         @client.attach_volume(
-          volume_id: volume_id,
+          volume_id:,
           instance_id: server_id,
           device: "/dev/xvdf"
         )
       end
 
       def detach_volume(volume_id)
-        @client.detach_volume(volume_id: volume_id)
+        @client.detach_volume(volume_id:)
       end
 
       # Validation operations
@@ -325,79 +325,79 @@ module Nvoi
 
       private
 
-      def find_vpc_by_name(name)
-        resp = @client.describe_vpcs(
-          filters: [{ name: "tag:Name", values: [name] }]
-        )
-        resp.vpcs.first
-      end
-
-      def find_security_group_by_name(name)
-        resp = @client.describe_security_groups(
-          filters: [{ name: "group-name", values: [name] }]
-        )
-        resp.security_groups.first
-      end
-
-      def find_instance_by_name(name)
-        resp = @client.describe_instances(
-          filters: [
-            { name: "tag:Name", values: [name] },
-            { name: "instance-state-name", values: %w[pending running stopping stopped] }
-          ]
-        )
-
-        resp.reservations.each do |reservation|
-          return reservation.instances.first unless reservation.instances.empty?
-        end
-        nil
-      end
-
-      def get_ubuntu_ami
-        resp = @client.describe_images(
-          owners: ["099720109477"], # Canonical's AWS account ID
-          filters: [
-            { name: "name", values: ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"] },
-            { name: "state", values: ["available"] }
-          ]
-        )
-
-        raise ProviderError, "no Ubuntu 22.04 AMI found" if resp.images.empty?
-
-        # Return the most recent AMI
-        latest = resp.images.max_by(&:creation_date)
-        latest.image_id
-      end
-
-      def instance_to_server(instance)
-        name = instance.tags&.find { |t| t.key == "Name" }&.value || ""
-
-        Server.new(
-          id: instance.instance_id,
-          name: name,
-          status: instance.state.name,
-          public_ipv4: instance.public_ip_address
-        )
-      end
-
-      def volume_to_compute(vol)
-        name = vol.tags&.find { |t| t.key == "Name" }&.value || ""
-
-        v = Volume.new(
-          id: vol.volume_id,
-          name: name,
-          size: vol.size,
-          location: vol.availability_zone,
-          status: vol.state
-        )
-
-        if vol.attachments.any?
-          v.server_id = vol.attachments[0].instance_id
-          v.device_path = vol.attachments[0].device
+        def find_vpc_by_name(name)
+          resp = @client.describe_vpcs(
+            filters: [{ name: "tag:Name", values: [name] }]
+          )
+          resp.vpcs.first
         end
 
-        v
-      end
+        def find_security_group_by_name(name)
+          resp = @client.describe_security_groups(
+            filters: [{ name: "group-name", values: [name] }]
+          )
+          resp.security_groups.first
+        end
+
+        def find_instance_by_name(name)
+          resp = @client.describe_instances(
+            filters: [
+              { name: "tag:Name", values: [name] },
+              { name: "instance-state-name", values: %w[pending running stopping stopped] }
+            ]
+          )
+
+          resp.reservations.each do |reservation|
+            return reservation.instances.first unless reservation.instances.empty?
+          end
+          nil
+        end
+
+        def get_ubuntu_ami
+          resp = @client.describe_images(
+            owners: ["099720109477"], # Canonical's AWS account ID
+            filters: [
+              { name: "name", values: ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"] },
+              { name: "state", values: ["available"] }
+            ]
+          )
+
+          raise ProviderError, "no Ubuntu 22.04 AMI found" if resp.images.empty?
+
+          # Return the most recent AMI
+          latest = resp.images.max_by(&:creation_date)
+          latest.image_id
+        end
+
+        def instance_to_server(instance)
+          name = instance.tags&.find { |t| t.key == "Name" }&.value || ""
+
+          Server.new(
+            id: instance.instance_id,
+            name:,
+            status: instance.state.name,
+            public_ipv4: instance.public_ip_address
+          )
+        end
+
+        def volume_to_compute(vol)
+          name = vol.tags&.find { |t| t.key == "Name" }&.value || ""
+
+          v = Volume.new(
+            id: vol.volume_id,
+            name:,
+            size: vol.size,
+            location: vol.availability_zone,
+            status: vol.state
+          )
+
+          if vol.attachments.any?
+            v.server_id = vol.attachments[0].instance_id
+            v.device_path = vol.attachments[0].device
+          end
+
+          v
+        end
     end
   end
 end

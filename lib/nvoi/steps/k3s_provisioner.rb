@@ -56,52 +56,52 @@ module Nvoi
 
       private
 
-      def wait_for_cloud_init
-        @log.info "Waiting for cloud-init to complete"
+        def wait_for_cloud_init
+          @log.info "Waiting for cloud-init to complete"
 
-        60.times do
-          begin
-            output = @ssh.execute("test -f /var/lib/cloud/instance/boot-finished && echo 'ready'")
-            if output.include?("ready")
-              @log.success "Cloud-init complete"
-              return
+          60.times do
+            begin
+              output = @ssh.execute("test -f /var/lib/cloud/instance/boot-finished && echo 'ready'")
+              if output.include?("ready")
+                @log.success "Cloud-init complete"
+                return
+              end
+            rescue SSHCommandError
+              # Not ready yet
             end
-          rescue SSHCommandError
-            # Not ready yet
+            sleep(5)
           end
-          sleep(5)
+
+          raise K8sError, "cloud-init timeout"
         end
 
-        raise K8sError, "cloud-init timeout"
-      end
+        def install_k3s_server
+          # Check if K3s is already running
+          begin
+            @ssh.execute("systemctl is-active k3s")
+            @log.info "K3s already running, skipping installation"
+            setup_kubeconfig
+            return
+          rescue SSHCommandError
+            # Not running, continue
+          end
 
-      def install_k3s_server
-        # Check if K3s is already running
-        begin
-          @ssh.execute("systemctl is-active k3s")
-          @log.info "K3s already running, skipping installation"
-          setup_kubeconfig
-          return
-        rescue SSHCommandError
-          # Not running, continue
-        end
+          @log.info "Installing K3s server"
 
-        @log.info "Installing K3s server"
+          # Detect private IP and interface
+          private_ip = get_private_ip
+          private_iface = @ssh.execute("ip addr show | grep 'inet 10\\.' | awk '{print $NF}' | head -1").strip
 
-        # Detect private IP and interface
-        private_ip = get_private_ip
-        private_iface = @ssh.execute("ip addr show | grep 'inet 10\\.' | awk '{print $NF}' | head -1").strip
+          @log.info "Installing k3s on private IP: %s, interface: %s", private_ip, private_iface
 
-        @log.info "Installing k3s on private IP: %s, interface: %s", private_ip, private_iface
+          # Install Docker for image building
+          install_docker(private_ip)
 
-        # Install Docker for image building
-        install_docker(private_ip)
+          # Configure k3s registries
+          configure_registries
 
-        # Configure k3s registries
-        configure_registries
-
-        # Install K3s with full configuration
-        install_cmd = <<~CMD
+          # Install K3s with full configuration
+          install_cmd = <<~CMD
           curl -sfL https://get.k3s.io | sudo sh -s - server \
             --bind-address=#{private_ip} \
             --advertise-address=#{private_ip} \
@@ -115,60 +115,60 @@ module Nvoi
             --service-cidr=10.43.0.0/16
         CMD
 
-        @ssh.execute(install_cmd, stream: true)
-        @log.success "K3s server installed"
+          @ssh.execute(install_cmd, stream: true)
+          @log.success "K3s server installed"
 
-        setup_kubeconfig(private_ip)
-        wait_for_k3s_ready
-      end
-
-      def install_k3s_agent
-        # Check if K3s agent is already running
-        begin
-          @ssh.execute("systemctl is-active k3s-agent")
-          @log.info "K3s agent already running, skipping installation"
-          return
-        rescue SSHCommandError
-          # Not running, continue
+          setup_kubeconfig(private_ip)
+          wait_for_k3s_ready
         end
 
-        @log.info "Installing K3s agent"
+        def install_k3s_agent
+          # Check if K3s agent is already running
+          begin
+            @ssh.execute("systemctl is-active k3s-agent")
+            @log.info "K3s agent already running, skipping installation"
+            return
+          rescue SSHCommandError
+            # Not running, continue
+          end
 
-        private_ip = get_private_ip
-        private_iface = @ssh.execute("ip addr show | grep 'inet 10\\.' | awk '{print $NF}' | head -1").strip
+          @log.info "Installing K3s agent"
 
-        @log.info "Worker private IP: %s, interface: %s", private_ip, private_iface
+          private_ip = get_private_ip
+          private_iface = @ssh.execute("ip addr show | grep 'inet 10\\.' | awk '{print $NF}' | head -1").strip
 
-        cmd = <<~CMD
+          @log.info "Worker private IP: %s, interface: %s", private_ip, private_iface
+
+          cmd = <<~CMD
           curl -sfL https://get.k3s.io | K3S_URL="https://#{@main_server_private_ip}:6443" K3S_TOKEN="#{@cluster_token}" sh -s - agent \
             --node-ip=#{private_ip} \
             --flannel-iface=#{private_iface} \
             --node-name=#{@server_name}
         CMD
 
-        @ssh.execute(cmd, stream: true)
-        @log.success "K3s agent installed"
-      end
+          @ssh.execute(cmd, stream: true)
+          @log.success "K3s agent installed"
+        end
 
-      def install_docker(private_ip)
-        # Check if Docker is already installed and running
-        begin
-          @ssh.execute("systemctl is-active docker")
-          @log.info "Docker already running, skipping installation"
-        rescue SSHCommandError
-          # Not running, install it
-          docker_install = <<~CMD
+        def install_docker(private_ip)
+          # Check if Docker is already installed and running
+          begin
+            @ssh.execute("systemctl is-active docker")
+            @log.info "Docker already running, skipping installation"
+          rescue SSHCommandError
+            # Not running, install it
+            docker_install = <<~CMD
             sudo apt-get update && sudo apt-get install -y docker.io
             sudo systemctl start docker
             sudo systemctl enable docker
             sudo usermod -aG docker deploy
           CMD
 
-          @ssh.execute(docker_install, stream: true)
-        end
+            @ssh.execute(docker_install, stream: true)
+          end
 
-        # Configure Docker for insecure registry
-        docker_config = <<~CMD
+          # Configure Docker for insecure registry
+          docker_config = <<~CMD
           sudo mkdir -p /etc/docker
           sudo tee /etc/docker/daemon.json > /dev/null <<EOF
           {"insecure-registries": ["#{private_ip}:5001", "localhost:30500"]}
@@ -176,14 +176,14 @@ module Nvoi
           sudo systemctl restart docker
         CMD
 
-        @ssh.execute(docker_config)
+          @ssh.execute(docker_config)
 
-        # Add registry domain to /etc/hosts
-        @ssh.execute('grep -q "nvoi-registry.default.svc.cluster.local" /etc/hosts || echo "127.0.0.1 nvoi-registry.default.svc.cluster.local" | sudo tee -a /etc/hosts')
-      end
+          # Add registry domain to /etc/hosts
+          @ssh.execute('grep -q "nvoi-registry.default.svc.cluster.local" /etc/hosts || echo "127.0.0.1 nvoi-registry.default.svc.cluster.local" | sudo tee -a /etc/hosts')
+        end
 
-      def configure_registries
-        config = <<~CMD
+        def configure_registries
+          config = <<~CMD
           sudo mkdir -p /etc/rancher/k3s
           sudo tee /etc/rancher/k3s/registries.yaml > /dev/null <<'REGEOF'
           mirrors:
@@ -203,54 +203,54 @@ module Nvoi
           REGEOF
         CMD
 
-        @ssh.execute(config)
-      end
+          @ssh.execute(config)
+        end
 
-      def setup_kubeconfig(private_ip = nil)
-        private_ip ||= get_private_ip
+        def setup_kubeconfig(private_ip = nil)
+          private_ip ||= get_private_ip
 
-        cmd = <<~CMD
+          cmd = <<~CMD
           sudo mkdir -p /home/deploy/.kube
           sudo cp /etc/rancher/k3s/k3s.yaml /home/deploy/.kube/config
           sudo sed -i "s/127.0.0.1/#{private_ip}/g" /home/deploy/.kube/config
           sudo chown -R deploy:deploy /home/deploy/.kube
         CMD
 
-        @ssh.execute(cmd)
-      end
+          @ssh.execute(cmd)
+        end
 
-      def wait_for_k3s_ready
-        @log.info "Waiting for K3s to be ready"
+        def wait_for_k3s_ready
+          @log.info "Waiting for K3s to be ready"
 
-        60.times do
-          begin
-            output = @ssh.execute("kubectl get nodes")
-            if output.include?("Ready")
-              @log.success "K3s is ready"
-              return
+          60.times do
+            begin
+              output = @ssh.execute("kubectl get nodes")
+              if output.include?("Ready")
+                @log.success "K3s is ready"
+                return
+              end
+            rescue SSHCommandError
+              # Not ready yet
             end
-          rescue SSHCommandError
-            # Not ready yet
+            sleep(5)
           end
-          sleep(5)
+
+          raise K8sError, "K3s failed to become ready"
         end
 
-        raise K8sError, "K3s failed to become ready"
-      end
+        def label_node(node_name, labels)
+          # Get actual node name from K3s
+          actual_node = @ssh.execute("kubectl get nodes -o jsonpath='{.items[0].metadata.name}'").strip
 
-      def label_node(node_name, labels)
-        # Get actual node name from K3s
-        actual_node = @ssh.execute("kubectl get nodes -o jsonpath='{.items[0].metadata.name}'").strip
-
-        labels.each do |key, value|
-          @ssh.execute("kubectl label node #{actual_node} #{key}=#{value} --overwrite")
+          labels.each do |key, value|
+            @ssh.execute("kubectl label node #{actual_node} #{key}=#{value} --overwrite")
+          end
         end
-      end
 
-      def setup_registry
-        @log.info "Setting up in-cluster registry"
+        def setup_registry
+          @log.info "Setting up in-cluster registry"
 
-        manifest = <<~YAML
+          manifest = <<~YAML
           apiVersion: v1
           kind: Namespace
           metadata:
@@ -302,50 +302,50 @@ module Nvoi
               app: nvoi-registry
         YAML
 
-        @ssh.execute("cat <<'EOF' | kubectl apply -f -\n#{manifest}\nEOF")
+          @ssh.execute("cat <<'EOF' | kubectl apply -f -\n#{manifest}\nEOF")
 
-        # Wait for registry to be ready
-        @log.info "Waiting for registry to be ready"
-        24.times do
-          begin
-            output = @ssh.execute("kubectl get deployment nvoi-registry -n default -o jsonpath='{.status.readyReplicas}'")
-            if output.strip == "1"
-              @log.success "In-cluster registry running on :30500"
-              return
+          # Wait for registry to be ready
+          @log.info "Waiting for registry to be ready"
+          24.times do
+            begin
+              output = @ssh.execute("kubectl get deployment nvoi-registry -n default -o jsonpath='{.status.readyReplicas}'")
+              if output.strip == "1"
+                @log.success "In-cluster registry running on :30500"
+                return
+              end
+            rescue SSHCommandError
+              # Not ready
             end
-          rescue SSHCommandError
-            # Not ready
+            sleep(5)
           end
-          sleep(5)
+
+          raise K8sError, "registry failed to become ready"
         end
 
-        raise K8sError, "registry failed to become ready"
-      end
+        def setup_ingress_controller
+          @log.info "Setting up NGINX Ingress Controller"
 
-      def setup_ingress_controller
-        @log.info "Setting up NGINX Ingress Controller"
+          @ssh.execute("kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.0/deploy/static/provider/baremetal/deploy.yaml", stream: true)
 
-        @ssh.execute("kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.0/deploy/static/provider/baremetal/deploy.yaml", stream: true)
+          # Wait for ingress controller
+          @log.info "Waiting for NGINX Ingress Controller to be ready"
+          60.times do
+            begin
+              ready = @ssh.execute("kubectl get deployment ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.readyReplicas}'").strip
+              desired = @ssh.execute("kubectl get deployment ingress-nginx-controller -n ingress-nginx -o jsonpath='{.spec.replicas}'").strip
 
-        # Wait for ingress controller
-        @log.info "Waiting for NGINX Ingress Controller to be ready"
-        60.times do
-          begin
-            ready = @ssh.execute("kubectl get deployment ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.readyReplicas}'").strip
-            desired = @ssh.execute("kubectl get deployment ingress-nginx-controller -n ingress-nginx -o jsonpath='{.spec.replicas}'").strip
-
-            if !ready.empty? && !desired.empty? && ready == desired
-              @log.success "NGINX Ingress Controller is ready"
-              return
+              if !ready.empty? && !desired.empty? && ready == desired
+                @log.success "NGINX Ingress Controller is ready"
+                return
+              end
+            rescue SSHCommandError
+              # Not ready
             end
-          rescue SSHCommandError
-            # Not ready
+            sleep(10)
           end
-          sleep(10)
-        end
 
-        raise K8sError, "NGINX Ingress Controller failed to become ready"
-      end
+          raise K8sError, "NGINX Ingress Controller failed to become ready"
+        end
     end
   end
 end

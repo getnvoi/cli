@@ -50,31 +50,31 @@ module Nvoi
 
       private
 
-      def provision_server
-        # Step 1: Provision all servers (main + workers)
-        provisioner = Steps::ServerProvisioner.new(@config, @provider, @log)
-        main_server_ip = provisioner.run
+        def provision_server
+          # Step 1: Provision all servers (main + workers)
+          provisioner = Steps::ServerProvisioner.new(@config, @provider, @log)
+          main_server_ip = provisioner.run
 
-        # Step 2: Provision volumes (create, attach, mount)
-        volume_provisioner = Steps::VolumeProvisioner.new(@config, @provider, @log)
-        volume_provisioner.run
+          # Step 2: Provision volumes (create, attach, mount)
+          volume_provisioner = Steps::VolumeProvisioner.new(@config, @provider, @log)
+          volume_provisioner.run
 
-        # Step 3: Setup K3s cluster (main server + join workers)
-        cluster_setup = Steps::K3sClusterSetup.new(@config, @provider, @log, main_server_ip)
-        cluster_setup.run
+          # Step 3: Setup K3s cluster (main server + join workers)
+          cluster_setup = Steps::K3sClusterSetup.new(@config, @provider, @log, main_server_ip)
+          cluster_setup.run
 
-        main_server_ip
-      end
+          main_server_ip
+        end
 
-      def configure_tunnels
-        configurator = Steps::TunnelConfigurator.new(@config, @log)
-        configurator.run
-      end
+        def configure_tunnels
+          configurator = Steps::TunnelConfigurator.new(@config, @log)
+          configurator.run
+        end
 
-      def deploy_application(server_ip, tunnels)
-        app_deployer = Steps::ApplicationDeployer.new(@config, @provider, @working_dir, server_ip, tunnels, @log)
-        app_deployer.run
-      end
+        def deploy_application(server_ip, tunnels)
+          app_deployer = Steps::ApplicationDeployer.new(@config, @provider, @working_dir, server_ip, tunnels, @log)
+          app_deployer.run
+        end
     end
   end
 end

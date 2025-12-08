@@ -34,27 +34,27 @@ module Nvoi
 
       private
 
-      def wait_for_database(name, timeout: 120)
-        @log.info "Waiting for database to be ready..."
+        def wait_for_database(name, timeout: 120)
+          @log.info "Waiting for database to be ready..."
 
-        start_time = Time.now
-        loop do
-          begin
-            output = @ssh.execute("kubectl get pods -l app=#{name} -o jsonpath='{.items[0].status.phase}'")
-            if output.strip == "Running"
-              @log.success "Database is running"
-              return
+          start_time = Time.now
+          loop do
+            begin
+              output = @ssh.execute("kubectl get pods -l app=#{name} -o jsonpath='{.items[0].status.phase}'")
+              if output.strip == "Running"
+                @log.success "Database is running"
+                return
+              end
+            rescue SSHCommandError
+              # Not ready yet
             end
-          rescue SSHCommandError
-            # Not ready yet
+
+            elapsed = Time.now - start_time
+            raise K8sError, "database failed to start within #{timeout}s" if elapsed > timeout
+
+            sleep(5)
           end
-
-          elapsed = Time.now - start_time
-          raise K8sError, "database failed to start within #{timeout}s" if elapsed > timeout
-
-          sleep(5)
         end
-      end
     end
   end
 end

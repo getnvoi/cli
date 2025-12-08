@@ -55,13 +55,13 @@ module Nvoi
         user_data = generate_user_data
 
         opts = Providers::ServerCreateOptions.new(
-          name: name,
+          name:,
           type: server_type,
-          image: image,
-          location: location,
-          user_data: user_data,
-          network_id: network_id,
-          firewall_id: firewall_id
+          image:,
+          location:,
+          user_data:,
+          network_id:,
+          firewall_id:
         )
 
         server = @provider.create_server(opts)
@@ -79,10 +79,10 @@ module Nvoi
 
       private
 
-      def generate_user_data
-        ssh_key = @config.ssh_public_key
+        def generate_user_data
+          ssh_key = @config.ssh_public_key
 
-        <<~CLOUD_INIT
+          <<~CLOUD_INIT
           #cloud-config
           users:
             - name: deploy
@@ -99,28 +99,28 @@ module Nvoi
             - jq
             - rsync
         CLOUD_INIT
-      end
-
-      def wait_for_ssh(ip)
-        @log.info "Waiting for SSH on %s...", ip
-        ssh = Remote::SSHExecutor.new(ip, @config.ssh_key_path)
-
-        Constants::SSH_READY_MAX_ATTEMPTS.times do |i|
-          begin
-            output = ssh.execute("echo 'ready'")
-            if output.strip == "ready"
-              @log.success "SSH ready"
-              return
-            end
-          rescue SSHCommandError
-            # SSH not ready yet
-          end
-
-          sleep(Constants::SSH_READY_INTERVAL)
         end
 
-        raise SSHConnectionError, "SSH connection failed after #{Constants::SSH_READY_MAX_ATTEMPTS} attempts"
-      end
+        def wait_for_ssh(ip)
+          @log.info "Waiting for SSH on %s...", ip
+          ssh = Remote::SSHExecutor.new(ip, @config.ssh_key_path)
+
+          Constants::SSH_READY_MAX_ATTEMPTS.times do |i|
+            begin
+              output = ssh.execute("echo 'ready'")
+              if output.strip == "ready"
+                @log.success "SSH ready"
+                return
+              end
+            rescue SSHCommandError
+              # SSH not ready yet
+            end
+
+            sleep(Constants::SSH_READY_INTERVAL)
+          end
+
+          raise SSHConnectionError, "SSH connection failed after #{Constants::SSH_READY_MAX_ATTEMPTS} attempts"
+        end
     end
   end
 end

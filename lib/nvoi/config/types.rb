@@ -34,17 +34,17 @@ module Nvoi
 
       private
 
-      def parse_servers(data)
-        data.transform_values { |v| ServerConfig.new(v || {}) }
-      end
+        def parse_servers(data)
+          data.transform_values { |v| ServerConfig.new(v || {}) }
+        end
 
-      def parse_app_config(data)
-        data.transform_values { |v| AppServiceConfig.new(v || {}) }
-      end
+        def parse_app_config(data)
+          data.transform_values { |v| AppServiceConfig.new(v || {}) }
+        end
 
-      def parse_services(data)
-        data.transform_values { |v| ServiceConfig.new(v || {}) }
-      end
+        def parse_services(data)
+          data.transform_values { |v| ServiceConfig.new(v || {}) }
+        end
     end
 
     # DomainProviderConfig contains domain provider configuration
@@ -179,9 +179,9 @@ module Nvoi
       # Convert to ServiceSpec
       def to_service_spec(namer)
         port = case @adapter&.downcase
-               when "mysql" then 3306
-               else 5432
-               end
+        when "mysql" then 3306
+        else 5432
+        end
 
         vols = {}
         vols["data"] = @volume if @volume
@@ -189,7 +189,7 @@ module Nvoi
         ServiceSpec.new(
           name: namer.database_service_name,
           image: @image,
-          port: port,
+          port:,
           env: nil,
           volumes: vols,
           replicas: 1,
@@ -220,16 +220,16 @@ module Nvoi
 
         # Infer port from image
         port = case @image
-               when /redis/ then 6379
-               when /postgres/ then 5432
-               when /mysql/ then 3306
-               else 0
-               end
+        when /redis/ then 6379
+        when /postgres/ then 5432
+        when /mysql/ then 3306
+        else 0
+        end
 
         ServiceSpec.new(
           name: "#{app_name}-#{service_name}",
           image: @image,
-          port: port,
+          port:,
           command: cmd,
           env: @env,
           volumes: vols,

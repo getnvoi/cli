@@ -15,7 +15,7 @@ class Nvoi::Providers::HetznerTest < Minitest::Test
 
   def json_response(body = nil, status: 200, **kwargs)
     body = kwargs if body.nil? && kwargs.any?
-    { status: status, body: body.to_json, headers: @json_headers }
+    { status:, body: body.to_json, headers: @json_headers }
   end
 
   # Validation tests

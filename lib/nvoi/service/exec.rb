@@ -101,44 +101,44 @@ module Nvoi
 
       private
 
-      def resolve_server_name(name)
-        return @config.server_name if name.nil? || name.empty? || name == "main"
+        def resolve_server_name(name)
+          return @config.server_name if name.nil? || name.empty? || name == "main"
 
-        # Check if name matches "{group}-{n}" pattern
-        parts = name.split("-")
-        if parts.length >= 2
-          num_str = parts.last
-          if num_str.match?(/^\d+$/)
-            group_name = parts[0...-1].join("-")
-            return @config.namer.server_name(group_name, num_str.to_i)
+          # Check if name matches "{group}-{n}" pattern
+          parts = name.split("-")
+          if parts.length >= 2
+            num_str = parts.last
+            if num_str.match?(/^\d+$/)
+              group_name = parts[0...-1].join("-")
+              return @config.namer.server_name(group_name, num_str.to_i)
+            end
           end
+
+          # Assume it's a group name, return first server
+          @config.namer.server_name(name, 1)
         end
 
-        # Assume it's a group name, return first server
-        @config.namer.server_name(name, 1)
-      end
+        def get_all_server_names
+          names = []
 
-      def get_all_server_names
-        names = []
+          @config.deploy.application.servers.each do |group_name, group_config|
+            next unless group_config
 
-        @config.deploy.application.servers.each do |group_name, group_config|
-          next unless group_config
-
-          count = group_config.count.positive? ? group_config.count : 1
-          (1..count).each do |i|
-            names << @config.namer.server_name(group_name, i)
+            count = group_config.count.positive? ? group_config.count : 1
+            (1..count).each do |i|
+              names << @config.namer.server_name(group_name, i)
+            end
           end
+
+          names
         end
 
-        names
-      end
+        def find_server(server_name)
+          server = @provider.find_server(server_name)
+          raise ServiceError, "server not found: #{server_name}" unless server
 
-      def find_server(server_name)
-        server = @provider.find_server(server_name)
-        raise ServiceError, "server not found: #{server_name}" unless server
-
-        server
-      end
+          server
+        end
     end
   end
 end

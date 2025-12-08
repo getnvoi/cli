@@ -35,8 +35,8 @@ module Nvoi
         tunnel_secret = generate_tunnel_secret
 
         response = post(url, {
-          name: name,
-          tunnel_secret: tunnel_secret,
+          name:,
+          tunnel_secret:,
           config_src: "cloudflare"
         })
 
@@ -50,7 +50,7 @@ module Nvoi
 
       def find_tunnel(name)
         url = "accounts/#{@account_id}/cfd_tunnel"
-        response = get(url, { name: name, is_deleted: false })
+        response = get(url, { name:, is_deleted: false })
 
         results = response["result"]
         return nil if results.nil? || results.empty?
@@ -75,7 +75,7 @@ module Nvoi
         config = {
           ingress: [
             {
-              hostname: hostname,
+              hostname:,
               service: service_url,
               originRequest: { httpHostHeader: hostname }
             },
@@ -83,7 +83,7 @@ module Nvoi
           ]
         }
 
-        put(url, { config: config })
+        put(url, { config: })
       end
 
       def verify_tunnel_configuration(tunnel_id, expected_hostname, expected_service, max_attempts)
@@ -165,9 +165,9 @@ module Nvoi
 
         response = post(url, {
           type: record_type,
-          name: name,
-          content: content,
-          proxied: proxied,
+          name:,
+          content:,
+          proxied:,
           ttl: 1
         })
 
@@ -187,9 +187,9 @@ module Nvoi
 
         response = patch(url, {
           type: record_type,
-          name: name,
-          content: content,
-          proxied: proxied,
+          name:,
+          content:,
+          proxied:,
           ttl: 1
         })
 
@@ -208,9 +208,9 @@ module Nvoi
         existing = find_dns_record(zone_id, name, record_type)
 
         if existing
-          update_dns_record(zone_id, existing.id, name, record_type, content, proxied: proxied)
+          update_dns_record(zone_id, existing.id, name, record_type, content, proxied:)
         else
-          create_dns_record(zone_id, name, record_type, content, proxied: proxied)
+          create_dns_record(zone_id, name, record_type, content, proxied:)
         end
       end
 
@@ -221,67 +221,67 @@ module Nvoi
 
       private
 
-      def get(url, params = {})
-        response = @conn.get(url) do |req|
-          req.headers["Authorization"] = "Bearer #{@token}"
-          req.params = params unless params.empty?
-        end
-        handle_response(response)
-      end
-
-      def post(url, body)
-        response = @conn.post(url) do |req|
-          req.headers["Authorization"] = "Bearer #{@token}"
-          req.body = body
-        end
-        handle_response(response)
-      end
-
-      def put(url, body)
-        response = @conn.put(url) do |req|
-          req.headers["Authorization"] = "Bearer #{@token}"
-          req.body = body
-        end
-        handle_response(response)
-      end
-
-      def patch(url, body)
-        response = @conn.patch(url) do |req|
-          req.headers["Authorization"] = "Bearer #{@token}"
-          req.body = body
-        end
-        handle_response(response)
-      end
-
-      def delete(url)
-        response = @conn.delete(url) do |req|
-          req.headers["Authorization"] = "Bearer #{@token}"
+        def get(url, params = {})
+          response = @conn.get(url) do |req|
+            req.headers["Authorization"] = "Bearer #{@token}"
+            req.params = params unless params.empty?
+          end
+          handle_response(response)
         end
 
-        # 404 is ok for idempotent delete
-        return { "success" => true } if response.status == 404
-
-        handle_response(response)
-      end
-
-      def handle_response(response)
-        body = response.body
-
-        unless body.is_a?(Hash)
-          raise CloudflareError, "unexpected response format"
+        def post(url, body)
+          response = @conn.post(url) do |req|
+            req.headers["Authorization"] = "Bearer #{@token}"
+            req.body = body
+          end
+          handle_response(response)
         end
 
-        unless body["success"]
-          errors = body["errors"]&.map { |e| e["message"] }&.join(", ") || "unknown error"
-          raise CloudflareError, "API error: #{errors}"
+        def put(url, body)
+          response = @conn.put(url) do |req|
+            req.headers["Authorization"] = "Bearer #{@token}"
+            req.body = body
+          end
+          handle_response(response)
         end
 
-        body
-      end
+        def patch(url, body)
+          response = @conn.patch(url) do |req|
+            req.headers["Authorization"] = "Bearer #{@token}"
+            req.body = body
+          end
+          handle_response(response)
+        end
 
-      def generate_tunnel_secret
-        Base64.strict_encode64(SecureRandom.random_bytes(32))
-      end
+        def delete(url)
+          response = @conn.delete(url) do |req|
+            req.headers["Authorization"] = "Bearer #{@token}"
+          end
+
+          # 404 is ok for idempotent delete
+          return { "success" => true } if response.status == 404
+
+          handle_response(response)
+        end
+
+        def handle_response(response)
+          body = response.body
+
+          unless body.is_a?(Hash)
+            raise CloudflareError, "unexpected response format"
+          end
+
+          unless body["success"]
+            errors = body["errors"]&.map { |e| e["message"] }&.join(", ") || "unknown error"
+            raise CloudflareError, "API error: #{errors}"
+          end
+
+          body
+        end
+
+        def generate_tunnel_secret
+          Base64.strict_encode64(SecureRandom.random_bytes(32))
+        end
     end
   end
 end

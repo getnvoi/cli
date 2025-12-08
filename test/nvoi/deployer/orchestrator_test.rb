@@ -37,176 +37,176 @@ class Nvoi::Deployer::OrchestratorTest < Minitest::Test
 
   private
 
-  def run_orchestrator_deployment(config)
-    # Stub ServiceDeployer to capture deploy_database calls
-    service_deployer = mock_service_deployer
+    def run_orchestrator_deployment(config)
+      # Stub ServiceDeployer to capture deploy_database calls
+      service_deployer = mock_service_deployer
 
-    Nvoi::Deployer::ServiceDeployer.stub(:new, service_deployer) do
-      Nvoi::Deployer::ImageBuilder.stub(:new, mock_image_builder) do
-        Nvoi::Deployer::Cleaner.stub(:new, mock_cleaner) do
-          Nvoi::Remote::SSHExecutor.stub(:new, @ssh) do
-            Nvoi::Remote::DockerManager.stub(:new, mock_docker) do
-              orchestrator = Nvoi::Deployer::Orchestrator.new(config, mock_provider, @log)
-              orchestrator.run("1.2.3.4", [], "/tmp/test")
+      Nvoi::Deployer::ServiceDeployer.stub(:new, service_deployer) do
+        Nvoi::Deployer::ImageBuilder.stub(:new, mock_image_builder) do
+          Nvoi::Deployer::Cleaner.stub(:new, mock_cleaner) do
+            Nvoi::Remote::SSHExecutor.stub(:new, @ssh) do
+              Nvoi::Remote::DockerManager.stub(:new, mock_docker) do
+                orchestrator = Nvoi::Deployer::Orchestrator.new(config, mock_provider, @log)
+                orchestrator.run("1.2.3.4", [], "/tmp/test")
+              end
             end
           end
         end
       end
     end
-  end
 
-  def build_config(adapter:)
-    OrchestratorTestConfig.new(adapter: adapter)
-  end
+    def build_config(adapter:)
+      OrchestratorTestConfig.new(adapter:)
+    end
 
-  def mock_service_deployer
-    test_instance = self
-    Object.new.tap do |deployer|
-      deployer.define_singleton_method(:deploy_app_secret) { |_| }
-      deployer.define_singleton_method(:deploy_database) do |spec|
-        test_instance.instance_variable_set(:@deploy_database_called, true)
-        test_instance.instance_variable_set(:@deployed_db_spec, spec)
+    def mock_service_deployer
+      test_instance = self
+      Object.new.tap do |deployer|
+        deployer.define_singleton_method(:deploy_app_secret) { |_| }
+        deployer.define_singleton_method(:deploy_database) do |spec|
+          test_instance.instance_variable_set(:@deploy_database_called, true)
+          test_instance.instance_variable_set(:@deployed_db_spec, spec)
+        end
+        deployer.define_singleton_method(:deploy_service) { |_, _| }
+        deployer.define_singleton_method(:deploy_app_service) { |_, _, _, _| }
+        deployer.define_singleton_method(:deploy_cloudflared) { |_, _| }
+        deployer.define_singleton_method(:verify_traffic_switchover) { |_| }
       end
-      deployer.define_singleton_method(:deploy_service) { |_, _| }
-      deployer.define_singleton_method(:deploy_app_service) { |_, _, _, _| }
-      deployer.define_singleton_method(:deploy_cloudflared) { |_, _| }
-      deployer.define_singleton_method(:verify_traffic_switchover) { |_| }
-    end
-  end
-
-  def mock_image_builder
-    Object.new.tap do |builder|
-      builder.define_singleton_method(:build_and_push) { |_, _| }
-    end
-  end
-
-  def mock_cleaner
-    Object.new.tap do |cleaner|
-      cleaner.define_singleton_method(:cleanup_old_images) { |_| }
-    end
-  end
-
-  def mock_docker
-    Object.new
-  end
-
-  def mock_provider
-    Object.new
-  end
-
-  class MockLogger
-    attr_reader :messages
-
-    def initialize
-      @messages = []
     end
 
-    def info(msg, *args)
-      @messages << (args.empty? ? msg : format(msg, *args))
+    def mock_image_builder
+      Object.new.tap do |builder|
+        builder.define_singleton_method(:build_and_push) { |_, _| }
+      end
     end
 
-    def success(msg, *args)
-      @messages << (args.empty? ? msg : format(msg, *args))
+    def mock_cleaner
+      Object.new.tap do |cleaner|
+        cleaner.define_singleton_method(:cleanup_old_images) { |_| }
+      end
     end
 
-    def warning(msg, *args)
-      @messages << (args.empty? ? msg : format(msg, *args))
-    end
-  end
-
-  class MockSSH
-    def execute(_cmd, **_opts)
-      ""
-    end
-  end
-
-  class OrchestratorTestConfig
-    attr_reader :ssh_key_path, :container_prefix
-
-    def initialize(adapter:)
-      @adapter = adapter
-      @ssh_key_path = "/tmp/test_key"
-      @container_prefix = "test-app"
+    def mock_docker
+      Object.new
     end
 
-    def deploy
-      @deploy ||= OrchestratorTestDeploy.new(@adapter)
+    def mock_provider
+      Object.new
     end
 
-    def namer
-      @namer ||= OrchestratorTestNamer.new
+    class MockLogger
+      attr_reader :messages
+
+      def initialize
+        @messages = []
+      end
+
+      def info(msg, *args)
+        @messages << (args.empty? ? msg : format(msg, *args))
+      end
+
+      def success(msg, *args)
+        @messages << (args.empty? ? msg : format(msg, *args))
+      end
+
+      def warning(msg, *args)
+        @messages << (args.empty? ? msg : format(msg, *args))
+      end
     end
 
-    def env_for_service(_name)
-      {}
-    end
-  end
-
-  class OrchestratorTestDeploy
-    def initialize(adapter)
-      @adapter = adapter
+    class MockSSH
+      def execute(_cmd, **_opts)
+        ""
+      end
     end
 
-    def application
-      @application ||= OrchestratorTestApplication.new(@adapter)
-    end
-  end
+    class OrchestratorTestConfig
+      attr_reader :ssh_key_path, :container_prefix
 
-  class OrchestratorTestApplication
-    attr_reader :env, :secrets, :services, :app
+      def initialize(adapter:)
+        @adapter = adapter
+        @ssh_key_path = "/tmp/test_key"
+        @container_prefix = "test-app"
+      end
 
-    def initialize(adapter)
-      @adapter = adapter
-      @env = {}
-      @secrets = {}
-      @services = {}
-      @app = {}
-    end
+      def deploy
+        @deploy ||= OrchestratorTestDeploy.new(@adapter)
+      end
 
-    def database
-      return nil unless @adapter
+      def namer
+        @namer ||= OrchestratorTestNamer.new
+      end
 
-      OrchestratorTestDatabase.new(@adapter)
-    end
-  end
-
-  class OrchestratorTestDatabase
-    attr_reader :adapter
-
-    def initialize(adapter)
-      @adapter = adapter
+      def env_for_service(_name)
+        {}
+      end
     end
 
-    def to_service_spec(namer)
-      Struct.new(:name, :image, :port, :secrets, :servers).new(
-        namer.database_service_name,
-        "postgres:15",
-        5432,
-        {},
-        []
-      )
-    end
-  end
+    class OrchestratorTestDeploy
+      def initialize(adapter)
+        @adapter = adapter
+      end
 
-  class OrchestratorTestNamer
-    def image_tag(timestamp)
-      "test-app:#{timestamp}"
+      def application
+        @application ||= OrchestratorTestApplication.new(@adapter)
+      end
     end
 
-    def deployment_lock_file_path
-      "/tmp/nvoi/deploy.lock"
+    class OrchestratorTestApplication
+      attr_reader :env, :secrets, :services, :app
+
+      def initialize(adapter)
+        @adapter = adapter
+        @env = {}
+        @secrets = {}
+        @services = {}
+        @app = {}
+      end
+
+      def database
+        return nil unless @adapter
+
+        OrchestratorTestDatabase.new(@adapter)
+      end
     end
 
-    def database_service_name
-      "db-myapp"
+    class OrchestratorTestDatabase
+      attr_reader :adapter
+
+      def initialize(adapter)
+        @adapter = adapter
+      end
+
+      def to_service_spec(namer)
+        Struct.new(:name, :image, :port, :secrets, :servers).new(
+          namer.database_service_name,
+          "postgres:15",
+          5432,
+          {},
+          []
+        )
+      end
     end
 
-    def database_secret_name
-      "db-myapp-secret"
-    end
+    class OrchestratorTestNamer
+      def image_tag(timestamp)
+        "test-app:#{timestamp}"
+      end
 
-    def database_volume_name
-      "db-myapp-volume"
+      def deployment_lock_file_path
+        "/tmp/nvoi/deploy.lock"
+      end
+
+      def database_service_name
+        "db-myapp"
+      end
+
+      def database_secret_name
+        "db-myapp-secret"
+      end
+
+      def database_volume_name
+        "db-myapp-volume"
+      end
     end
-  end
 end

@@ -26,47 +26,47 @@ module Nvoi
 
       private
 
-      def determine_private_key_path
-        ssh_config = @config.deploy.application.ssh_key_path
+        def determine_private_key_path
+          ssh_config = @config.deploy.application.ssh_key_path
 
-        if ssh_config&.private && !ssh_config.private.empty?
-          expand_path(ssh_config.private)
-        elsif ENV["SSH_KEY_PATH"] && !ENV["SSH_KEY_PATH"].empty?
-          expand_path(ENV["SSH_KEY_PATH"])
-        else
-          find_ssh_key
-        end
-      end
-
-      def determine_public_key_path
-        ssh_config = @config.deploy.application.ssh_key_path
-
-        if ssh_config&.public && !ssh_config.public.empty?
-          expand_path(ssh_config.public)
-        else
-          "#{@config.ssh_key_path}.pub"
-        end
-      end
-
-      def find_ssh_key
-        home_dir = Dir.home
-        ssh_dir = File.join(home_dir, ".ssh")
-
-        key_names = %w[id_rsa id_ed25519 id_ecdsa id_dsa]
-        key_names.each do |name|
-          path = File.join(ssh_dir, name)
-          return path if File.exist?(path)
+          if ssh_config&.private && !ssh_config.private.empty?
+            expand_path(ssh_config.private)
+          elsif ENV["SSH_KEY_PATH"] && !ENV["SSH_KEY_PATH"].empty?
+            expand_path(ENV["SSH_KEY_PATH"])
+          else
+            find_ssh_key
+          end
         end
 
-        # Return default path even if it doesn't exist
-        File.join(ssh_dir, "id_rsa")
-      end
+        def determine_public_key_path
+          ssh_config = @config.deploy.application.ssh_key_path
 
-      def expand_path(path)
-        return path unless path.start_with?("~/")
+          if ssh_config&.public && !ssh_config.public.empty?
+            expand_path(ssh_config.public)
+          else
+            "#{@config.ssh_key_path}.pub"
+          end
+        end
 
-        File.join(Dir.home, path[2..])
-      end
+        def find_ssh_key
+          home_dir = Dir.home
+          ssh_dir = File.join(home_dir, ".ssh")
+
+          key_names = %w[id_rsa id_ed25519 id_ecdsa id_dsa]
+          key_names.each do |name|
+            path = File.join(ssh_dir, name)
+            return path if File.exist?(path)
+          end
+
+          # Return default path even if it doesn't exist
+          File.join(ssh_dir, "id_rsa")
+        end
+
+        def expand_path(path)
+          return path unless path.start_with?("~/")
+
+          File.join(Dir.home, path[2..])
+        end
     end
   end
 end

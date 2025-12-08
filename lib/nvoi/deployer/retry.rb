@@ -42,18 +42,18 @@ module Nvoi
 
       private
 
-      # Exponential backoff: attempt 0: 1s, attempt 1: 2s, attempt 2: 4s, etc.
-      def exponential_backoff(attempt)
-        2**attempt
-      end
+        # Exponential backoff: attempt 0: 1s, attempt 1: 2s, attempt 2: 4s, etc.
+        def exponential_backoff(attempt)
+          2**attempt
+        end
 
-      # Check if an error is retryable
-      def retryable?(error)
-        return error.retryable? if error.respond_to?(:retryable?)
+        # Check if an error is retryable
+        def retryable?(error)
+          return error.retryable? if error.respond_to?(:retryable?)
 
-        # Default: network/SSH errors are retryable
-        error.is_a?(SSHError) || error.is_a?(NetworkError)
-      end
+          # Default: network/SSH errors are retryable
+          error.is_a?(SSHError) || error.is_a?(NetworkError)
+        end
     end
 
     # Retry helper module for simple retry scenarios (backwards compatibility)

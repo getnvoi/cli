@@ -143,28 +143,28 @@ module Nvoi
 
       private
 
-      def handle_response(response)
-        case response.status
-        when 200..299
-          response.body
-        when 401
-          raise AuthenticationError, "Invalid Hetzner API token"
-        when 404
-          raise NotFoundError, parse_error(response)
-        when 422
-          raise ValidationError, parse_error(response)
-        else
-          raise APIError, parse_error(response)
+        def handle_response(response)
+          case response.status
+          when 200..299
+            response.body
+          when 401
+            raise AuthenticationError, "Invalid Hetzner API token"
+          when 404
+            raise NotFoundError, parse_error(response)
+          when 422
+            raise ValidationError, parse_error(response)
+          else
+            raise APIError, parse_error(response)
+          end
         end
-      end
 
-      def parse_error(response)
-        if response.body.is_a?(Hash) && response.body["error"]
-          response.body["error"]["message"]
-        else
-          "HTTP #{response.status}: #{response.body}"
+        def parse_error(response)
+          if response.body.is_a?(Hash) && response.body["error"]
+            response.body["error"]["message"]
+          else
+            "HTTP #{response.status}: #{response.body}"
+          end
         end
-      end
     end
   end
 end

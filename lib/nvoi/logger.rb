@@ -51,22 +51,22 @@ module Nvoi
 
     private
 
-    def format_message(message, args)
-      return message if args.empty?
+      def format_message(message, args)
+        return message if args.empty?
 
-      format(message, *args)
-    end
+        format(message, *args)
+      end
 
-    def log(color, level, message)
-      timestamp = Time.now.strftime("%H:%M:%S")
-      prefix = colorize(color, "[#{timestamp}] [#{level}]")
-      @output.puts "#{prefix} #{message}"
-    end
+      def log(color, level, message)
+        timestamp = Time.now.strftime("%H:%M:%S")
+        prefix = colorize(color, "[#{timestamp}] [#{level}]")
+        @output.puts "#{prefix} #{message}"
+      end
 
-    def colorize(color, text)
-      return text unless @color
+      def colorize(color, text)
+        return text unless @color
 
-      "#{COLORS[color]}#{text}#{COLORS[:reset]}"
-    end
+        "#{COLORS[color]}#{text}#{COLORS[:reset]}"
+      end
   end
 end

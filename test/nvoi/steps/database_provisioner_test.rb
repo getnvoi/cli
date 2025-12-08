@@ -50,110 +50,110 @@ class Nvoi::Steps::DatabaseProvisionerTest < Minitest::Test
 
   private
 
-  def mock_config(adapter:, image: nil)
-    db_config = if adapter
-                  MockDatabaseConfig.new(adapter: adapter, image: image)
-                end
-
-    MockConfig.new(database: db_config)
-  end
-
-  class MockLogger
-    attr_reader :messages
-
-    def initialize
-      @messages = []
-    end
-
-    def info(msg, *args)
-      @messages << (args.empty? ? msg : format(msg, *args))
-    end
-
-    def success(msg, *args)
-      @messages << (args.empty? ? msg : format(msg, *args))
-    end
-  end
-
-  class MockSSH
-    def initialize
-      @responses = {}
-    end
-
-    def add_response(pattern, response)
-      @responses[pattern] = response
-    end
-
-    def execute(cmd, **_opts)
-      @responses.each do |pattern, response|
-        return response if cmd.include?(pattern)
+    def mock_config(adapter:, image: nil)
+      db_config = if adapter
+        MockDatabaseConfig.new(adapter:, image:)
       end
-      "Running"
-    end
-  end
 
-  class MockServiceDeployer
-    attr_reader :deploy_database_called
-
-    def initialize
-      @deploy_database_called = false
+      MockConfig.new(database: db_config)
     end
 
-    def deploy_database(_spec)
-      @deploy_database_called = true
-    end
-  end
+    class MockLogger
+      attr_reader :messages
 
-  MockDatabaseConfig = Struct.new(:adapter, :image, :secrets, :servers, :volume, keyword_init: true) do
-    def to_service_spec(namer)
-      Struct.new(:name, :image, :port, :secrets, :servers).new(
-        namer.database_service_name,
-        image,
-        5432,
-        secrets || {},
-        servers || []
-      )
-    end
-  end
+      def initialize
+        @messages = []
+      end
 
-  class MockConfig
-    attr_reader :deploy
+      def info(msg, *args)
+        @messages << (args.empty? ? msg : format(msg, *args))
+      end
 
-    def initialize(database:)
-      @deploy = MockDeploy.new(database: database)
+      def success(msg, *args)
+        @messages << (args.empty? ? msg : format(msg, *args))
+      end
     end
 
-    def namer
-      MockNamer.new
-    end
-  end
+    class MockSSH
+      def initialize
+        @responses = {}
+      end
 
-  class MockDeploy
-    attr_reader :application
+      def add_response(pattern, response)
+        @responses[pattern] = response
+      end
 
-    def initialize(database:)
-      @application = MockApplication.new(database: database)
-    end
-  end
-
-  class MockApplication
-    attr_reader :database
-
-    def initialize(database:)
-      @database = database
-    end
-  end
-
-  class MockNamer
-    def database_service_name
-      "db-test"
+      def execute(cmd, **_opts)
+        @responses.each do |pattern, response|
+          return response if cmd.include?(pattern)
+        end
+        "Running"
+      end
     end
 
-    def database_secret_name
-      "db-test-secret"
+    class MockServiceDeployer
+      attr_reader :deploy_database_called
+
+      def initialize
+        @deploy_database_called = false
+      end
+
+      def deploy_database(_spec)
+        @deploy_database_called = true
+      end
     end
 
-    def database_volume_name
-      "db-test-volume"
+    MockDatabaseConfig = Struct.new(:adapter, :image, :secrets, :servers, :volume, keyword_init: true) do
+      def to_service_spec(namer)
+        Struct.new(:name, :image, :port, :secrets, :servers).new(
+          namer.database_service_name,
+          image,
+          5432,
+          secrets || {},
+          servers || []
+        )
+      end
     end
-  end
+
+    class MockConfig
+      attr_reader :deploy
+
+      def initialize(database:)
+        @deploy = MockDeploy.new(database:)
+      end
+
+      def namer
+        MockNamer.new
+      end
+    end
+
+    class MockDeploy
+      attr_reader :application
+
+      def initialize(database:)
+        @application = MockApplication.new(database:)
+      end
+    end
+
+    class MockApplication
+      attr_reader :database
+
+      def initialize(database:)
+        @database = database
+      end
+    end
+
+    class MockNamer
+      def database_service_name
+        "db-test"
+      end
+
+      def database_secret_name
+        "db-test-secret"
+      end
+
+      def database_volume_name
+        "db-test-volume"
+      end
+    end
 end

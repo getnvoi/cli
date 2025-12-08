@@ -78,10 +78,10 @@ module Nvoi
 
         private
 
-        def decode_key(hex_key)
-          validate_key(hex_key)
-          [hex_key].pack("H*")
-        end
+          def decode_key(hex_key)
+            validate_key(hex_key)
+            [hex_key].pack("H*")
+          end
       end
     end
   end

@@ -34,33 +34,33 @@ module Nvoi
 
       private
 
-      def configure_service_tunnel(service_name, service_config)
-        tunnel_name = @config.namer.tunnel_name(service_name)
-        hostname = build_hostname(service_config.subdomain, service_config.domain)
+        def configure_service_tunnel(service_name, service_config)
+          tunnel_name = @config.namer.tunnel_name(service_name)
+          hostname = build_hostname(service_config.subdomain, service_config.domain)
 
-        # Service URL points to the K8s service
-        k8s_service_name = @config.namer.app_service_name(service_name)
-        service_url = "http://#{k8s_service_name}:#{service_config.port}"
+          # Service URL points to the K8s service
+          k8s_service_name = @config.namer.app_service_name(service_name)
+          service_url = "http://#{k8s_service_name}:#{service_config.port}"
 
-        tunnel = @tunnel_manager.setup_tunnel(tunnel_name, hostname, service_url, service_config.domain)
+          tunnel = @tunnel_manager.setup_tunnel(tunnel_name, hostname, service_url, service_config.domain)
 
-        Deployer::TunnelInfo.new(
-          service_name: service_name,
-          hostname: hostname,
-          tunnel_id: tunnel.tunnel_id,
-          tunnel_token: tunnel.tunnel_token
-        )
-      end
-
-      # Build hostname from subdomain and domain
-      # Supports: "app" -> "app.example.com", "" or "@" -> "example.com", "*" -> "*.example.com"
-      def build_hostname(subdomain, domain)
-        if subdomain.nil? || subdomain.empty? || subdomain == "@"
-          domain
-        else
-          "#{subdomain}.#{domain}"
+          Deployer::TunnelInfo.new(
+            service_name:,
+            hostname:,
+            tunnel_id: tunnel.tunnel_id,
+            tunnel_token: tunnel.tunnel_token
+          )
         end
-      end
+
+        # Build hostname from subdomain and domain
+        # Supports: "app" -> "app.example.com", "" or "@" -> "example.com", "*" -> "*.example.com"
+        def build_hostname(subdomain, domain)
+          if subdomain.nil? || subdomain.empty? || subdomain == "@"
+            domain
+          else
+            "#{subdomain}.#{domain}"
+          end
+        end
     end
   end
 end

@@ -40,24 +40,24 @@ module Nvoi
 
       private
 
-      def inject_database_env(env)
-        db = @config.deploy.application.database
-        return unless db
+        def inject_database_env(env)
+          db = @config.deploy.application.database
+          return unless db
 
-        env["DATABASE_ADAPTER"] = db.adapter if db.adapter && !db.adapter.empty?
+          env["DATABASE_ADAPTER"] = db.adapter if db.adapter && !db.adapter.empty?
 
-        # Handle database URL
-        if db.adapter == "sqlite3"
-          env["DATABASE_URL"] = "sqlite://data/db/production.sqlite3"
-        elsif db.url && !db.url.empty?
-          env["DATABASE_URL"] = db.url
+          # Handle database URL
+          if db.adapter == "sqlite3"
+            env["DATABASE_URL"] = "sqlite://data/db/production.sqlite3"
+          elsif db.url && !db.url.empty?
+            env["DATABASE_URL"] = db.url
+          end
+
+          # Inject database secrets
+          db.secrets&.each do |key, value|
+            env[key] = value
+          end
         end
-
-        # Inject database secrets
-        db.secrets&.each do |key, value|
-          env[key] = value
-        end
-      end
     end
   end
 end

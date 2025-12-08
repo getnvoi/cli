@@ -50,7 +50,7 @@ module Nvoi
     def initialize(step, message, retryable: false, details: nil)
       @step = step
       @retryable = retryable
-      super("#{step}: #{message}", details: details)
+      super("#{step}: #{message}", details:)
     end
 
     def retryable?

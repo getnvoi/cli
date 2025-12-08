@@ -66,14 +66,14 @@ module Nvoi
 
     private
 
-    def resolve_working_dir
-      wd = options[:dir]
-      if wd.nil? || wd.empty? || wd == "."
-        Dir.pwd
-      else
-        File.expand_path(wd)
+      def resolve_working_dir
+        wd = options[:dir]
+        if wd.nil? || wd.empty? || wd == "."
+          Dir.pwd
+        else
+          File.expand_path(wd)
+        end
       end
-    end
   end
 
   # Main CLI for nvoi commands
@@ -176,15 +176,15 @@ module Nvoi
 
     private
 
-    def resolve_config_path
-      config_path = options[:config]
-      working_dir = options[:dir]
+      def resolve_config_path
+        config_path = options[:config]
+        working_dir = options[:dir]
 
-      if config_path == Constants::DEFAULT_CONFIG_FILE && working_dir && working_dir != "."
-        File.join(working_dir, Constants::DEFAULT_CONFIG_FILE)
-      else
-        config_path
+        if config_path == Constants::DEFAULT_CONFIG_FILE && working_dir && working_dir != "."
+          File.join(working_dir, Constants::DEFAULT_CONFIG_FILE)
+        else
+          config_path
+        end
       end
-    end
   end
 end

@@ -115,59 +115,59 @@ module Nvoi
 
       private
 
-      def find_encrypted_file
-        search_paths = [
-          File.join(@working_dir, DEFAULT_ENCRYPTED_FILE),
-          File.join(@working_dir, "config", DEFAULT_ENCRYPTED_FILE)
-        ]
+        def find_encrypted_file
+          search_paths = [
+            File.join(@working_dir, DEFAULT_ENCRYPTED_FILE),
+            File.join(@working_dir, "config", DEFAULT_ENCRYPTED_FILE)
+          ]
 
-        search_paths.each do |path|
-          return path if File.exist?(path)
+          search_paths.each do |path|
+            return path if File.exist?(path)
+          end
+
+          # Default to working dir location (for new file creation)
+          File.join(@working_dir, DEFAULT_ENCRYPTED_FILE)
         end
 
-        # Default to working dir location (for new file creation)
-        File.join(@working_dir, DEFAULT_ENCRYPTED_FILE)
-      end
+        def resolve_key(explicit_key_path)
+          # Priority 1: Explicit key file path
+          if explicit_key_path && !explicit_key_path.empty?
+            @master_key = load_key_from_file(explicit_key_path)
+            @key_path = explicit_key_path
+            return
+          end
 
-      def resolve_key(explicit_key_path)
-        # Priority 1: Explicit key file path
-        if explicit_key_path && !explicit_key_path.empty?
-          @master_key = load_key_from_file(explicit_key_path)
-          @key_path = explicit_key_path
-          return
+          # Priority 2: Environment variable
+          env_key = ENV[MASTER_KEY_ENV_VAR]
+          if env_key && !env_key.empty?
+            Crypto.validate_key(env_key)
+            @master_key = env_key
+            return
+          end
+
+          # Priority 3: Key file in standard locations
+          key_search_paths = [
+            File.join(File.dirname(@encrypted_path), DEFAULT_KEY_FILE),
+            File.join(@working_dir, DEFAULT_KEY_FILE),
+            File.join(@working_dir, "config", DEFAULT_KEY_FILE)
+          ]
+
+          key_search_paths.each do |path|
+            next unless File.exist?(path)
+
+            @master_key = load_key_from_file(path)
+            @key_path = path
+            return
+          end
+
+          raise CredentialError, "master key not found: set #{MASTER_KEY_ENV_VAR} or create #{DEFAULT_KEY_FILE}"
         end
 
-        # Priority 2: Environment variable
-        env_key = ENV[MASTER_KEY_ENV_VAR]
-        if env_key && !env_key.empty?
-          Crypto.validate_key(env_key)
-          @master_key = env_key
-          return
+        def load_key_from_file(path)
+          content = File.read(path).strip
+          Crypto.validate_key(content)
+          content
         end
-
-        # Priority 3: Key file in standard locations
-        key_search_paths = [
-          File.join(File.dirname(@encrypted_path), DEFAULT_KEY_FILE),
-          File.join(@working_dir, DEFAULT_KEY_FILE),
-          File.join(@working_dir, "config", DEFAULT_KEY_FILE)
-        ]
-
-        key_search_paths.each do |path|
-          next unless File.exist?(path)
-
-          @master_key = load_key_from_file(path)
-          @key_path = path
-          return
-        end
-
-        raise CredentialError, "master key not found: set #{MASTER_KEY_ENV_VAR} or create #{DEFAULT_KEY_FILE}"
-      end
-
-      def load_key_from_file(path)
-        content = File.read(path).strip
-        Crypto.validate_key(content)
-        content
-      end
     end
   end
 end

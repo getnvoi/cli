@@ -26,7 +26,7 @@ module Nvoi
 
         K8s::Renderer.apply_manifest(@ssh, "app-secret.yaml", {
           name: secret_name,
-          env_vars: env_vars
+          env_vars:
         })
 
         @log.success "App secret deployed"
@@ -68,8 +68,8 @@ module Nvoi
           env_keys: env.keys.sort,
           affinity_server_names: service_config.servers,
           resources: DEFAULT_RESOURCES,
-          readiness_probe: readiness_probe,
-          liveness_probe: liveness_probe,
+          readiness_probe:,
+          liveness_probe:,
           volume_mounts: [],
           host_path_volumes: [],
           volumes: []
@@ -78,8 +78,8 @@ module Nvoi
         # Add volumes if configured
         service_config.volumes&.each do |vol_key, mount_path|
           host_path = "/opt/nvoi/volumes/#{@namer.app_volume_name(service_name, vol_key)}"
-          data[:volume_mounts] << { name: vol_key, mount_path: mount_path }
-          data[:host_path_volumes] << { name: vol_key, host_path: host_path }
+          data[:volume_mounts] << { name: vol_key, mount_path: }
+          data[:host_path_volumes] << { name: vol_key, host_path: }
         end
 
         K8s::Renderer.apply_manifest(@ssh, template, data)
@@ -95,10 +95,10 @@ module Nvoi
         # Deploy ingress if domain is specified
         if service_config.domain && !service_config.domain.empty?
           hostname = if service_config.subdomain && !service_config.subdomain.empty? && service_config.subdomain != "@"
-                       "#{service_config.subdomain}.#{service_config.domain}"
-                     else
-                       service_config.domain
-                     end
+            "#{service_config.subdomain}.#{service_config.domain}"
+          else
+            service_config.domain
+          end
 
           K8s::Renderer.apply_manifest(@ssh, "app-ingress.yaml", {
             name: deployment_name,
@@ -174,7 +174,7 @@ module Nvoi
           env_vars: service_spec.env,
           env_keys: service_spec.env.keys.sort,
           volume_path: service_spec.volumes["data"],
-          host_path: host_path,
+          host_path:,
           affinity_server_names: service_spec.servers
         }
 
@@ -225,10 +225,10 @@ module Nvoi
         return unless service_config.domain && !service_config.domain.empty?
 
         hostname = if service_config.subdomain && !service_config.subdomain.empty? && service_config.subdomain != "@"
-                     "#{service_config.subdomain}.#{service_config.domain}"
-                   else
-                     service_config.domain
-                   end
+          "#{service_config.subdomain}.#{service_config.domain}"
+        else
+          service_config.domain
+        end
 
         health_path = service_config.healthcheck&.path || "/"
         public_url = "https://#{hostname}#{health_path}"
@@ -277,35 +277,35 @@ module Nvoi
 
       private
 
-      def run_pre_run_command(service_name, command)
-        @log.info "Running pre-run command: %s", command
+        def run_pre_run_command(service_name, command)
+          @log.info "Running pre-run command: %s", command
 
-        # Get pod name
-        pod_label = @namer.app_pod_label(service_name)
-        pod_name = @ssh.execute("kubectl get pod -l #{pod_label} -o jsonpath='{.items[0].metadata.name}'")
-        pod_name = pod_name.strip.delete("'")
+          # Get pod name
+          pod_label = @namer.app_pod_label(service_name)
+          pod_name = @ssh.execute("kubectl get pod -l #{pod_label} -o jsonpath='{.items[0].metadata.name}'")
+          pod_name = pod_name.strip.delete("'")
 
-        # Execute command in pod
-        escaped_command = command.gsub("'", "'\"'\"'")
-        exec_cmd = "kubectl exec #{pod_name} -- sh -c '#{escaped_command}'"
+          # Execute command in pod
+          escaped_command = command.gsub("'", "'\"'\"'")
+          exec_cmd = "kubectl exec #{pod_name} -- sh -c '#{escaped_command}'"
 
-        begin
-          output = @ssh.execute(exec_cmd)
-          @log.info "Pre-run command output:\n%s", output unless output.empty?
-        rescue SSHCommandError => e
-          @log.error "Pre-run command failed: %s", e.message
+          begin
+            output = @ssh.execute(exec_cmd)
+            @log.info "Pre-run command output:\n%s", output unless output.empty?
+          rescue SSHCommandError => e
+            @log.error "Pre-run command failed: %s", e.message
 
-          # Get pod logs for debugging
-          logs = @ssh.execute("kubectl logs #{pod_name} --tail=50")
-          @log.error "Pod logs:\n%s", logs
+            # Get pod logs for debugging
+            logs = @ssh.execute("kubectl logs #{pod_name} --tail=50")
+            @log.error "Pod logs:\n%s", logs
 
-          raise DeploymentError.new("pre_run_command", "deployment aborted: pre-run command failed: #{e.message}")
+            raise DeploymentError.new("pre_run_command", "deployment aborted: pre-run command failed: #{e.message}")
+          end
         end
-      end
 
-      def wait_for_statefulset(name, namespace: "default", timeout: 300)
-        @ssh.execute("kubectl rollout status statefulset/#{name} -n #{namespace} --timeout=#{timeout}s")
-      end
+        def wait_for_statefulset(name, namespace: "default", timeout: 300)
+          @ssh.execute("kubectl rollout status statefulset/#{name} -n #{namespace} --timeout=#{timeout}s")
+        end
     end
   end
 end

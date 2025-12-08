@@ -163,29 +163,29 @@ class Nvoi::Config::SSHKeyLocatorTest < Minitest::Test
 
   private
 
-  def mock_config_with_ssh_paths(private_path, public_path)
-    ssh_key_path = if private_path || public_path
-                     MockSSHKeyPath.new(private: private_path, public: public_path)
-                   else
-                     nil
-                   end
+    def mock_config_with_ssh_paths(private_path, public_path)
+      ssh_key_path = if private_path || public_path
+        MockSSHKeyPath.new(private: private_path, public: public_path)
+      else
+        nil
+      end
 
-    MockConfig.new(
-      deploy: MockDeploy.new(
-        application: MockApplication.new(
-          name: "myapp",
-          ssh_key_path: ssh_key_path,
-          servers: {},
-          app: {},
-          database: nil,
-          services: {}
-        )
-      ),
-      container_prefix: "test",
-      ssh_key_path: nil,
-      ssh_public_key: nil
-    )
-  end
+      MockConfig.new(
+        deploy: MockDeploy.new(
+          application: MockApplication.new(
+            name: "myapp",
+            ssh_key_path:,
+            servers: {},
+            app: {},
+            database: nil,
+            services: {}
+          )
+        ),
+        container_prefix: "test",
+        ssh_key_path: nil,
+        ssh_public_key: nil
+      )
+    end
 end
 
 class Nvoi::Config::SSHKeyGenerationMockTest < Minitest::Test

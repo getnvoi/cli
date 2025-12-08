@@ -171,26 +171,26 @@ module Nvoi
 
       private
 
-      def hash_string(str)
-        Digest::SHA256.hexdigest(str)[0, 16]
-      end
-
-      def infer_base_prefix
-        output = `git config --get remote.origin.url 2>/dev/null`.strip
-        return "app" if output.empty?
-
-        # Extract username/repo from: git@github.com:user/repo.git or https://github.com/user/repo.git
-        repo_url = output.sub(/\.git$/, "")
-        parts = repo_url.split(%r{[/:]+})
-
-        if parts.length >= 2
-          username = parts[-2]
-          repo = parts[-1]
-          "#{username}-#{repo}"
-        else
-          "app"
+        def hash_string(str)
+          Digest::SHA256.hexdigest(str)[0, 16]
         end
-      end
+
+        def infer_base_prefix
+          output = `git config --get remote.origin.url 2>/dev/null`.strip
+          return "app" if output.empty?
+
+          # Extract username/repo from: git@github.com:user/repo.git or https://github.com/user/repo.git
+          repo_url = output.sub(/\.git$/, "")
+          parts = repo_url.split(%r{[/:]+})
+
+          if parts.length >= 2
+            username = parts[-2]
+            repo = parts[-1]
+            "#{username}-#{repo}"
+          else
+            "app"
+          end
+        end
     end
   end
 end

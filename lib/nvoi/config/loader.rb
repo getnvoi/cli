@@ -69,21 +69,21 @@ module Nvoi
 
       private
 
-      def find_master_server_group(cfg)
-        servers = cfg.deploy.application.servers
-        return "master" if servers.empty?
+        def find_master_server_group(cfg)
+          servers = cfg.deploy.application.servers
+          return "master" if servers.empty?
 
-        # Find explicit master
-        servers.each do |name, server_cfg|
-          return name if server_cfg&.master
+          # Find explicit master
+          servers.each do |name, server_cfg|
+            return name if server_cfg&.master
+          end
+
+          # Single server group: use it as master
+          return servers.keys.first if servers.size == 1
+
+          # Fallback
+          "master"
         end
-
-        # Single server group: use it as master
-        return servers.keys.first if servers.size == 1
-
-        # Fallback
-        "master"
-      end
     end
 
     # Module-level load function

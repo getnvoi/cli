@@ -95,20 +95,20 @@ module TestHelpers
         headers: { "Content-Type" => "application/json" },
         body: {
           success: true,
-          result: { id: tunnel_id, name: name, token: token }
+          result: { id: tunnel_id, name:, token: }
         }.to_json
       )
   end
 
   def stub_cloudflare_tunnel_find(account_id, name, tunnel_id = nil, token = nil)
-    result = tunnel_id ? [{ id: tunnel_id, name: name, token: token }] : []
+    result = tunnel_id ? [{ id: tunnel_id, name:, token: }] : []
 
     stub_request(:get, "https://api.cloudflare.com/client/v4/accounts/#{account_id}/cfd_tunnel")
       .with(query: hash_including("name" => name))
       .to_return(
         status: 200,
         headers: { "Content-Type" => "application/json" },
-        body: { success: true, result: result }.to_json
+        body: { success: true, result: }.to_json
       )
   end
 
@@ -122,13 +122,13 @@ module TestHelpers
   end
 
   def stub_cloudflare_dns_find(zone_id, name, record_type, record_id = nil, content = nil)
-    result = record_id ? [{ id: record_id, name: name, type: record_type, content: content, proxied: true, ttl: 1 }] : []
+    result = record_id ? [{ id: record_id, name:, type: record_type, content:, proxied: true, ttl: 1 }] : []
 
     stub_request(:get, "https://api.cloudflare.com/client/v4/zones/#{zone_id}/dns_records")
       .to_return(
         status: 200,
         headers: { "Content-Type" => "application/json" },
-        body: { success: true, result: result }.to_json
+        body: { success: true, result: }.to_json
       )
   end
 

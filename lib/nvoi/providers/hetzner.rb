@@ -17,7 +17,7 @@ module Nvoi
         return to_network(network) if network
 
         network = @client.create_network(
-          name: name,
+          name:,
           ip_range: Constants::NETWORK_CIDR,
           subnets: [{
             type: "cloud",
@@ -47,7 +47,7 @@ module Nvoi
         return to_firewall(firewall) if firewall
 
         firewall = @client.create_firewall(
-          name: name,
+          name:,
           rules: [{
             direction: "in",
             protocol: "tcp",
@@ -222,67 +222,67 @@ module Nvoi
 
       private
 
-      def find_network_by_name(name)
-        @client.list_networks.find { |n| n["name"] == name }
-      end
+        def find_network_by_name(name)
+          @client.list_networks.find { |n| n["name"] == name }
+        end
 
-      def find_firewall_by_name(name)
-        @client.list_firewalls.find { |f| f["name"] == name }
-      end
+        def find_firewall_by_name(name)
+          @client.list_firewalls.find { |f| f["name"] == name }
+        end
 
-      def find_server_by_name(name)
-        @client.list_servers.find { |s| s["name"] == name }
-      end
+        def find_server_by_name(name)
+          @client.list_servers.find { |s| s["name"] == name }
+        end
 
-      def find_server_type(name)
-        @client.list_server_types.find { |t| t["name"] == name }
-      end
+        def find_server_type(name)
+          @client.list_server_types.find { |t| t["name"] == name }
+        end
 
-      def find_image(name)
-        # Images endpoint requires filtering
-        response = @client.get("/images?name=#{name}")
-        response["images"]&.first
-      end
+        def find_image(name)
+          # Images endpoint requires filtering
+          response = @client.get("/images?name=#{name}")
+          response["images"]&.first
+        end
 
-      def find_location(name)
-        @client.list_locations.find { |l| l["name"] == name }
-      end
+        def find_location(name)
+          @client.list_locations.find { |l| l["name"] == name }
+        end
 
-      def to_network(data)
-        Network.new(
-          id: data["id"].to_s,
-          name: data["name"],
-          ip_range: data["ip_range"]
-        )
-      end
+        def to_network(data)
+          Network.new(
+            id: data["id"].to_s,
+            name: data["name"],
+            ip_range: data["ip_range"]
+          )
+        end
 
-      def to_firewall(data)
-        Firewall.new(
-          id: data["id"].to_s,
-          name: data["name"]
-        )
-      end
+        def to_firewall(data)
+          Firewall.new(
+            id: data["id"].to_s,
+            name: data["name"]
+          )
+        end
 
-      def to_server(data)
-        Server.new(
-          id: data["id"].to_s,
-          name: data["name"],
-          status: data["status"],
-          public_ipv4: data.dig("public_net", "ipv4", "ip")
-        )
-      end
+        def to_server(data)
+          Server.new(
+            id: data["id"].to_s,
+            name: data["name"],
+            status: data["status"],
+            public_ipv4: data.dig("public_net", "ipv4", "ip")
+          )
+        end
 
-      def to_volume(data)
-        Volume.new(
-          id: data["id"].to_s,
-          name: data["name"],
-          size: data["size"],
-          location: data.dig("location", "name"),
-          status: data["status"],
-          server_id: data["server"]&.to_s,
-          device_path: data["linux_device"]
-        )
-      end
+        def to_volume(data)
+          Volume.new(
+            id: data["id"].to_s,
+            name: data["name"],
+            size: data["size"],
+            location: data.dig("location", "name"),
+            status: data["status"],
+            server_id: data["server"]&.to_s,
+            device_path: data["linux_device"]
+          )
+        end
     end
   end
 end

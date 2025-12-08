@@ -28,134 +28,134 @@ module Nvoi
 
       private
 
-      def run_deployment(tunnels, working_dir)
-        ssh = @ssh
-        docker = Remote::DockerManager.new(ssh)
+        def run_deployment(tunnels, working_dir)
+          ssh = @ssh
+          docker = Remote::DockerManager.new(ssh)
 
-        # Generate image tag
-        timestamp = Time.now.strftime("%Y%m%d%H%M%S")
-        image_tag = @config.namer.image_tag(timestamp)
+          # Generate image tag
+          timestamp = Time.now.strftime("%Y%m%d%H%M%S")
+          image_tag = @config.namer.image_tag(timestamp)
 
-        # Build and push image
-        image_builder = ImageBuilder.new(@config, docker, @log)
-        image_builder.build_and_push(working_dir, image_tag)
+          # Build and push image
+          image_builder = ImageBuilder.new(@config, docker, @log)
+          image_builder.build_and_push(working_dir, image_tag)
 
-        # Tag as latest locally for K8s to use
-        # The image is already in containerd from build_image
-        registry_tag = "localhost:#{Constants::REGISTRY_PORT}/#{@config.container_prefix}:#{timestamp}"
-        push_to_registry(ssh, image_tag, registry_tag)
+          # Tag as latest locally for K8s to use
+          # The image is already in containerd from build_image
+          registry_tag = "localhost:#{Constants::REGISTRY_PORT}/#{@config.container_prefix}:#{timestamp}"
+          push_to_registry(ssh, image_tag, registry_tag)
 
-        # Deploy services
-        service_deployer = ServiceDeployer.new(@config, ssh, @log)
+          # Deploy services
+          service_deployer = ServiceDeployer.new(@config, ssh, @log)
 
-        # Gather all env vars
-        all_env = gather_env_vars
+          # Gather all env vars
+          all_env = gather_env_vars
 
-        # Deploy app secret
-        service_deployer.deploy_app_secret(all_env)
+          # Deploy app secret
+          service_deployer.deploy_app_secret(all_env)
 
-        # Deploy database if configured (skip SQLite - handled by app volumes)
-        db_config = @config.deploy.application.database
-        if db_config && db_config.adapter != "sqlite3"
-          db_spec = db_config.to_service_spec(@config.namer)
-          service_deployer.deploy_database(db_spec)
-        end
-
-        # Deploy additional services
-        @config.deploy.application.services.each do |service_name, service_config|
-          service_spec = service_config.to_service_spec(@config.deploy.application.name, service_name)
-          service_deployer.deploy_service(service_name, service_spec)
-        end
-
-        # Deploy app services
-        @config.deploy.application.app.each do |service_name, service_config|
-          service_env = @config.env_for_service(service_name)
-          service_deployer.deploy_app_service(service_name, service_config, registry_tag, service_env)
-
-          # Deploy cloudflared for services with tunnels
-          tunnel = tunnels.find { |t| t.service_name == service_name }
-          if tunnel
-            service_deployer.deploy_cloudflared(service_name, tunnel.tunnel_token)
-
-            # Verify traffic is routing correctly
-            service_deployer.verify_traffic_switchover(service_config)
+          # Deploy database if configured (skip SQLite - handled by app volumes)
+          db_config = @config.deploy.application.database
+          if db_config && db_config.adapter != "sqlite3"
+            db_spec = db_config.to_service_spec(@config.namer)
+            service_deployer.deploy_database(db_spec)
           end
-        end
 
-        # Cleanup old images
-        cleaner = Cleaner.new(@config, docker, @log)
-        cleaner.cleanup_old_images(timestamp)
+          # Deploy additional services
+          @config.deploy.application.services.each do |service_name, service_config|
+            service_spec = service_config.to_service_spec(@config.deploy.application.name, service_name)
+            service_deployer.deploy_service(service_name, service_spec)
+          end
 
-        @log.success "Deployment orchestration complete"
-      end
+          # Deploy app services
+          @config.deploy.application.app.each do |service_name, service_config|
+            service_env = @config.env_for_service(service_name)
+            service_deployer.deploy_app_service(service_name, service_config, registry_tag, service_env)
 
-      def acquire_lock
-        lock_file = @config.namer.deployment_lock_file_path
+            # Deploy cloudflared for services with tunnels
+            tunnel = tunnels.find { |t| t.service_name == service_name }
+            if tunnel
+              service_deployer.deploy_cloudflared(service_name, tunnel.tunnel_token)
 
-        # Check if lock file exists
-        output = @ssh.execute("test -f #{lock_file} && cat #{lock_file} || echo ''")
-        output = output.strip
-
-        unless output.empty?
-          # Lock exists, check timestamp
-          timestamp = output.to_i
-          if timestamp > 0
-            lock_time = Time.at(timestamp)
-            age = Time.now - lock_time
-
-            if age < Constants::STALE_DEPLOYMENT_LOCK_AGE
-              raise DeploymentError.new(
-                "lock",
-                "deployment already in progress (started #{age.round}s ago). Wait or remove lock file: #{lock_file}"
-              )
+              # Verify traffic is routing correctly
+              service_deployer.verify_traffic_switchover(service_config)
             end
-
-            # Lock is stale, will overwrite
-            @log.warning "Removing stale deployment lock (age: #{age.round}s)"
           end
+
+          # Cleanup old images
+          cleaner = Cleaner.new(@config, docker, @log)
+          cleaner.cleanup_old_images(timestamp)
+
+          @log.success "Deployment orchestration complete"
         end
 
-        # Create lock file with current timestamp
-        @ssh.execute("echo #{Time.now.to_i} > #{lock_file}")
-        @log.info "Deployment lock acquired: %s", lock_file
-      end
+        def acquire_lock
+          lock_file = @config.namer.deployment_lock_file_path
 
-      def release_lock
-        lock_file = @config.namer.deployment_lock_file_path
-        @log.info "Releasing deployment lock"
-        @ssh.execute("rm -f #{lock_file}")
-      rescue StandardError
-        # Ignore errors during lock release
-      end
+          # Check if lock file exists
+          output = @ssh.execute("test -f #{lock_file} && cat #{lock_file} || echo ''")
+          output = output.strip
 
-      def gather_env_vars
-        env = {}
+          unless output.empty?
+            # Lock exists, check timestamp
+            timestamp = output.to_i
+            if timestamp > 0
+              lock_time = Time.at(timestamp)
+              age = Time.now - lock_time
 
-        # Global env
-        @config.deploy.application.env&.each { |k, v| env[k] = v }
+              if age < Constants::STALE_DEPLOYMENT_LOCK_AGE
+                raise DeploymentError.new(
+                  "lock",
+                  "deployment already in progress (started #{age.round}s ago). Wait or remove lock file: #{lock_file}"
+                )
+              end
 
-        # Global secrets
-        @config.deploy.application.secrets&.each { |k, v| env[k] = v }
+              # Lock is stale, will overwrite
+              @log.warning "Removing stale deployment lock (age: #{age.round}s)"
+            end
+          end
 
-        # Service-specific env (merged)
-        @config.deploy.application.app.each do |_name, service|
-          service.env&.each { |k, v| env[k] = v }
+          # Create lock file with current timestamp
+          @ssh.execute("echo #{Time.now.to_i} > #{lock_file}")
+          @log.info "Deployment lock acquired: %s", lock_file
         end
 
-        env
-      end
+        def release_lock
+          lock_file = @config.namer.deployment_lock_file_path
+          @log.info "Releasing deployment lock"
+          @ssh.execute("rm -f #{lock_file}")
+        rescue StandardError
+          # Ignore errors during lock release
+        end
 
-      def push_to_registry(ssh, local_tag, registry_tag)
-        @log.info "Pushing to in-cluster registry: %s", registry_tag
+        def gather_env_vars
+          env = {}
 
-        # Tag for registry
-        ssh.execute("sudo ctr -n k8s.io images tag #{local_tag} #{registry_tag}")
+          # Global env
+          @config.deploy.application.env&.each { |k, v| env[k] = v }
 
-        # Push to local registry
-        ssh.execute("sudo ctr -n k8s.io images push --plain-http #{registry_tag}")
+          # Global secrets
+          @config.deploy.application.secrets&.each { |k, v| env[k] = v }
 
-        @log.success "Image pushed to registry"
-      end
+          # Service-specific env (merged)
+          @config.deploy.application.app.each do |_name, service|
+            service.env&.each { |k, v| env[k] = v }
+          end
+
+          env
+        end
+
+        def push_to_registry(ssh, local_tag, registry_tag)
+          @log.info "Pushing to in-cluster registry: %s", registry_tag
+
+          # Tag for registry
+          ssh.execute("sudo ctr -n k8s.io images tag #{local_tag} #{registry_tag}")
+
+          # Push to local registry
+          ssh.execute("sudo ctr -n k8s.io images push --plain-http #{registry_tag}")
+
+          @log.success "Image pushed to registry"
+        end
     end
   end
 end

@@ -56,28 +56,28 @@ module Nvoi
 
       private
 
-      def has_filesystem?(device_path)
-        output = @ssh.execute("sudo blkid #{device_path}")
-        output.include?("TYPE=")
-      rescue SSHCommandError
-        # blkid returns error if no filesystem
-        false
-      end
+        def has_filesystem?(device_path)
+          output = @ssh.execute("sudo blkid #{device_path}")
+          output.include?("TYPE=")
+        rescue SSHCommandError
+          # blkid returns error if no filesystem
+          false
+        end
 
-      def format_volume(device_path, fs_type)
-        @ssh.execute("sudo mkfs.#{fs_type} #{device_path}")
-      end
+        def format_volume(device_path, fs_type)
+          @ssh.execute("sudo mkfs.#{fs_type} #{device_path}")
+        end
 
-      def add_to_fstab(device_path, mount_path, fs_type)
-        # Check if entry already exists
-        output = @ssh.execute("grep -q '#{mount_path}' /etc/fstab && echo 'exists' || echo 'missing'")
-        return if output.strip == "exists"
+        def add_to_fstab(device_path, mount_path, fs_type)
+          # Check if entry already exists
+          output = @ssh.execute("grep -q '#{mount_path}' /etc/fstab && echo 'exists' || echo 'missing'")
+          return if output.strip == "exists"
 
-        # Add fstab entry using UUID for reliability
-        cmd = "UUID=$(sudo blkid -s UUID -o value #{device_path}) && " \
-              "echo \"UUID=$UUID #{mount_path} #{fs_type} defaults,nofail 0 2\" | sudo tee -a /etc/fstab"
-        @ssh.execute(cmd)
-      end
+          # Add fstab entry using UUID for reliability
+          cmd = "UUID=$(sudo blkid -s UUID -o value #{device_path}) && " \
+                "echo \"UUID=$UUID #{mount_path} #{fs_type} defaults,nofail 0 2\" | sudo tee -a /etc/fstab"
+          @ssh.execute(cmd)
+        end
     end
   end
 end
