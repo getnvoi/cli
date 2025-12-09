@@ -1,0 +1,357 @@
+openapi: 3.1.0
+info:
+  title: NVOI Configuration Schema
+  version: 0.1.2
+  description: |
+    OpenAPI 3.1 / JSON Schema definition for NVOI deployment configuration.
+    This schema defines the structure of deploy.yml / deploy.enc files.
+
+components:
+  schemas:
+    DeployConfig:
+      type: object
+      description: Root deployment configuration
+      required:
+        - application
+      properties:
+        application:
+          $ref: "#/components/schemas/Application"
+
+    Application:
+      type: object
+      description: Application-level configuration
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Application name (used for resource naming)
+          example: myapp
+        environment:
+          type: string
+          description: Deployment environment
+          default: production
+          example: production
+        domain_provider:
+          $ref: "#/components/schemas/DomainProviderConfig"
+        compute_provider:
+          $ref: "#/components/schemas/ComputeProviderConfig"
+        keep_count:
+          type: integer
+          description: Number of old deployments to keep for rollback
+          minimum: 0
+          example: 3
+        servers:
+          type: object
+          description: Server group definitions (key is group name)
+          additionalProperties:
+            $ref: "#/components/schemas/ServerConfig"
+          example:
+            master:
+              type: cx32
+              location: fsn1
+            workers:
+              count: 2
+              type: cx22
+        app:
+          type: object
+          description: Application services (key is service name)
+          additionalProperties:
+            $ref: "#/components/schemas/AppServiceConfig"
+          example:
+            web:
+              port: 3000
+              domain: example.com
+        database:
+          $ref: "#/components/schemas/DatabaseConfig"
+        services:
+          type: object
+          description: Additional services like Redis, etc. (key is service name)
+          additionalProperties:
+            $ref: "#/components/schemas/ServiceConfig"
+          example:
+            redis:
+              image: redis:7-alpine
+        env:
+          type: object
+          description: Global environment variables
+          additionalProperties:
+            type: string
+          example:
+            RAILS_ENV: production
+            LOG_LEVEL: info
+        secrets:
+          type: object
+          description: Secret environment variables (stored encrypted)
+          additionalProperties:
+            type: string
+          example:
+            DATABASE_URL: postgres://user:pass@host/db
+        ssh_keys:
+          $ref: "#/components/schemas/SSHKeyConfig"
+
+    DomainProviderConfig:
+      type: object
+      description: Domain/DNS provider configuration
+      properties:
+        cloudflare:
+          $ref: "#/components/schemas/CloudflareConfig"
+
+    ComputeProviderConfig:
+      type: object
+      description: Compute provider configuration (one of hetzner or aws)
+      properties:
+        hetzner:
+          $ref: "#/components/schemas/HetznerConfig"
+        aws:
+          $ref: "#/components/schemas/AWSConfig"
+
+    CloudflareConfig:
+      type: object
+      description: Cloudflare provider configuration
+      required:
+        - api_token
+        - account_id
+      properties:
+        api_token:
+          type: string
+          description: Cloudflare API token with tunnel and DNS permissions
+          example: xxxxx
+        account_id:
+          type: string
+          description: Cloudflare account ID
+          example: xxxxx
+
+    HetznerConfig:
+      type: object
+      description: Hetzner Cloud provider configuration
+      required:
+        - api_token
+      properties:
+        api_token:
+          type: string
+          description: Hetzner Cloud API token
+          example: xxxxx
+        server_type:
+          type: string
+          description: Default server type for all server groups
+          example: cx22
+        server_location:
+          type: string
+          description: Default datacenter location
+          enum: [fsn1, nbg1, hel1, ash, hil]
+          example: fsn1
+
+    AWSConfig:
+      type: object
+      description: AWS provider configuration
+      required:
+        - access_key_id
+        - secret_access_key
+        - region
+      properties:
+        access_key_id:
+          type: string
+          description: AWS access key ID
+        secret_access_key:
+          type: string
+          description: AWS secret access key
+        region:
+          type: string
+          description: AWS region
+          example: us-east-1
+        instance_type:
+          type: string
+          description: Default EC2 instance type
+          example: t3.medium
+
+    ServerConfig:
+      type: object
+      description: Server group configuration
+      properties:
+        master:
+          type: boolean
+          description: Whether this group contains the K3s master node
+          default: false
+        type:
+          type: string
+          description: Server type (overrides compute_provider default)
+          example: cx32
+        location:
+          type: string
+          description: Datacenter location (overrides compute_provider default)
+          example: fsn1
+        count:
+          type: integer
+          description: Number of servers in this group
+          minimum: 1
+          default: 1
+          example: 2
+
+    AppServiceConfig:
+      type: object
+      description: Application service configuration (web, worker, etc.)
+      properties:
+        servers:
+          type: array
+          description: Server groups this service runs on
+          items:
+            type: string
+          example: [master]
+        domain:
+          type: string
+          description: Domain for this service (must be on Cloudflare)
+          example: example.com
+        subdomain:
+          type: string
+          description: Subdomain for this service (use @ for apex)
+          example: www
+        port:
+          type: integer
+          description: Container port to expose
+          minimum: 1
+          maximum: 65535
+          example: 3000
+        healthcheck:
+          $ref: "#/components/schemas/HealthCheckConfig"
+        command:
+          type: string
+          description: Override container command
+          example: bundle exec puma -C config/puma.rb
+        pre_run_command:
+          type: string
+          description: Command to run before deployment (e.g., migrations)
+          example: bundle exec rails db:migrate
+        env:
+          type: object
+          description: Service-specific environment variables
+          additionalProperties:
+            type: string
+        volumes:
+          type: object
+          description: Volume mounts (key is volume name, value is mount path)
+          additionalProperties:
+            type: string
+          example:
+            data: /app/data
+            uploads: /app/public/uploads
+
+    HealthCheckConfig:
+      type: object
+      description: Health check configuration for readiness/liveness probes
+      properties:
+        type:
+          type: string
+          description: Health check type
+          enum: [http, tcp, exec]
+          example: http
+        path:
+          type: string
+          description: HTTP path for health check (type=http)
+          example: /health
+        port:
+          type: integer
+          description: Port for health check (defaults to service port)
+          example: 3000
+        command:
+          type: string
+          description: Command for exec health check (type=exec)
+          example: /bin/healthcheck
+        interval:
+          type: string
+          description: Time between health checks
+          example: 10s
+        timeout:
+          type: string
+          description: Health check timeout
+          example: 5s
+        retries:
+          type: integer
+          description: Number of retries before marking unhealthy
+          minimum: 1
+          example: 3
+
+    DatabaseConfig:
+      type: object
+      description: Database configuration
+      properties:
+        servers:
+          type: array
+          description: Server groups to run database on
+          items:
+            type: string
+          example: [master]
+        adapter:
+          type: string
+          description: Database adapter type
+          enum: [postgresql, postgres, mysql, sqlite3]
+          example: postgres
+        url:
+          type: string
+          description: Database connection URL (for external databases)
+          example: postgres://user:pass@host:5432/dbname
+        image:
+          type: string
+          description: Docker image for database (managed databases only)
+          example: postgres:15-alpine
+        volume:
+          type: string
+          description: Volume mount path for data persistence
+          example: /var/lib/postgresql/data
+        secrets:
+          type: object
+          description: Database secrets (POSTGRES_PASSWORD, etc.)
+          additionalProperties:
+            type: string
+          example:
+            POSTGRES_USER: app
+            POSTGRES_PASSWORD: secretpassword
+            POSTGRES_DB: app_production
+
+    ServiceConfig:
+      type: object
+      description: Additional service configuration (Redis, etc.)
+      properties:
+        servers:
+          type: array
+          description: Server groups to run service on
+          items:
+            type: string
+          example: [master]
+        image:
+          type: string
+          description: Docker image for service
+          example: redis:7-alpine
+        command:
+          type: string
+          description: Override container command
+          example: redis-server --appendonly yes
+        env:
+          type: object
+          description: Service environment variables
+          additionalProperties:
+            type: string
+        volume:
+          type: string
+          description: Volume mount path for data persistence
+          example: /data
+
+    SSHKeyConfig:
+      type: object
+      description: SSH key content for server access (auto-generated on first run)
+      required:
+        - private_key
+        - public_key
+      properties:
+        private_key:
+          type: string
+          description: Private SSH key content (Ed25519 format, auto-generated)
+          example: |
+            -----BEGIN OPENSSH PRIVATE KEY-----
+            b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+            ...
+            -----END OPENSSH PRIVATE KEY-----
+        public_key:
+          type: string
+          description: Public SSH key content (OpenSSH format, auto-generated)
+          example: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... nvoi-deploy

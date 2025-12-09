@@ -1,72 +1,82 @@
 # frozen_string_literal: true
 
+require "tempfile"
+require "fileutils"
+
 module Nvoi
   module Config
-    # SSHKeyLocator handles SSH key location and loading
-    class SSHKeyLocator
+    # SSHKeyLoader handles SSH key loading from config content
+    # Keys are stored as content in deploy.enc, written to temp files for SSH usage
+    class SSHKeyLoader
       def initialize(config)
         @config = config
+        @temp_dir = nil
+        @private_key_path = nil
+        @public_key_path = nil
       end
 
-      # Load SSH key paths and public key content
+      # Load SSH keys from config content and write to temp files
       def load_keys
-        # Determine private key path
-        @config.ssh_key_path = determine_private_key_path
+        ssh_keys = @config.deploy.application.ssh_keys
 
-        # Determine public key path
-        pub_key_path = determine_public_key_path
-
-        # Read public key
-        unless File.exist?(pub_key_path)
-          raise ConfigError, "SSH public key not found: #{pub_key_path}"
+        unless ssh_keys
+          raise ConfigError, "ssh_keys section is required in config. Run 'nvoi credentials edit' to generate keys."
         end
 
-        @config.ssh_public_key = File.read(pub_key_path).strip
+        unless ssh_keys.private_key && !ssh_keys.private_key.empty?
+          raise ConfigError, "ssh_keys.private_key is required"
+        end
+
+        unless ssh_keys.public_key && !ssh_keys.public_key.empty?
+          raise ConfigError, "ssh_keys.public_key is required"
+        end
+
+        # Create temp directory for keys
+        @temp_dir = Dir.mktmpdir("nvoi-ssh-")
+
+        # Write private key
+        @private_key_path = File.join(@temp_dir, "id_nvoi")
+        File.write(@private_key_path, ssh_keys.private_key)
+        File.chmod(0o600, @private_key_path)
+
+        # Write public key
+        @public_key_path = File.join(@temp_dir, "id_nvoi.pub")
+        File.write(@public_key_path, ssh_keys.public_key)
+        File.chmod(0o644, @public_key_path)
+
+        # Set config values
+        @config.ssh_key_path = @private_key_path
+        @config.ssh_public_key = ssh_keys.public_key.strip
       end
 
-      private
+      # Cleanup temp files
+      def cleanup
+        FileUtils.rm_rf(@temp_dir) if @temp_dir && Dir.exist?(@temp_dir)
+      end
 
-        def determine_private_key_path
-          ssh_config = @config.deploy.application.ssh_key_path
+      class << self
+        # Generate a new Ed25519 keypair using ssh-keygen
+        def generate_keypair
+          temp_dir = Dir.mktmpdir("nvoi-keygen-")
+          key_path = File.join(temp_dir, "id_nvoi")
 
-          if ssh_config&.private && !ssh_config.private.empty?
-            expand_path(ssh_config.private)
-          elsif ENV["SSH_KEY_PATH"] && !ENV["SSH_KEY_PATH"].empty?
-            expand_path(ENV["SSH_KEY_PATH"])
-          else
-            find_ssh_key
+          begin
+            result = system(
+              "ssh-keygen", "-t", "ed25519", "-N", "", "-C", "nvoi-deploy", "-f", key_path,
+              out: File::NULL, err: File::NULL
+            )
+
+            raise ConfigError, "Failed to generate SSH keypair (ssh-keygen not available?)" unless result
+
+            private_key = File.read(key_path)
+            public_key = File.read("#{key_path}.pub").strip
+
+            [private_key, public_key]
+          ensure
+            FileUtils.rm_rf(temp_dir)
           end
         end
-
-        def determine_public_key_path
-          ssh_config = @config.deploy.application.ssh_key_path
-
-          if ssh_config&.public && !ssh_config.public.empty?
-            expand_path(ssh_config.public)
-          else
-            "#{@config.ssh_key_path}.pub"
-          end
-        end
-
-        def find_ssh_key
-          home_dir = Dir.home
-          ssh_dir = File.join(home_dir, ".ssh")
-
-          key_names = %w[id_rsa id_ed25519 id_ecdsa id_dsa]
-          key_names.each do |name|
-            path = File.join(ssh_dir, name)
-            return path if File.exist?(path)
-          end
-
-          # Return default path even if it doesn't exist
-          File.join(ssh_dir, "id_rsa")
-        end
-
-        def expand_path(path)
-          return path unless path.start_with?("~/")
-
-          File.join(Dir.home, path[2..])
-        end
+      end
     end
   end
 end

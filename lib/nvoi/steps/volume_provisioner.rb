@@ -109,10 +109,7 @@ module Nvoi
           @log.info "Attaching volume to server..."
           @provider.attach_volume(volume.id, server.id)
 
-          # Wait for attachment
-          sleep(5)
-
-          # Mount volume on server
+          # Mount volume on server (includes device wait)
           mount_volume(server.public_ipv4, volume, vol_config[:mount_path])
 
           @log.success "Volume provisioned and mounted: %s", vol_config[:name]
@@ -126,7 +123,6 @@ module Nvoi
           if volume.server_id.nil? || volume.server_id.empty?
             @log.info "Attaching existing volume..."
             @provider.attach_volume(volume.id, server.id)
-            sleep(5)
             volume = @provider.get_volume(volume.id)
           end
 

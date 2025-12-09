@@ -4,177 +4,110 @@ require "test_helper"
 require "tempfile"
 require "fileutils"
 
-class Nvoi::Config::SSHKeyLocatorTest < Minitest::Test
-  def setup
-    @temp_dir = Dir.mktmpdir("nvoi-test-ssh")
-    @ssh_dir = File.join(@temp_dir, ".ssh")
-    FileUtils.mkdir_p(@ssh_dir)
+class Nvoi::Config::SSHKeyLoaderTest < Minitest::Test
+  def test_load_keys_writes_temp_files
+    config = mock_config_with_keys(
+      private_key: "-----BEGIN OPENSSH PRIVATE KEY-----\ntest\n-----END OPENSSH PRIVATE KEY-----",
+      public_key: "ssh-ed25519 AAAAC3test nvoi-deploy"
+    )
+
+    loader = Nvoi::Config::SSHKeyLoader.new(config)
+    loader.load_keys
+
+    # Verify temp files created
+    assert File.exist?(config.ssh_key_path), "Private key file should exist"
+    assert_equal "-----BEGIN OPENSSH PRIVATE KEY-----\ntest\n-----END OPENSSH PRIVATE KEY-----",
+                 File.read(config.ssh_key_path)
+
+    # Verify permissions
+    assert_equal 0o600, File.stat(config.ssh_key_path).mode & 0o777
+
+    # Verify public key set
+    assert_equal "ssh-ed25519 AAAAC3test nvoi-deploy", config.ssh_public_key
+
+    loader.cleanup
   end
 
-  def teardown
-    FileUtils.rm_rf(@temp_dir)
-  end
+  def test_load_keys_raises_if_no_ssh_keys_section
+    config = mock_config_with_keys(private_key: nil, public_key: nil, no_keys: true)
 
-  def test_load_keys_with_explicit_paths
-    # Create test key files
-    private_key_path = File.join(@ssh_dir, "custom_key")
-    public_key_path = File.join(@ssh_dir, "custom_key.pub")
+    loader = Nvoi::Config::SSHKeyLoader.new(config)
 
-    File.write(private_key_path, "PRIVATE KEY CONTENT")
-    File.write(public_key_path, "ssh-rsa AAAAB3... user@host")
-
-    config = mock_config_with_ssh_paths(private_key_path, public_key_path)
-    locator = Nvoi::Config::SSHKeyLocator.new(config)
-
-    locator.load_keys
-
-    assert_equal private_key_path, config.ssh_key_path
-    assert_equal "ssh-rsa AAAAB3... user@host", config.ssh_public_key
-  end
-
-  def test_load_keys_derives_public_from_private
-    # Create test key files
-    private_key_path = File.join(@ssh_dir, "my_key")
-    public_key_path = File.join(@ssh_dir, "my_key.pub")
-
-    File.write(private_key_path, "PRIVATE KEY CONTENT")
-    File.write(public_key_path, "ssh-ed25519 AAAAC3... user@host")
-
-    config = mock_config_with_ssh_paths(private_key_path, nil)
-    locator = Nvoi::Config::SSHKeyLocator.new(config)
-
-    locator.load_keys
-
-    assert_equal private_key_path, config.ssh_key_path
-    assert_equal "ssh-ed25519 AAAAC3... user@host", config.ssh_public_key
-  end
-
-  def test_load_keys_from_env_variable
-    private_key_path = File.join(@ssh_dir, "env_key")
-    public_key_path = File.join(@ssh_dir, "env_key.pub")
-
-    File.write(private_key_path, "PRIVATE KEY")
-    File.write(public_key_path, "ssh-rsa ENVKEY user@host")
-
-    config = mock_config_with_ssh_paths(nil, nil)
-    locator = Nvoi::Config::SSHKeyLocator.new(config)
-
-    # Mock ENV
-    original_env = ENV["SSH_KEY_PATH"]
-    ENV["SSH_KEY_PATH"] = private_key_path
-
-    begin
-      locator.load_keys
-      assert_equal private_key_path, config.ssh_key_path
-      assert_equal "ssh-rsa ENVKEY user@host", config.ssh_public_key
-    ensure
-      if original_env
-        ENV["SSH_KEY_PATH"] = original_env
-      else
-        ENV.delete("SSH_KEY_PATH")
-      end
+    assert_raises(Nvoi::ConfigError) do
+      loader.load_keys
     end
+  end
+
+  def test_load_keys_raises_if_private_key_missing
+    config = mock_config_with_keys(private_key: nil, public_key: "ssh-ed25519 test")
+
+    loader = Nvoi::Config::SSHKeyLoader.new(config)
+
+    error = assert_raises(Nvoi::ConfigError) do
+      loader.load_keys
+    end
+    assert_match(/private_key/, error.message)
   end
 
   def test_load_keys_raises_if_public_key_missing
-    private_key_path = File.join(@ssh_dir, "lonely_key")
-    File.write(private_key_path, "PRIVATE KEY")
-    # No public key file
+    config = mock_config_with_keys(
+      private_key: "-----BEGIN OPENSSH PRIVATE KEY-----\ntest\n-----END OPENSSH PRIVATE KEY-----",
+      public_key: nil
+    )
 
-    config = mock_config_with_ssh_paths(private_key_path, nil)
-    locator = Nvoi::Config::SSHKeyLocator.new(config)
+    loader = Nvoi::Config::SSHKeyLoader.new(config)
 
-    assert_raises(Nvoi::ConfigError) do
-      locator.load_keys
+    error = assert_raises(Nvoi::ConfigError) do
+      loader.load_keys
     end
+    assert_match(/public_key/, error.message)
   end
 
-  def test_finds_id_rsa_by_default
-    # Create id_rsa key
-    private_key = File.join(@ssh_dir, "id_rsa")
-    public_key = File.join(@ssh_dir, "id_rsa.pub")
+  def test_cleanup_removes_temp_directory
+    config = mock_config_with_keys(
+      private_key: "-----BEGIN OPENSSH PRIVATE KEY-----\ntest\n-----END OPENSSH PRIVATE KEY-----",
+      public_key: "ssh-ed25519 test nvoi-deploy"
+    )
 
-    File.write(private_key, "RSA PRIVATE KEY")
-    File.write(public_key, "ssh-rsa DEFAULT user@host")
+    loader = Nvoi::Config::SSHKeyLoader.new(config)
+    loader.load_keys
 
-    config = mock_config_with_ssh_paths(nil, nil)
-    locator = Nvoi::Config::SSHKeyLocator.new(config)
+    temp_dir = File.dirname(config.ssh_key_path)
+    assert Dir.exist?(temp_dir)
 
-    # Mock Dir.home to return our temp dir
-    Dir.stub(:home, @temp_dir) do
-      locator.load_keys
-      assert_equal private_key, config.ssh_key_path
-      assert_equal "ssh-rsa DEFAULT user@host", config.ssh_public_key
-    end
-  end
+    loader.cleanup
 
-  def test_finds_id_ed25519_if_no_id_rsa
-    # Create only id_ed25519 key
-    private_key = File.join(@ssh_dir, "id_ed25519")
-    public_key = File.join(@ssh_dir, "id_ed25519.pub")
-
-    File.write(private_key, "ED25519 PRIVATE KEY")
-    File.write(public_key, "ssh-ed25519 EDKEY user@host")
-
-    config = mock_config_with_ssh_paths(nil, nil)
-    locator = Nvoi::Config::SSHKeyLocator.new(config)
-
-    Dir.stub(:home, @temp_dir) do
-      locator.load_keys
-      assert_equal private_key, config.ssh_key_path
-      assert_equal "ssh-ed25519 EDKEY user@host", config.ssh_public_key
-    end
-  end
-
-  def test_expands_tilde_in_path
-    # Create test files in temp ssh dir
-    private_key = File.join(@ssh_dir, "custom_key")
-    public_key = File.join(@ssh_dir, "custom_key.pub")
-
-    File.write(private_key, "PRIVATE")
-    File.write(public_key, "ssh-rsa TILDEKEY user@host")
-
-    # Config with tilde path
-    config = mock_config_with_ssh_paths("~/.ssh/custom_key", nil)
-    locator = Nvoi::Config::SSHKeyLocator.new(config)
-
-    Dir.stub(:home, @temp_dir) do
-      locator.load_keys
-      assert_equal private_key, config.ssh_key_path
-    end
+    refute Dir.exist?(temp_dir)
   end
 
   def test_strips_whitespace_from_public_key
-    private_key = File.join(@ssh_dir, "key")
-    public_key = File.join(@ssh_dir, "key.pub")
+    config = mock_config_with_keys(
+      private_key: "-----BEGIN OPENSSH PRIVATE KEY-----\ntest\n-----END OPENSSH PRIVATE KEY-----",
+      public_key: "  ssh-ed25519 test nvoi-deploy  \n"
+    )
 
-    File.write(private_key, "PRIVATE")
-    File.write(public_key, "  ssh-rsa KEYDATA user@host  \n")
+    loader = Nvoi::Config::SSHKeyLoader.new(config)
+    loader.load_keys
 
-    config = mock_config_with_ssh_paths(private_key, nil)
-    locator = Nvoi::Config::SSHKeyLocator.new(config)
+    assert_equal "ssh-ed25519 test nvoi-deploy", config.ssh_public_key
 
-    locator.load_keys
-
-    assert_equal "ssh-rsa KEYDATA user@host", config.ssh_public_key
-    refute config.ssh_public_key.include?("\n")
-    refute config.ssh_public_key.start_with?(" ")
+    loader.cleanup
   end
 
   private
 
-    def mock_config_with_ssh_paths(private_path, public_path)
-      ssh_key_path = if private_path || public_path
-        MockSSHKeyPath.new(private: private_path, public: public_path)
-      else
+    def mock_config_with_keys(private_key:, public_key:, no_keys: false)
+      ssh_keys = if no_keys
         nil
+      else
+        MockSSHKeyConfig.new(private_key:, public_key:)
       end
 
       MockConfig.new(
         deploy: MockDeploy.new(
           application: MockApplication.new(
             name: "myapp",
-            ssh_key_path:,
+            ssh_keys:,
             servers: {},
             app: {},
             database: nil,
@@ -188,26 +121,24 @@ class Nvoi::Config::SSHKeyLocatorTest < Minitest::Test
     end
 end
 
-class Nvoi::Config::SSHKeyGenerationMockTest < Minitest::Test
-  # Tests for mocked SSH key generation scenarios
+class Nvoi::Config::SSHKeyGenerationTest < Minitest::Test
+  def test_generate_keypair_returns_valid_keys
+    private_key, public_key = Nvoi::Config::SSHKeyLoader.generate_keypair
 
-  def test_generates_valid_ssh_key_format
-    # Simulate generated key formats
-    rsa_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC#{SecureRandom.base64(100).gsub(/[^A-Za-z0-9]/, '')} test@nvoi"
-    ed25519_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI#{SecureRandom.base64(32).gsub(/[^A-Za-z0-9]/, '')} test@nvoi"
+    # Private key should be OpenSSH format
+    assert private_key.start_with?("-----BEGIN OPENSSH PRIVATE KEY-----")
+    assert private_key.include?("-----END OPENSSH PRIVATE KEY-----")
 
-    # Verify RSA format
-    assert_match(/^ssh-rsa AAAA[A-Za-z0-9+\/]+ .+$/, rsa_key)
-
-    # Verify Ed25519 format
-    assert_match(/^ssh-ed25519 AAAA[A-Za-z0-9+\/]+ .+$/, ed25519_key)
+    # Public key should be ssh-ed25519 format
+    assert public_key.start_with?("ssh-ed25519 ")
+    assert public_key.include?("nvoi-deploy")
   end
 
-  def test_key_types_supported
-    supported = %w[id_rsa id_ed25519 id_ecdsa id_dsa]
+  def test_generate_keypair_creates_unique_keys
+    key1_priv, key1_pub = Nvoi::Config::SSHKeyLoader.generate_keypair
+    key2_priv, key2_pub = Nvoi::Config::SSHKeyLoader.generate_keypair
 
-    supported.each do |key_type|
-      assert_match(/^id_/, key_type)
-    end
+    refute_equal key1_priv, key2_priv
+    refute_equal key1_pub, key2_pub
   end
 end
