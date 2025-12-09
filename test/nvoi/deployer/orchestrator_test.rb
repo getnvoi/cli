@@ -8,6 +8,7 @@ class Nvoi::Deployer::OrchestratorTest < Minitest::Test
     @ssh = MockSSH.new
     @deploy_database_called = false
     @deployed_db_spec = nil
+    @deployed_secret_env = nil
   end
 
   def test_skips_database_deployment_for_sqlite3
@@ -35,6 +36,38 @@ class Nvoi::Deployer::OrchestratorTest < Minitest::Test
     refute @deploy_database_called, "deploy_database should not be called when no database configured"
   end
 
+  def test_deploy_app_secret_receives_database_env_vars_for_sqlite
+    config = build_config(adapter: "sqlite3", env: { "APP_NAME" => "myapp" })
+
+    run_orchestrator_deployment(config)
+
+    assert @deployed_secret_env, "deploy_app_secret should have been called"
+    assert_equal "sqlite3", @deployed_secret_env["DATABASE_ADAPTER"]
+    assert_equal "sqlite://data/db/production.sqlite3", @deployed_secret_env["DATABASE_URL"]
+    assert_equal "production", @deployed_secret_env["DEPLOY_ENV"]
+    assert_equal "myapp", @deployed_secret_env["APP_NAME"]
+  end
+
+  def test_deploy_app_secret_receives_database_env_vars_for_postgres
+    config = build_config(adapter: "postgres", env: { "APP_NAME" => "myapp" })
+
+    run_orchestrator_deployment(config)
+
+    assert @deployed_secret_env, "deploy_app_secret should have been called"
+    assert_equal "postgres", @deployed_secret_env["DATABASE_ADAPTER"]
+    assert_equal "production", @deployed_secret_env["DEPLOY_ENV"]
+  end
+
+  def test_deploy_app_secret_receives_database_env_vars_for_mysql
+    config = build_config(adapter: "mysql2", env: { "APP_NAME" => "myapp" })
+
+    run_orchestrator_deployment(config)
+
+    assert @deployed_secret_env, "deploy_app_secret should have been called"
+    assert_equal "mysql2", @deployed_secret_env["DATABASE_ADAPTER"]
+    assert_equal "production", @deployed_secret_env["DEPLOY_ENV"]
+  end
+
   private
 
     def run_orchestrator_deployment(config)
@@ -55,14 +88,16 @@ class Nvoi::Deployer::OrchestratorTest < Minitest::Test
       end
     end
 
-    def build_config(adapter:)
-      OrchestratorTestConfig.new(adapter:)
+    def build_config(adapter:, env: {})
+      OrchestratorTestConfig.new(adapter:, env:)
     end
 
     def mock_service_deployer
       test_instance = self
       Object.new.tap do |deployer|
-        deployer.define_singleton_method(:deploy_app_secret) { |_| }
+        deployer.define_singleton_method(:deploy_app_secret) do |env|
+          test_instance.instance_variable_set(:@deployed_secret_env, env)
+        end
         deployer.define_singleton_method(:deploy_database) do |spec|
           test_instance.instance_variable_set(:@deploy_database_called, true)
           test_instance.instance_variable_set(:@deployed_db_spec, spec)
@@ -123,14 +158,15 @@ class Nvoi::Deployer::OrchestratorTest < Minitest::Test
     class OrchestratorTestConfig
       attr_reader :ssh_key_path, :container_prefix
 
-      def initialize(adapter:)
+      def initialize(adapter:, env: {})
         @adapter = adapter
+        @env = env
         @ssh_key_path = "/tmp/test_key"
         @container_prefix = "test-app"
       end
 
       def deploy
-        @deploy ||= OrchestratorTestDeploy.new(@adapter)
+        @deploy ||= OrchestratorTestDeploy.new(@adapter, @env)
       end
 
       def namer
@@ -138,29 +174,37 @@ class Nvoi::Deployer::OrchestratorTest < Minitest::Test
       end
 
       def env_for_service(_name)
-        {}
+        env = { "DEPLOY_ENV" => "production" }
+        env.merge!(@env)
+        if @adapter
+          env["DATABASE_ADAPTER"] = @adapter
+          env["DATABASE_URL"] = "sqlite://data/db/production.sqlite3" if @adapter == "sqlite3"
+        end
+        env
       end
     end
 
     class OrchestratorTestDeploy
-      def initialize(adapter)
+      def initialize(adapter, env = {})
         @adapter = adapter
+        @env = env
       end
 
       def application
-        @application ||= OrchestratorTestApplication.new(@adapter)
+        @application ||= OrchestratorTestApplication.new(@adapter, @env)
       end
     end
 
     class OrchestratorTestApplication
-      attr_reader :env, :secrets, :services, :app
+      attr_reader :env, :secrets, :services, :app, :environment
 
-      def initialize(adapter)
+      def initialize(adapter, env = {})
         @adapter = adapter
-        @env = {}
+        @env = env
         @secrets = {}
         @services = {}
         @app = {}
+        @environment = "production"
       end
 
       def database

@@ -1,5 +1,5 @@
 NVOI = ruby -I$(PWD)/lib $(PWD)/exe/nvoi
-EXAMPLES = $(PWD)/../nvoi-cli/examples
+EXAMPLES = $(PWD)/examples
 
 deploy-golang:
 	cd $(EXAMPLES)/golang && $(NVOI) deploy

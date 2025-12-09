@@ -171,6 +171,12 @@ module Nvoi
             return db_error if db_error
           end
 
+          # Validate SSH keys
+          ssh_keys = app["ssh_keys"]
+          return "application.ssh_keys is required" unless ssh_keys.is_a?(Hash)
+          return "application.ssh_keys.private_key is required" if ssh_keys["private_key"].nil? || ssh_keys["private_key"].to_s.strip.empty?
+          return "application.ssh_keys.public_key is required" if ssh_keys["public_key"].nil? || ssh_keys["public_key"].to_s.strip.empty?
+
           nil
         end
 
@@ -196,6 +202,9 @@ module Nvoi
         end
 
         def default_template
+          # Generate SSH keypair for first-time setup
+          private_key, public_key = Config::SSHKeyLoader.generate_keypair
+
           <<~YAML
           # NVOI Deployment Configuration
           # This file is encrypted - never commit deploy.key!
@@ -250,6 +259,12 @@ module Nvoi
             secrets:
               # Add secrets here (will be injected as env vars)
               # SECRET_KEY_BASE: YOUR_SECRET_KEY_BASE
+
+            # SSH keys (auto-generated, do not modify)
+            ssh_keys:
+              private_key: |
+          #{private_key.lines.map { |l| "        #{l}" }.join}
+              public_key: #{public_key}
         YAML
         end
     end

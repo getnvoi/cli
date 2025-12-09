@@ -48,9 +48,9 @@ module Nvoi
         # Create config
         cfg = Configuration.new(deploy_config)
 
-        # Load SSH keys
-        key_locator = SSHKeyLocator.new(cfg)
-        key_locator.load_keys
+        # Load SSH keys from config content
+        key_loader = SSHKeyLoader.new(cfg)
+        key_loader.load_keys
 
         # Validate config structure
         cfg.validate_config
