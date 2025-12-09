@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
 
   spec.summary       = "NVOI deployment tool"
   spec.description   = "A deployment tool that automates application deployment to cloud providers (Hetzner, AWS) with K3s orchestration and Cloudflare tunnels."
-  spec.homepage      = "https://github.com/getnvoi/nvoi"
+  spec.homepage      = "https://github.com/getnvoi/cli"
   spec.license       = "MIT"
   spec.required_ruby_version = ">= 3.2.0"
 
