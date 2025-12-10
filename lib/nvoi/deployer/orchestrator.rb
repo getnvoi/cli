@@ -48,8 +48,10 @@ module Nvoi
           # Deploy services
           service_deployer = ServiceDeployer.new(@config, ssh, @log)
 
-          # Gather all env vars
-          all_env = gather_env_vars
+          # Gather all env vars using EnvResolver (single source of truth)
+          # Use first app service to get full env (includes database vars, deploy_env, etc.)
+          first_service = @config.deploy.application.app.keys.first
+          all_env = @config.env_for_service(first_service)
 
           # Deploy app secret
           service_deployer.deploy_app_secret(all_env)
@@ -126,23 +128,6 @@ module Nvoi
           @ssh.execute("rm -f #{lock_file}")
         rescue StandardError
           # Ignore errors during lock release
-        end
-
-        def gather_env_vars
-          env = {}
-
-          # Global env
-          @config.deploy.application.env&.each { |k, v| env[k] = v }
-
-          # Global secrets
-          @config.deploy.application.secrets&.each { |k, v| env[k] = v }
-
-          # Service-specific env (merged)
-          @config.deploy.application.app.each do |_name, service|
-            service.env&.each { |k, v| env[k] = v }
-          end
-
-          env
         end
 
         def push_to_registry(ssh, local_tag, registry_tag)

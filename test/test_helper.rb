@@ -3,7 +3,6 @@
 $LOAD_PATH.unshift File.expand_path("../lib", __dir__)
 
 require "minitest/autorun"
-require "minitest/pride"
 require "webmock/minitest"
 require "yaml"
 require "nvoi"
@@ -14,9 +13,9 @@ WebMock.disable_net_connect!
 # Test doubles using Struct
 MockConfig = Struct.new(:deploy, :container_prefix, :ssh_key_path, :ssh_public_key, keyword_init: true)
 MockDeploy = Struct.new(:application, keyword_init: true)
-MockApplication = Struct.new(:name, :servers, :app, :database, :services, :ssh_key_path, keyword_init: true)
+MockApplication = Struct.new(:name, :servers, :app, :database, :services, :ssh_keys, keyword_init: true)
 MockServerGroup = Struct.new(:count, :master, :type, keyword_init: true)
-MockSSHKeyPath = Struct.new(:private, :public, keyword_init: true)
+MockSSHKeyConfig = Struct.new(:private_key, :public_key, keyword_init: true)
 
 module TestHelpers
   # Mock config for testing naming and other components
@@ -45,7 +44,7 @@ module TestHelpers
       app: overrides[:app] || {},
       database: overrides[:database],
       services: overrides[:services] || {},
-      ssh_key_path: overrides[:ssh_key_path]
+      ssh_keys: overrides[:ssh_keys]
     )
   end
 

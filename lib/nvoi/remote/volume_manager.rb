@@ -18,6 +18,9 @@ module Nvoi
         # Check if already mounted
         return if mounted?(opts.mount_path)
 
+        # Wait for device to appear (Hetzner attachment is async)
+        wait_for_device(opts.device_path)
+
         # Check if device has a filesystem
         unless has_filesystem?(opts.device_path)
           format_volume(opts.device_path, fs_type)
@@ -55,6 +58,23 @@ module Nvoi
       end
 
       private
+
+        def wait_for_device(device_path, timeout: 60)
+          attempts = 0
+          max_attempts = timeout / 2
+
+          loop do
+            output = @ssh.execute("test -e #{device_path} && echo 'exists' || echo 'missing'")
+            return if output.strip == "exists"
+
+            attempts += 1
+            if attempts >= max_attempts
+              raise VolumeError, "Timeout waiting for device #{device_path} to appear"
+            end
+
+            sleep(2)
+          end
+        end
 
         def has_filesystem?(device_path)
           output = @ssh.execute("sudo blkid #{device_path}")

@@ -15,7 +15,7 @@ module Nvoi
     class Application
       attr_accessor :name, :environment, :domain_provider, :compute_provider,
                     :keep_count, :servers, :app, :database, :services, :env,
-                    :secrets, :ssh_key_path
+                    :secrets, :ssh_keys
 
       def initialize(data = {})
         @name = data["name"]
@@ -29,7 +29,7 @@ module Nvoi
         @services = parse_services(data["services"] || {})
         @env = data["env"] || {}
         @secrets = data["secrets"] || {}
-        @ssh_key_path = data["ssh_key_path"] ? SSHKeyPathConfig.new(data["ssh_key_path"]) : nil
+        @ssh_keys = data["ssh_keys"] ? SSHKeyConfig.new(data["ssh_keys"]) : nil
       end
 
       private
@@ -240,13 +240,13 @@ module Nvoi
       end
     end
 
-    # SSHKeyPathConfig defines SSH key paths
-    class SSHKeyPathConfig
-      attr_accessor :private, :public
+    # SSHKeyConfig defines SSH key content (stored in encrypted config)
+    class SSHKeyConfig
+      attr_accessor :private_key, :public_key
 
       def initialize(data = {})
-        @private = data["private"]
-        @public = data["public"]
+        @private_key = data["private_key"]
+        @public_key = data["public_key"]
       end
     end
 
