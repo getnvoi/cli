@@ -321,11 +321,11 @@ module Nvoi
         has_error_header = output.lines.any? { |line| line.downcase.start_with?("x-nvoi-error:") }
 
         if http_code == "200" && !has_error_header
-          { success: true, http_code: http_code, message: "OK" }
+          { success: true, http_code:, message: "OK" }
         elsif has_error_header
-          { success: false, http_code: http_code, message: "Error backend responding (X-Nvoi-Error header present) - app is down" }
+          { success: false, http_code:, message: "Error backend responding (X-Nvoi-Error header present) - app is down" }
         else
-          { success: false, http_code: http_code, message: "HTTP #{http_code} (expected: 200)" }
+          { success: false, http_code:, message: "HTTP #{http_code} (expected: 200)" }
         end
       end
 

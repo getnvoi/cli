@@ -8,11 +8,14 @@ module Nvoi
 
       attr_accessor :config_dir
 
-      def initialize(config_path, log)
+      def initialize(config_path, log, override: nil)
         @log = log
 
         # Load configuration
         @config = Config.load(config_path)
+
+        # Apply override for branch deployments
+        override&.apply(@config)
 
         # Initialize provider
         @provider = init_provider(@config)
@@ -128,21 +131,12 @@ module Nvoi
           namer = @config.namer
           names = []
 
-          # Database volume
-          db = @config.deploy.application.database
-          names << namer.database_volume_name if db&.volume && !db.volume.empty?
+          # Volumes are defined at server-level (per volume redesign)
+          @config.deploy.application.servers.each do |server_name, server_config|
+            next unless server_config.volumes && !server_config.volumes.empty?
 
-          # Service volumes
-          @config.deploy.application.services.each do |svc_name, svc|
-            names << namer.service_volume_name(svc_name, "data") if svc&.volume && !svc.volume.empty?
-          end
-
-          # App volumes
-          @config.deploy.application.app.each do |app_name, app|
-            next unless app&.volumes && !app.volumes.empty?
-
-            app.volumes.keys.each do |vol_key|
-              names << namer.app_volume_name(app_name, vol_key)
+            server_config.volumes.each_key do |vol_name|
+              names << namer.server_volume_name(server_name, vol_name)
             end
           end
 

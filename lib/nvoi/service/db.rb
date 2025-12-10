@@ -8,11 +8,14 @@ module Nvoi
 
       BRANCHES_DIR = "/mnt/db-branches"
 
-      def initialize(config_path, log)
+      def initialize(config_path, log, override: nil)
         @log = log
 
         # Load configuration
         @config = Config.load(config_path)
+
+        # Apply override for branch deployments
+        override&.apply(@config)
 
         # Initialize provider
         @provider = init_provider(@config)
@@ -250,7 +253,7 @@ module Nvoi
           metadata.branches << Database::Branch.new(
             id: branch_id,
             created_at: Time.now.iso8601,
-            size: size,
+            size:,
             adapter: @db_config.adapter,
             database: @creds.database
           )

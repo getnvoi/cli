@@ -25,6 +25,7 @@ require_relative "nvoi/config/env_resolver"
 require_relative "nvoi/config/loader"
 require_relative "nvoi/config/config"
 require_relative "nvoi/config/database"
+require_relative "nvoi/config/override"
 require_relative "nvoi/config/builder"
 require_relative "nvoi/config/schema"
 

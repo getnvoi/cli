@@ -3,8 +3,26 @@
 require "thor"
 
 module Nvoi
+  # Shared options for branch deployments
+  module BranchDeploymentOptions
+    def self.included(base)
+      base.class_option :branch, aliases: "-b", desc: "Branch name for isolated deployments (prefixes app name and subdomains)"
+    end
+
+    private
+
+      def build_override
+        branch = options[:branch]
+        return nil if branch.nil? || branch.empty?
+
+        Config::Override.new(branch:)
+      end
+  end
+
   # DbCLI handles database branch operations
   class DbCLI < Thor
+    include BranchDeploymentOptions
+
     class_option :config, aliases: "-c", default: Constants::DEFAULT_CONFIG_FILE,
                           desc: "Path to deployment configuration file"
     class_option :dir, aliases: "-d", default: ".",
@@ -16,6 +34,8 @@ module Nvoi
 
     desc "branch SUBCOMMAND", "Database branch operations"
     subcommand "branch", Class.new(Thor) {
+      include BranchDeploymentOptions
+
       class_option :config, aliases: "-c", default: Constants::DEFAULT_CONFIG_FILE,
                             desc: "Path to deployment configuration file"
       class_option :dir, aliases: "-d", default: ".",
@@ -37,7 +57,8 @@ module Nvoi
         log.info "Database Branch Create"
 
         config_path = resolve_config_path
-        svc = Service::DbService.new(config_path, log)
+        override = build_override
+        svc = Service::DbService.new(config_path, log, override:)
         svc.branch_create(name)
       rescue StandardError => e
         log.error "Branch create failed: %s", e.message
@@ -49,7 +70,8 @@ module Nvoi
       def list
         log = Nvoi.logger
         config_path = resolve_config_path
-        svc = Service::DbService.new(config_path, log)
+        override = build_override
+        svc = Service::DbService.new(config_path, log, override:)
         branches = svc.branch_list
 
         if branches.empty?
@@ -86,7 +108,8 @@ module Nvoi
         log.info "Database Branch Restore"
 
         config_path = resolve_config_path
-        svc = Service::DbService.new(config_path, log)
+        override = build_override
+        svc = Service::DbService.new(config_path, log, override:)
         svc.branch_restore(branch_id, new_db_name)
       rescue StandardError => e
         log.error "Branch restore failed: %s", e.message
@@ -104,7 +127,8 @@ module Nvoi
         log.info "Database Branch Download"
 
         config_path = resolve_config_path
-        svc = Service::DbService.new(config_path, log)
+        override = build_override
+        svc = Service::DbService.new(config_path, log, override:)
         svc.branch_download(branch_id, options[:path])
       rescue StandardError => e
         log.error "Branch download failed: %s", e.message
@@ -269,6 +293,8 @@ module Nvoi
 
   # Main CLI for nvoi commands
   class CLI < Thor
+    include BranchDeploymentOptions
+
     class_option :config, aliases: "-c", default: Constants::DEFAULT_CONFIG_FILE,
                           desc: "Path to deployment configuration file"
     class_option :dir, aliases: "-d", default: ".",
@@ -294,8 +320,11 @@ module Nvoi
       working_dir = options[:dir]
       dockerfile_path = options[:dockerfile_path] || File.join(working_dir, "Dockerfile")
 
+      # Build override if branch deployment flags provided
+      override = build_override
+
       begin
-        svc = Service::DeployService.new(config_path, working_dir, log)
+        svc = Service::DeployService.new(config_path, working_dir, log, override:)
         svc.config_dir = options[:config_dir] if options[:config_dir]
         svc.dockerfile_path = dockerfile_path
         svc.run
@@ -313,8 +342,11 @@ module Nvoi
 
       config_path = resolve_config_path
 
+      # Build override if branch deployment flags provided
+      override = build_override
+
       begin
-        svc = Service::DeleteService.new(config_path, log)
+        svc = Service::DeleteService.new(config_path, log, override:)
         svc.config_dir = options[:config_dir] if options[:config_dir]
         svc.run
       rescue StandardError => e
@@ -338,8 +370,11 @@ module Nvoi
 
       config_path = resolve_config_path
 
+      # Build override if branch deployment flags provided
+      override = build_override
+
       begin
-        svc = Service::ExecService.new(config_path, log)
+        svc = Service::ExecService.new(config_path, log, override:)
 
         if options[:interactive]
           log.warning "Ignoring command arguments in interactive mode" unless args.empty?
