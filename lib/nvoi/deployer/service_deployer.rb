@@ -252,6 +252,8 @@ module Nvoi
       end
 
       # Verify traffic is routing to the new deployment via public URL
+      # Checks both HTTP status (200) and absence of X-Nvoi-Error header
+      # (which indicates the error backend is serving, meaning the real app is down)
       def verify_traffic_switchover(service_config)
         return unless service_config.domain && !service_config.domain.empty?
 
@@ -272,14 +274,12 @@ module Nvoi
         max_attempts = Constants::TRAFFIC_VERIFY_ATTEMPTS
 
         max_attempts.times do |attempt|
-          curl_cmd = "curl -s -o /dev/null -w '%{http_code}' -m 10 '#{public_url}' 2>/dev/null"
-
           begin
-            http_code = @ssh.execute(curl_cmd).strip
+            result = check_public_url(@ssh, public_url)
 
-            if http_code == "200"
+            if result[:success]
               consecutive_success += 1
-              @log.success "[%d/%d] Public URL responding: %s", consecutive_success, required_consecutive, http_code
+              @log.success "[%d/%d] Public URL responding: %s", consecutive_success, required_consecutive, result[:http_code]
 
               if consecutive_success >= required_consecutive
                 @log.success "Traffic switchover verified: public URL accessible"
@@ -290,7 +290,7 @@ module Nvoi
                 @log.warning "Success streak broken at %d, restarting count", consecutive_success
               end
               consecutive_success = 0
-              @log.info "[%d/%d] Public URL check: %s (expected: 200)", attempt + 1, max_attempts, http_code
+              @log.info "[%d/%d] %s", attempt + 1, max_attempts, result[:message]
             end
           rescue SSHCommandError
             consecutive_success = 0
@@ -304,6 +304,30 @@ module Nvoi
           "traffic_verification",
           "public URL verification failed after #{max_attempts} attempts. Cloudflare tunnel may not be routing correctly."
         )
+      end
+
+      # Check public URL for both status code and error header
+      # Returns { success: bool, http_code: string, message: string }
+      def check_public_url(ssh, url)
+        # Get headers and status code in one request
+        # -I = HEAD request, -s = silent, -o /dev/null discards body
+        # We use -i to include headers in output, then parse
+        curl_cmd = "curl -sI -m 10 '#{url}' 2>/dev/null"
+        output = ssh.execute(curl_cmd).strip
+
+        # Parse HTTP status code from first line (e.g., "HTTP/2 200" or "HTTP/1.1 200 OK")
+        http_code = output.lines.first&.match(/HTTP\/[\d.]+ (\d+)/)&.captures&.first || "000"
+
+        # Check for X-Nvoi-Error header (case-insensitive)
+        has_error_header = output.lines.any? { |line| line.downcase.start_with?("x-nvoi-error:") }
+
+        if http_code == "200" && !has_error_header
+          { success: true, http_code: http_code, message: "OK" }
+        elsif has_error_header
+          { success: false, http_code: http_code, message: "Error backend responding (X-Nvoi-Error header present) - app is down" }
+        else
+          { success: false, http_code: http_code, message: "HTTP #{http_code} (expected: 200)" }
+        end
       end
 
       private
