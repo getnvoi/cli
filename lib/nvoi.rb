@@ -27,6 +27,7 @@ require_relative "nvoi/credentials/editor"
 require_relative "nvoi/providers/base"
 require_relative "nvoi/providers/hetzner"
 require_relative "nvoi/providers/aws"
+require_relative "nvoi/providers/scaleway"
 
 require_relative "nvoi/cloudflare/client"
 

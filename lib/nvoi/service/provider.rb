@@ -12,6 +12,9 @@ module Nvoi
         when "aws"
           a = config.aws
           Providers::AWS.new(a.access_key_id, a.secret_access_key, a.region)
+        when "scaleway"
+          s = config.scaleway
+          Providers::Scaleway.new(s.secret_key, s.project_id, zone: s.zone)
         else
           raise ProviderError, "unknown provider: #{config.provider_name}"
         end
@@ -29,6 +32,11 @@ module Nvoi
           provider.validate_credentials
           provider.validate_instance_type(a.instance_type)
           provider.validate_region(a.region)
+        when "scaleway"
+          s = config.scaleway
+          provider.validate_credentials
+          provider.validate_instance_type(s.server_type)
+          provider.validate_region(s.zone)
         end
       end
     end

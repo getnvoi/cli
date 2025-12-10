@@ -32,6 +32,8 @@ module Nvoi
   class APIError < ProviderError; end
   class AuthenticationError < ProviderError; end
   class NotFoundError < ProviderError; end
+  class ConflictError < ProviderError; end
+  class RateLimitError < ProviderError; end
 
   # Cloudflare errors
   class CloudflareError < Error; end

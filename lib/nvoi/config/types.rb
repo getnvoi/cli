@@ -58,11 +58,12 @@ module Nvoi
 
     # ComputeProviderConfig contains compute provider configuration
     class ComputeProviderConfig
-      attr_accessor :hetzner, :aws
+      attr_accessor :hetzner, :aws, :scaleway
 
       def initialize(data = {})
         @hetzner = data["hetzner"] ? HetznerConfig.new(data["hetzner"]) : nil
         @aws = data["aws"] ? AWSConfig.new(data["aws"]) : nil
+        @scaleway = data["scaleway"] ? ScalewayConfig.new(data["scaleway"]) : nil
       end
     end
 
@@ -96,6 +97,18 @@ module Nvoi
         @secret_access_key = data["secret_access_key"]
         @region = data["region"]
         @instance_type = data["instance_type"]
+      end
+    end
+
+    # ScalewayConfig contains Scaleway-specific configuration
+    class ScalewayConfig
+      attr_accessor :secret_key, :project_id, :zone, :server_type
+
+      def initialize(data = {})
+        @secret_key = data["secret_key"]
+        @project_id = data["project_id"]
+        @zone = data["zone"] || "fr-par-1"
+        @server_type = data["server_type"]
       end
     end
 

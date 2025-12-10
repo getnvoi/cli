@@ -44,6 +44,7 @@ module Nvoi
       def provider_name
         return "hetzner" if @deploy.application.compute_provider.hetzner
         return "aws" if @deploy.application.compute_provider.aws
+        return "scaleway" if @deploy.application.compute_provider.scaleway
 
         ""
       end
@@ -54,6 +55,10 @@ module Nvoi
 
       def aws
         @deploy.application.compute_provider.aws
+      end
+
+      def scaleway
+        @deploy.application.compute_provider.scaleway
       end
 
       def cloudflare
@@ -176,7 +181,15 @@ module Nvoi
             raise ConfigValidationError, "aws instance_type is required" if a.instance_type.nil? || a.instance_type.empty?
           end
 
-          raise ConfigValidationError, "compute provider required: hetzner or aws must be configured" unless has_provider
+          if app.compute_provider.scaleway
+            has_provider = true
+            s = app.compute_provider.scaleway
+            raise ConfigValidationError, "scaleway secret_key is required" if s.secret_key.nil? || s.secret_key.empty?
+            raise ConfigValidationError, "scaleway project_id is required" if s.project_id.nil? || s.project_id.empty?
+            raise ConfigValidationError, "scaleway server_type is required" if s.server_type.nil? || s.server_type.empty?
+          end
+
+          raise ConfigValidationError, "compute provider required: hetzner, aws, or scaleway must be configured" unless has_provider
         end
 
         def inject_database_env_vars
