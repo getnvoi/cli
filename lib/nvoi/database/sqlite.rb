@@ -17,7 +17,7 @@ module Nvoi
         # Handle: sqlite://path/to/file.db or sqlite:///absolute/path.db
         path = url.sub(%r{^sqlite3?:///?}, "")
         Credentials.new(
-          path: path,
+          path:,
           database: File.basename(path)
         )
       end

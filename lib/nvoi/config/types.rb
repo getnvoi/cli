@@ -212,8 +212,8 @@ module Nvoi
 
         ServiceSpec.new(
           name: namer.database_service_name,
-          image: image,
-          port: port,
+          image:,
+          port:,
           env: nil,
           mounts: @mount,
           replicas: 1,
@@ -247,7 +247,7 @@ module Nvoi
         ServiceSpec.new(
           name: "#{app_name}-#{service_name}",
           image: @image,
-          port: port,
+          port:,
           command: cmd,
           env: @env,
           mounts: @mount,

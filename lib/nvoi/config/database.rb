@@ -51,13 +51,13 @@ module Nvoi
           end
 
           return DatabaseCredentials.new(
-            adapter: adapter,
+            adapter:,
             user: creds.user,
             password: creds.password,
             database: creds.database,
             port: creds.port,
             path: creds.path,
-            host_path: host_path
+            host_path:
           )
         end
 
@@ -65,7 +65,7 @@ module Nvoi
         case adapter
         when "postgres", "postgresql"
           DatabaseCredentials.new(
-            adapter: adapter,
+            adapter:,
             port: provider.default_port,
             user: db_config.secrets["POSTGRES_USER"],
             password: db_config.secrets["POSTGRES_PASSWORD"],
@@ -73,7 +73,7 @@ module Nvoi
           )
         when "mysql", "mysql2"
           DatabaseCredentials.new(
-            adapter: adapter,
+            adapter:,
             port: provider.default_port,
             user: db_config.secrets["MYSQL_USER"],
             password: db_config.secrets["MYSQL_PASSWORD"],
@@ -82,7 +82,7 @@ module Nvoi
         when "sqlite", "sqlite3"
           # SQLite should always use URL, but handle edge case
           DatabaseCredentials.new(
-            adapter: adapter,
+            adapter:,
             database: "app.db",
             host_path: resolve_sqlite_host_path(db_config, namer, "app.db")
           )
@@ -102,13 +102,13 @@ module Nvoi
         db_creds = Database::Credentials.new(
           user: creds.user,
           password: creds.password,
-          host: host,
+          host:,
           port: creds.port,
           database: creds.database,
           path: creds.path || creds.database
         )
 
-        provider.build_url(db_creds, host: host)
+        provider.build_url(db_creds, host:)
       end
 
       # Resolve the host path for SQLite database from mount configuration
