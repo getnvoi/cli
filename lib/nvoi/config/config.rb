@@ -144,8 +144,7 @@ module Nvoi
               raise ConfigValidationError, "mysql database requires #{key} in secrets (or provide database.url)" unless db.secrets[key]
             end
           when "sqlite", "sqlite3"
-            # SQLite doesn't require secrets, but needs url
-            raise ConfigValidationError, "sqlite database requires database.url" unless db.url && !db.url.empty?
+            # SQLite doesn't require secrets - path can be inferred from url, mount, or defaults
           end
         end
 

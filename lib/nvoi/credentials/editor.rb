@@ -203,8 +203,7 @@ module Nvoi
               return "database.secrets.#{key} is required for mysql (or provide database.url)" unless db.dig("secrets", key)
             end
           when "sqlite", "sqlite3"
-            # SQLite requires URL
-            return "database.url is required for sqlite (e.g., sqlite://path/to/db.sqlite3)" unless has_url
+            # SQLite doesn't require secrets - path can be inferred from url, mount, or defaults
           else
             return "unsupported database adapter: #{adapter}"
           end
