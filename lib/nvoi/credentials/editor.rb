@@ -121,8 +121,8 @@ module Nvoi
 
           # Compute provider
           compute_provider = app["compute_provider"]
-          has_compute = compute_provider&.dig("hetzner") || compute_provider&.dig("aws")
-          return "compute_provider (hetzner or aws) is required" unless has_compute
+          has_compute = compute_provider&.dig("hetzner") || compute_provider&.dig("aws") || compute_provider&.dig("scaleway")
+          return "compute_provider (hetzner, aws, or scaleway) is required" unless has_compute
 
           if (h = compute_provider&.dig("hetzner"))
             return "application.compute_provider.hetzner.api_token is required" if h["api_token"].nil? || h["api_token"].to_s.empty?
@@ -135,6 +135,12 @@ module Nvoi
             return "application.compute_provider.aws.secret_access_key is required" if a["secret_access_key"].nil? || a["secret_access_key"].to_s.empty?
             return "application.compute_provider.aws.region is required" if a["region"].nil? || a["region"].to_s.empty?
             return "application.compute_provider.aws.instance_type is required" if a["instance_type"].nil? || a["instance_type"].to_s.empty?
+          end
+
+          if (s = compute_provider&.dig("scaleway"))
+            return "application.compute_provider.scaleway.secret_key is required" if s["secret_key"].nil? || s["secret_key"].to_s.empty?
+            return "application.compute_provider.scaleway.project_id is required" if s["project_id"].nil? || s["project_id"].to_s.empty?
+            return "application.compute_provider.scaleway.server_type is required" if s["server_type"].nil? || s["server_type"].to_s.empty?
           end
 
           # Servers (if any services defined)
