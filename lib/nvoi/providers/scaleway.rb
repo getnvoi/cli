@@ -228,14 +228,30 @@ module Nvoi
         server = @client.get_server(server_id)
         raise VolumeError, "server not found: #{server_id}" unless server
 
+        # Wait for volume to be available
+        wait_for_volume_available(volume_id)
+
         # Get current volumes and add new one
         current_volumes = server["volumes"] || {}
         next_index = current_volumes.keys.map(&:to_i).max.to_i + 1
 
         new_volumes = current_volumes.dup
-        new_volumes[next_index.to_s] = { id: volume_id, boot: false }
+        # SBS volumes require volume_type: "sbs_volume"
+        new_volumes[next_index.to_s] = { id: volume_id, volume_type: "sbs_volume" }
 
         @client.update_server(server_id, { volumes: new_volumes })
+      end
+
+      def wait_for_volume_available(volume_id, timeout: 60)
+        deadline = Time.now + timeout
+        loop do
+          vol = @client.get_volume(volume_id)
+          return if vol && vol["status"] == "available"
+
+          raise VolumeError, "volume #{volume_id} did not become available" if Time.now > deadline
+
+          sleep 2
+        end
       end
 
       def detach_volume(volume_id)
