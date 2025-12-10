@@ -72,6 +72,10 @@ module Nvoi
         "app=db-#{@config.deploy.application.name}"
       end
 
+      def database_pod_name
+        "db-#{@config.deploy.application.name}-0"
+      end
+
       # ============================================================================
       # KUBERNETES APP RESOURCES
       # ============================================================================

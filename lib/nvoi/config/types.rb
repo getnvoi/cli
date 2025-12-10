@@ -186,7 +186,7 @@ module Nvoi
 
     # DatabaseConfig defines database configuration
     class DatabaseConfig
-      attr_accessor :servers, :adapter, :url, :image, :mount, :secrets
+      attr_accessor :servers, :adapter, :url, :image, :mount, :secrets, :path
 
       def initialize(data = {})
         @servers = data["servers"] || []
@@ -195,6 +195,7 @@ module Nvoi
         @image = data["image"]
         @mount = data["mount"] || {}
         @secrets = data["secrets"] || {}
+        @path = data["path"]  # For SQLite: relative path to db file (e.g., "data/db/production.sqlite3")
       end
 
       # Convert to ServiceSpec
