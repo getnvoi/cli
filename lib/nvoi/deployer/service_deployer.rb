@@ -75,11 +75,35 @@ module Nvoi
           volumes: []
         }
 
-        # Add volumes if configured
-        service_config.volumes&.each do |vol_key, mount_path|
-          host_path = "/opt/nvoi/volumes/#{@namer.app_volume_name(service_name, vol_key)}"
-          data[:volume_mounts] << { name: vol_key, mount_path: }
-          data[:host_path_volumes] << { name: vol_key, host_path: }
+        # Add mounts if configured (volumes are now server-level)
+        if service_config.mounts && !service_config.mounts.empty?
+          # Validate: single server only for services with mounts
+          if service_config.servers.length > 1
+            raise DeploymentError.new(
+              "validation",
+              "app '#{service_name}' runs on multiple servers #{service_config.servers} " \
+              "and cannot have mounts. Volumes are server-local and would cause data inconsistency."
+            )
+          end
+
+          server_name = service_config.servers.first
+          server_config = @config.deploy.application.servers[server_name]
+
+          service_config.mounts.each do |vol_name, mount_path|
+            # Validate: volume exists on the server
+            unless server_config&.volumes&.key?(vol_name)
+              available = server_config&.volumes&.keys&.join(", ") || "none"
+              raise DeploymentError.new(
+                "validation",
+                "app '#{service_name}' mounts '#{vol_name}' but server '#{server_name}' " \
+                "has no volume named '#{vol_name}'. Available: #{available}"
+              )
+            end
+
+            host_path = @namer.server_volume_host_path(server_name, vol_name)
+            data[:volume_mounts] << { name: vol_name, mount_path: }
+            data[:host_path_volumes] << { name: vol_name, host_path: }
+          end
         end
 
         K8s::Renderer.apply_manifest(@ssh, template, data)
@@ -136,9 +160,12 @@ module Nvoi
           host_path: nil
         }
 
-        # Use hostPath for database volume if configured
-        if @config.deploy.application.database.volume
-          data[:host_path] = "/opt/nvoi/volumes/#{@namer.database_volume_name}"
+        # Use hostPath for database volume if configured (mounts reference server volumes)
+        db_mount = @config.deploy.application.database.mount
+        if db_mount && !db_mount.empty?
+          server_name = db_spec.servers.first
+          vol_name = db_mount.keys.first
+          data[:host_path] = @namer.server_volume_host_path(server_name, vol_name)
         end
 
         # Create database secret first
@@ -162,8 +189,12 @@ module Nvoi
         @log.info "Deploying service: %s", service_spec.name
 
         host_path = nil
-        if service_spec.volumes["data"]
-          host_path = "/opt/nvoi/volumes/#{@namer.service_volume_name(service_name, 'data')}"
+        volume_path = nil
+        if service_spec.mounts && !service_spec.mounts.empty?
+          server_name = service_spec.servers.first
+          vol_name, mount_path = service_spec.mounts.first
+          host_path = @namer.server_volume_host_path(server_name, vol_name)
+          volume_path = mount_path
         end
 
         data = {
@@ -173,7 +204,7 @@ module Nvoi
           command: service_spec.command,
           env_vars: service_spec.env,
           env_keys: service_spec.env.keys.sort,
-          volume_path: service_spec.volumes["data"],
+          volume_path:,
           host_path:,
           affinity_server_names: service_spec.servers
         }
@@ -221,6 +252,8 @@ module Nvoi
       end
 
       # Verify traffic is routing to the new deployment via public URL
+      # Checks both HTTP status (200) and absence of X-Nvoi-Error header
+      # (which indicates the error backend is serving, meaning the real app is down)
       def verify_traffic_switchover(service_config)
         return unless service_config.domain && !service_config.domain.empty?
 
@@ -241,14 +274,12 @@ module Nvoi
         max_attempts = Constants::TRAFFIC_VERIFY_ATTEMPTS
 
         max_attempts.times do |attempt|
-          curl_cmd = "curl -s -o /dev/null -w '%{http_code}' -m 10 '#{public_url}' 2>/dev/null"
-
           begin
-            http_code = @ssh.execute(curl_cmd).strip
+            result = check_public_url(@ssh, public_url)
 
-            if http_code == "200"
+            if result[:success]
               consecutive_success += 1
-              @log.success "[%d/%d] Public URL responding: %s", consecutive_success, required_consecutive, http_code
+              @log.success "[%d/%d] Public URL responding: %s", consecutive_success, required_consecutive, result[:http_code]
 
               if consecutive_success >= required_consecutive
                 @log.success "Traffic switchover verified: public URL accessible"
@@ -259,7 +290,7 @@ module Nvoi
                 @log.warning "Success streak broken at %d, restarting count", consecutive_success
               end
               consecutive_success = 0
-              @log.info "[%d/%d] Public URL check: %s (expected: 200)", attempt + 1, max_attempts, http_code
+              @log.info "[%d/%d] %s", attempt + 1, max_attempts, result[:message]
             end
           rescue SSHCommandError
             consecutive_success = 0
@@ -273,6 +304,29 @@ module Nvoi
           "traffic_verification",
           "public URL verification failed after #{max_attempts} attempts. Cloudflare tunnel may not be routing correctly."
         )
+      end
+
+      # Check public URL for both status code and error header
+      # Returns { success: bool, http_code: string, message: string }
+      def check_public_url(ssh, url)
+        # Get headers and status code with GET request (not HEAD - some apps don't support it)
+        # -s = silent, -i = include headers, -o /dev/null would discard body but we need headers
+        curl_cmd = "curl -si -m 10 '#{url}' 2>/dev/null"
+        output = ssh.execute(curl_cmd).strip
+
+        # Parse HTTP status code from first line (e.g., "HTTP/2 200" or "HTTP/1.1 200 OK")
+        http_code = output.lines.first&.match(/HTTP\/[\d.]+ (\d+)/)&.captures&.first || "000"
+
+        # Check for X-Nvoi-Error header (case-insensitive)
+        has_error_header = output.lines.any? { |line| line.downcase.start_with?("x-nvoi-error:") }
+
+        if http_code == "200" && !has_error_header
+          { success: true, http_code: http_code, message: "OK" }
+        elsif has_error_header
+          { success: false, http_code: http_code, message: "Error backend responding (X-Nvoi-Error header present) - app is down" }
+        else
+          { success: false, http_code: http_code, message: "HTTP #{http_code} (expected: 200)" }
+        end
       end
 
       private

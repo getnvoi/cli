@@ -38,9 +38,9 @@ module Nvoi
           tunnel_name = @config.namer.tunnel_name(service_name)
           hostname = build_hostname(service_config.subdomain, service_config.domain)
 
-          # Service URL points to the K8s service
-          k8s_service_name = @config.namer.app_service_name(service_name)
-          service_url = "http://#{k8s_service_name}:#{service_config.port}"
+          # Service URL points to the NGINX Ingress Controller (not direct to app)
+          # Traffic flow: Cloudflare -> Tunnel -> Ingress -> Service -> App
+          service_url = "http://ingress-nginx-controller.ingress-nginx.svc.cluster.local:80"
 
           tunnel = @tunnel_manager.setup_tunnel(tunnel_name, hostname, service_url, service_config.domain)
 

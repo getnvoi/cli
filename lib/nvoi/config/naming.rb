@@ -72,6 +72,10 @@ module Nvoi
         "app=db-#{@config.deploy.application.name}"
       end
 
+      def database_pod_name
+        "db-#{@config.deploy.application.name}-0"
+      end
+
       # ============================================================================
       # KUBERNETES APP RESOURCES
       # ============================================================================
@@ -153,20 +157,14 @@ module Nvoi
       # VOLUME RESOURCES
       # ============================================================================
 
-      def volume_name(service_type, service_name, volume_key)
-        "#{@config.deploy.application.name}-#{service_type}-#{service_name}-#{volume_key}"
+      # Server-level volume naming: {app}-{server}-{volume}
+      def server_volume_name(server_name, volume_name)
+        "#{@config.deploy.application.name}-#{server_name}-#{volume_name}"
       end
 
-      def database_volume_name
-        "#{@config.deploy.application.name}-db-data"
-      end
-
-      def service_volume_name(service_name, volume_key)
-        "#{@config.deploy.application.name}-svc-#{service_name}-#{volume_key}"
-      end
-
-      def app_volume_name(service_name, volume_key)
-        "#{@config.deploy.application.name}-app-#{service_name}-#{volume_key}"
+      # Host mount path for a server volume
+      def server_volume_host_path(server_name, volume_name)
+        "/opt/nvoi/volumes/#{server_volume_name(server_name, volume_name)}"
       end
 
       private

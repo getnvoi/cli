@@ -128,19 +128,23 @@ module Nvoi
         def validate_database_secrets(db)
           adapter = db.adapter&.downcase
 
+          # If URL is provided, it takes precedence - no secrets required
+          return if db.url && !db.url.empty?
+
+          # Fall back to secrets-based validation for backwards compatibility
           case adapter
           when "postgres", "postgresql"
             required_keys = %w[POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB]
             required_keys.each do |key|
-              raise ConfigValidationError, "postgres database requires #{key} in secrets" unless db.secrets[key]
+              raise ConfigValidationError, "postgres database requires #{key} in secrets (or provide database.url)" unless db.secrets[key]
             end
           when "mysql"
             required_keys = %w[MYSQL_USER MYSQL_PASSWORD MYSQL_DATABASE]
             required_keys.each do |key|
-              raise ConfigValidationError, "mysql database requires #{key} in secrets" unless db.secrets[key]
+              raise ConfigValidationError, "mysql database requires #{key} in secrets (or provide database.url)" unless db.secrets[key]
             end
-          when "sqlite3"
-            # SQLite doesn't require secrets
+          when "sqlite", "sqlite3"
+            # SQLite doesn't require secrets - path can be inferred from url, mount, or defaults
           end
         end
 
@@ -187,60 +191,56 @@ module Nvoi
 
           db = app.database
           adapter = db.adapter&.downcase
+          return unless adapter
 
-          # SQLite doesn't need network connection vars
-          return if adapter == "sqlite3"
+          # Get provider for this adapter
+          provider = Database.provider_for(adapter)
 
-          # Build connection variables
+          # SQLite doesn't need network connection vars (no separate container)
+          return unless provider.needs_container?
+
+          # Parse credentials from URL or secrets
+          creds = parse_database_credentials(db, provider)
+          return unless creds
+
+          # Get env vars from provider
           db_host = namer.database_service_name
-          db_port, db_user, db_password, db_name = extract_db_credentials(adapter, db)
-
-          return unless db_user && db_password && db_name
-
-          # Build DATABASE_URL
-          database_url = case adapter
-          when "postgres", "postgresql"
-            "postgresql://#{db_user}:#{db_password}@#{db_host}:#{db_port}/#{db_name}"
-          when "mysql"
-            "mysql://#{db_user}:#{db_password}@#{db_host}:#{db_port}/#{db_name}"
-          end
+          env_vars = provider.app_env(creds, host: db_host)
 
           # Inject into all app services
           app.app.each_value do |service_config|
             service_config.env ||= {}
 
-            # Only inject if not already set by user
-            service_config.env["DATABASE_URL"] ||= database_url
-
-            case adapter
-            when "postgres", "postgresql"
-              unless service_config.env.key?("POSTGRES_HOST")
-                service_config.env["POSTGRES_HOST"] = db_host
-                service_config.env["POSTGRES_PORT"] = db_port
-                service_config.env["POSTGRES_USER"] = db_user
-                service_config.env["POSTGRES_PASSWORD"] = db_password
-                service_config.env["POSTGRES_DB"] = db_name
-              end
-            when "mysql"
-              unless service_config.env.key?("MYSQL_HOST")
-                service_config.env["MYSQL_HOST"] = db_host
-                service_config.env["MYSQL_PORT"] = db_port
-                service_config.env["MYSQL_USER"] = db_user
-                service_config.env["MYSQL_PASSWORD"] = db_password
-                service_config.env["MYSQL_DATABASE"] = db_name
-              end
+            # Only inject vars not already set by user
+            env_vars.each do |key, value|
+              service_config.env[key] ||= value
             end
           end
         end
 
-        def extract_db_credentials(adapter, db)
+        def parse_database_credentials(db, provider)
+          # URL takes precedence
+          if db.url && !db.url.empty?
+            return provider.parse_url(db.url)
+          end
+
+          # Fall back to secrets for backwards compatibility
+          adapter = db.adapter&.downcase
           case adapter
           when "postgres", "postgresql"
-            ["5432", db.secrets["POSTGRES_USER"], db.secrets["POSTGRES_PASSWORD"], db.secrets["POSTGRES_DB"]]
+            Database::Credentials.new(
+              user: db.secrets["POSTGRES_USER"],
+              password: db.secrets["POSTGRES_PASSWORD"],
+              database: db.secrets["POSTGRES_DB"],
+              port: provider.default_port
+            )
           when "mysql"
-            ["3306", db.secrets["MYSQL_USER"], db.secrets["MYSQL_PASSWORD"], db.secrets["MYSQL_DATABASE"]]
-          else
-            [nil, nil, nil, nil]
+            Database::Credentials.new(
+              user: db.secrets["MYSQL_USER"],
+              password: db.secrets["MYSQL_PASSWORD"],
+              database: db.secrets["MYSQL_DATABASE"],
+              port: provider.default_port
+            )
           end
         end
     end

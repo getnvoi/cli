@@ -336,6 +336,8 @@ module Nvoi
 
               if !ready.empty? && !desired.empty? && ready == desired
                 @log.success "NGINX Ingress Controller is ready"
+                deploy_error_backend
+                configure_custom_error_pages
                 return
               end
             rescue SSHCommandError
@@ -345,6 +347,63 @@ module Nvoi
           end
 
           raise K8sError, "NGINX Ingress Controller failed to become ready"
+        end
+
+        def deploy_error_backend
+          @log.info "Deploying custom error backend"
+
+          manifest = File.read(File.join(Nvoi.templates_path, "error-backend.yaml.erb"))
+          @ssh.execute("cat <<'EOF' | kubectl apply -f -\n#{manifest}\nEOF")
+
+          # Wait for error backend to be ready
+          30.times do
+            begin
+              ready = @ssh.execute("kubectl get deployment nvoi-error-backend -n ingress-nginx -o jsonpath='{.status.readyReplicas}'").strip
+              if ready == "1"
+                @log.success "Error backend is ready"
+                return
+              end
+            rescue SSHCommandError
+              # Not ready
+            end
+            sleep(2)
+          end
+
+          raise K8sError, "Error backend failed to become ready"
+        end
+
+        def configure_custom_error_pages
+          @log.info "Configuring custom error pages for 502, 503, 504"
+
+          # Patch the ingress-nginx-controller ConfigMap to enable custom error handling
+          patch_cmd = <<~CMD
+            kubectl patch configmap ingress-nginx-controller -n ingress-nginx --type merge -p '{"data":{"custom-http-errors":"502,503,504"}}'
+          CMD
+
+          @ssh.execute(patch_cmd)
+
+          # Check if default-backend-service arg already exists
+          check_cmd = "kubectl get deployment ingress-nginx-controller -n ingress-nginx -o jsonpath='{.spec.template.spec.containers[0].args}'"
+          current_args = @ssh.execute(check_cmd)
+
+          unless current_args.include?("--default-backend-service")
+            # Set the default backend service (only if not already set)
+            patch_deployment = <<~CMD
+              kubectl patch deployment ingress-nginx-controller -n ingress-nginx --type=json -p='[
+                {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--default-backend-service=ingress-nginx/nvoi-error-backend"}
+              ]'
+            CMD
+
+            @ssh.execute(patch_deployment)
+
+            # Wait for controller to restart with new config
+            @log.info "Waiting for ingress controller to restart..."
+            @ssh.execute("kubectl rollout status deployment/ingress-nginx-controller -n ingress-nginx --timeout=120s")
+          else
+            @log.info "Custom error backend already configured"
+          end
+
+          @log.success "Custom error pages configured"
         end
     end
   end

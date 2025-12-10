@@ -64,10 +64,6 @@ class Nvoi::Config::ResourceNamerTest < Minitest::Test
     assert_equal "app=db-myapp", @namer.database_pod_label
   end
 
-  def test_database_volume_name
-    assert_equal "myapp-db-data", @namer.database_volume_name
-  end
-
   # ============================================================================
   # APP RESOURCES
   # ============================================================================
@@ -99,10 +95,6 @@ class Nvoi::Config::ResourceNamerTest < Minitest::Test
 
   def test_service_container_prefix
     assert_equal "testuser-testrepo-myapp-web-", @namer.service_container_prefix("web")
-  end
-
-  def test_app_volume_name
-    assert_equal "myapp-app-web-uploads", @namer.app_volume_name("web", "uploads")
   end
 
   # ============================================================================
@@ -150,16 +142,17 @@ class Nvoi::Config::ResourceNamerTest < Minitest::Test
   end
 
   # ============================================================================
-  # VOLUME RESOURCES
+  # VOLUME RESOURCES (server-level)
   # ============================================================================
 
-  def test_volume_name
-    assert_equal "myapp-app-web-uploads", @namer.volume_name("app", "web", "uploads")
-    assert_equal "myapp-svc-redis-data", @namer.volume_name("svc", "redis", "data")
+  def test_server_volume_name
+    assert_equal "myapp-master-database", @namer.server_volume_name("master", "database")
+    assert_equal "myapp-workers-uploads", @namer.server_volume_name("workers", "uploads")
   end
 
-  def test_service_volume_name
-    assert_equal "myapp-svc-redis-data", @namer.service_volume_name("redis", "data")
+  def test_server_volume_host_path
+    assert_equal "/opt/nvoi/volumes/myapp-master-database", @namer.server_volume_host_path("master", "database")
+    assert_equal "/opt/nvoi/volumes/myapp-workers-uploads", @namer.server_volume_host_path("workers", "uploads")
   end
 end
 

@@ -29,57 +29,25 @@ module Nvoi
         def collect_volumes
           volumes = []
 
-          # Database volume
-          db = @config.deploy.application.database
-          if db&.volume && !db.volume.empty?
-            server_name = resolve_server_name(db.servers)
-            volumes << {
-              name: @namer.database_volume_name,
-              server_name:,
-              mount_path: "/opt/nvoi/volumes/#{@namer.database_volume_name}",
-              size: 10
-            }
-          end
+          # Volumes are now defined at server-level
+          @config.deploy.application.servers.each do |server_group, server_config|
+            next unless server_config.volumes && !server_config.volumes.empty?
 
-          # Service volumes
-          @config.deploy.application.services.each do |svc_name, svc|
-            next unless svc&.volume && !svc.volume.empty?
+            # Resolve to actual server name (e.g., "master" -> "myapp-master-1")
+            resolved_server = @namer.server_name(server_group, 1)
 
-            server_name = resolve_server_name(svc.servers)
-            vol_name = @namer.service_volume_name(svc_name, "data")
-            volumes << {
-              name: vol_name,
-              server_name:,
-              mount_path: "/opt/nvoi/volumes/#{vol_name}",
-              size: 10
-            }
-          end
-
-          # App volumes
-          @config.deploy.application.app.each do |app_name, app|
-            next unless app&.volumes && !app.volumes.empty?
-
-            server_name = resolve_server_name(app.servers)
-            app.volumes.each_key do |vol_key|
-              vol_name = @namer.app_volume_name(app_name, vol_key)
+            server_config.volumes.each do |vol_name, vol_config|
+              full_name = @namer.server_volume_name(server_group, vol_name)
               volumes << {
-                name: vol_name,
-                server_name:,
-                mount_path: "/opt/nvoi/volumes/#{vol_name}",
-                size: 10
+                name: full_name,
+                server_name: resolved_server,
+                mount_path: @namer.server_volume_host_path(server_group, vol_name),
+                size: vol_config.size
               }
             end
           end
 
           volumes
-        end
-
-        def resolve_server_name(servers)
-          return @config.server_name if servers.nil? || servers.empty?
-
-          # Use first server in the list
-          group_name = servers.first
-          @namer.server_name(group_name, 1)
         end
 
         def provision_volume(vol_config)

@@ -187,6 +187,27 @@ components:
           minimum: 1
           default: 1
           example: 2
+        volumes:
+          type: object
+          description: Block storage volumes attached to this server (key is volume name)
+          additionalProperties:
+            $ref: "#/components/schemas/ServerVolumeConfig"
+          example:
+            database:
+              size: 20
+            uploads:
+              size: 10
+
+    ServerVolumeConfig:
+      type: object
+      description: Server-attached volume configuration
+      properties:
+        size:
+          type: integer
+          description: Volume size in GB
+          minimum: 10
+          default: 10
+          example: 20
 
     AppServiceConfig:
       type: object
@@ -227,13 +248,15 @@ components:
           description: Service-specific environment variables
           additionalProperties:
             type: string
-        volumes:
+        mounts:
           type: object
-          description: Volume mounts (key is volume name, value is mount path)
+          description: |
+            Mount server volumes into the container.
+            Key is volume name (must exist in server's volumes), value is container mount path.
+            Note: Services with mounts can only run on a single server.
           additionalProperties:
             type: string
           example:
-            data: /app/data
             uploads: /app/public/uploads
 
     HealthCheckConfig:
@@ -294,10 +317,15 @@ components:
           type: string
           description: Docker image for database (managed databases only)
           example: postgres:15-alpine
-        volume:
-          type: string
-          description: Volume mount path for data persistence
-          example: /var/lib/postgresql/data
+        mount:
+          type: object
+          description: |
+            Mount a server volume for database data persistence.
+            Key is volume name (must exist in server's volumes), value is container mount path.
+          additionalProperties:
+            type: string
+          example:
+            database: /var/lib/postgresql/data
         secrets:
           type: object
           description: Database secrets (POSTGRES_PASSWORD, etc.)
@@ -331,10 +359,15 @@ components:
           description: Service environment variables
           additionalProperties:
             type: string
-        volume:
-          type: string
-          description: Volume mount path for data persistence
-          example: /data
+        mount:
+          type: object
+          description: |
+            Mount a server volume for data persistence.
+            Key is volume name (must exist in server's volumes), value is container mount path.
+          additionalProperties:
+            type: string
+          example:
+            redis_data: /data
 
     SSHKeyConfig:
       type: object
