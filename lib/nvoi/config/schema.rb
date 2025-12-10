@@ -210,6 +210,14 @@ module Nvoi
               show_if: { field: :adapter, not_equals: :sqlite3 }
             },
             {
+              key: :url,
+              type: :string,
+              label: "Database URL",
+              placeholder: "postgres://user:pass@host:5432/dbname",
+              description: "Custom DATABASE_URL (overrides auto-generated URL)",
+              show_if: { field: :adapter, not_equals: :sqlite3 }
+            },
+            {
               key: :mount,
               type: :key_value,
               label: "Volume Mount",
@@ -258,6 +266,13 @@ module Nvoi
               label: "Docker Image",
               required: true,
               placeholder: "redis:7-alpine"
+            },
+            {
+              key: :port,
+              type: :number,
+              label: "Port",
+              placeholder: "6379",
+              description: "Service port (auto-detected from image if not specified)"
             },
             {
               key: :command,

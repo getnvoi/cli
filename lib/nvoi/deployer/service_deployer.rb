@@ -309,10 +309,9 @@ module Nvoi
       # Check public URL for both status code and error header
       # Returns { success: bool, http_code: string, message: string }
       def check_public_url(ssh, url)
-        # Get headers and status code in one request
-        # -I = HEAD request, -s = silent, -o /dev/null discards body
-        # We use -i to include headers in output, then parse
-        curl_cmd = "curl -sI -m 10 '#{url}' 2>/dev/null"
+        # Get headers and status code with GET request (not HEAD - some apps don't support it)
+        # -s = silent, -i = include headers, -o /dev/null would discard body but we need headers
+        curl_cmd = "curl -si -m 10 '#{url}' 2>/dev/null"
         output = ssh.execute(curl_cmd).strip
 
         # Parse HTTP status code from first line (e.g., "HTTP/2 200" or "HTTP/1.1 200 OK")

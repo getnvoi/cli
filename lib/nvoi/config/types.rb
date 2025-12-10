@@ -198,16 +198,21 @@ module Nvoi
       end
 
       # Convert to ServiceSpec
+      # Returns nil for sqlite3 (no container needed)
       def to_service_spec(namer)
+        return nil if @adapter&.downcase == "sqlite3"
+
         port = case @adapter&.downcase
         when "mysql" then 3306
         else 5432
         end
 
+        image = @image || Constants::DATABASE_IMAGES[@adapter&.downcase]
+
         ServiceSpec.new(
           name: namer.database_service_name,
-          image: @image,
-          port:,
+          image: image,
+          port: port,
           env: nil,
           mounts: @mount,
           replicas: 1,
@@ -220,11 +225,12 @@ module Nvoi
 
     # ServiceConfig defines a generic service
     class ServiceConfig
-      attr_accessor :servers, :image, :command, :env, :mount
+      attr_accessor :servers, :image, :port, :command, :env, :mount
 
       def initialize(data = {})
         @servers = data["servers"] || []
         @image = data["image"]
+        @port = data["port"]&.to_i
         @command = data["command"]
         @env = data["env"] || {}
         @mount = data["mount"] || {}
@@ -234,18 +240,13 @@ module Nvoi
       def to_service_spec(app_name, service_name)
         cmd = @command ? @command.split : []
 
-        # Infer port from image
-        port = case @image
-        when /redis/ then 6379
-        when /postgres/ then 5432
-        when /mysql/ then 3306
-        else 0
-        end
+        # Use explicit port if provided, otherwise infer from image
+        port = @port && @port.positive? ? @port : infer_port_from_image
 
         ServiceSpec.new(
           name: "#{app_name}-#{service_name}",
           image: @image,
-          port:,
+          port: port,
           command: cmd,
           env: @env,
           mounts: @mount,
@@ -254,6 +255,20 @@ module Nvoi
           servers: @servers
         )
       end
+
+      private
+
+        def infer_port_from_image
+          case @image
+          when /redis/ then 6379
+          when /postgres/ then 5432
+          when /mysql/ then 3306
+          when /memcache/ then 11211
+          when /mongo/ then 27017
+          when /elastic/ then 9200
+          else 0
+          end
+        end
     end
 
     # SSHKeyConfig defines SSH key content (stored in encrypted config)
