@@ -19,6 +19,8 @@ require_relative "nvoi/config/ssh_keys"
 require_relative "nvoi/config/env_resolver"
 require_relative "nvoi/config/loader"
 require_relative "nvoi/config/config"
+require_relative "nvoi/config/builder"
+require_relative "nvoi/config/schema"
 
 require_relative "nvoi/credentials/crypto"
 require_relative "nvoi/credentials/manager"

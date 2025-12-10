@@ -99,22 +99,43 @@ module Nvoi
       end
     end
 
+    # ServerVolumeConfig defines a volume attached to a server
+    class ServerVolumeConfig
+      attr_accessor :size
+
+      def initialize(data = {})
+        # Handle both hash format { "size" => 20 } and integer format
+        if data.is_a?(Hash)
+          @size = data["size"]&.to_i || 10
+        else
+          @size = data.to_i.positive? ? data.to_i : 10
+        end
+      end
+    end
+
     # ServerConfig contains server instance configuration
     class ServerConfig
-      attr_accessor :master, :type, :location, :count
+      attr_accessor :master, :type, :location, :count, :volumes
 
       def initialize(data = {})
         @master = data["master"] || false
         @type = data["type"]
         @location = data["location"]
         @count = data["count"]&.to_i || 1
+        @volumes = parse_volumes(data["volumes"] || {})
       end
+
+      private
+
+        def parse_volumes(data)
+          data.transform_values { |v| ServerVolumeConfig.new(v || {}) }
+        end
     end
 
     # AppServiceConfig defines a service in the app section
     class AppServiceConfig
       attr_accessor :servers, :domain, :subdomain, :port, :healthcheck,
-                    :command, :pre_run_command, :env, :volumes
+                    :command, :pre_run_command, :env, :mounts
 
       def initialize(data = {})
         @servers = data["servers"] || []
@@ -125,7 +146,7 @@ module Nvoi
         @command = data["command"]
         @pre_run_command = data["pre_run_command"]
         @env = data["env"] || {}
-        @volumes = data["volumes"] || {}
+        @mounts = data["mounts"] || {}
       end
 
       # Convert to ServiceSpec
@@ -138,7 +159,7 @@ module Nvoi
           port: @port,
           command: cmd,
           env: @env,
-          volumes: @volumes,
+          mounts: @mounts,
           replicas: @port.nil? || @port.zero? ? 1 : 2,
           healthcheck: @healthcheck,
           stateful_set: false,
@@ -165,14 +186,14 @@ module Nvoi
 
     # DatabaseConfig defines database configuration
     class DatabaseConfig
-      attr_accessor :servers, :adapter, :url, :image, :volume, :secrets
+      attr_accessor :servers, :adapter, :url, :image, :mount, :secrets
 
       def initialize(data = {})
         @servers = data["servers"] || []
         @adapter = data["adapter"]
         @url = data["url"]
         @image = data["image"]
-        @volume = data["volume"]
+        @mount = data["mount"] || {}
         @secrets = data["secrets"] || {}
       end
 
@@ -183,15 +204,12 @@ module Nvoi
         else 5432
         end
 
-        vols = {}
-        vols["data"] = @volume if @volume
-
         ServiceSpec.new(
           name: namer.database_service_name,
           image: @image,
           port:,
           env: nil,
-          volumes: vols,
+          mounts: @mount,
           replicas: 1,
           stateful_set: true,
           secrets: @secrets,
@@ -202,21 +220,19 @@ module Nvoi
 
     # ServiceConfig defines a generic service
     class ServiceConfig
-      attr_accessor :servers, :image, :command, :env, :volume
+      attr_accessor :servers, :image, :command, :env, :mount
 
       def initialize(data = {})
         @servers = data["servers"] || []
         @image = data["image"]
         @command = data["command"]
         @env = data["env"] || {}
-        @volume = data["volume"]
+        @mount = data["mount"] || {}
       end
 
       # Convert to ServiceSpec
       def to_service_spec(app_name, service_name)
         cmd = @command ? @command.split : []
-        vols = {}
-        vols["data"] = @volume if @volume
 
         # Infer port from image
         port = case @image
@@ -232,7 +248,7 @@ module Nvoi
           port:,
           command: cmd,
           env: @env,
-          volumes: vols,
+          mounts: @mount,
           replicas: 1,
           stateful_set: false,
           servers: @servers
@@ -252,17 +268,17 @@ module Nvoi
 
     # ServiceSpec is the CORE primitive - pure K8s deployment specification
     class ServiceSpec
-      attr_accessor :name, :image, :port, :command, :env, :volumes, :replicas,
+      attr_accessor :name, :image, :port, :command, :env, :mounts, :replicas,
                     :healthcheck, :stateful_set, :secrets, :servers
 
-      def initialize(name:, image:, port: 0, command: [], env: nil, volumes: nil,
+      def initialize(name:, image:, port: 0, command: [], env: nil, mounts: nil,
                      replicas: 1, healthcheck: nil, stateful_set: false, secrets: nil, servers: [])
         @name = name
         @image = image
         @port = port
         @command = command || []
         @env = env || {}
-        @volumes = volumes || {}
+        @mounts = mounts || {}
         @replicas = replicas
         @healthcheck = healthcheck
         @stateful_set = stateful_set

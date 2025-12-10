@@ -19,6 +19,9 @@ application:
     master:
       type: cx22
       location: fsn1
+      volumes:
+        appdata:
+          size: 10
 
   # Container retention
   keep_count: 2
@@ -39,11 +42,11 @@ application:
         timeout: 5s
         retries: 3
 
-      # Volume mounts for SQLite data persistence
-      volumes:
-        data: /app/data
+      # Mount server volume for SQLite data persistence
+      mounts:
+        appdata: /app/data
 
-  # SQLite database (adapter specified, volume configured at service level)
+  # SQLite database (adapter specified, no mount needed - uses app's data directory)
   database:
     servers: [master]
     adapter: sqlite3

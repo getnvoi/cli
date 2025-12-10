@@ -14,7 +14,8 @@ WebMock.disable_net_connect!
 MockConfig = Struct.new(:deploy, :container_prefix, :ssh_key_path, :ssh_public_key, keyword_init: true)
 MockDeploy = Struct.new(:application, keyword_init: true)
 MockApplication = Struct.new(:name, :servers, :app, :database, :services, :ssh_keys, keyword_init: true)
-MockServerGroup = Struct.new(:count, :master, :type, keyword_init: true)
+MockServerGroup = Struct.new(:count, :master, :type, :volumes, keyword_init: true)
+MockServerVolume = Struct.new(:size, keyword_init: true)
 MockSSHKeyConfig = Struct.new(:private_key, :public_key, keyword_init: true)
 
 module TestHelpers
@@ -38,8 +39,13 @@ module TestHelpers
     MockApplication.new(
       name: overrides[:name] || "myapp",
       servers: overrides[:servers] || {
-        "master" => MockServerGroup.new(count: 1, master: true, type: "cpx11"),
-        "workers" => MockServerGroup.new(count: 2, master: false, type: "cpx21")
+        "master" => MockServerGroup.new(
+          count: 1,
+          master: true,
+          type: "cpx11",
+          volumes: { "database" => MockServerVolume.new(size: 20) }
+        ),
+        "workers" => MockServerGroup.new(count: 2, master: false, type: "cpx21", volumes: {})
       },
       app: overrides[:app] || {},
       database: overrides[:database],

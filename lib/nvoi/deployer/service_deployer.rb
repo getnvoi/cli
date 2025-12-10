@@ -75,11 +75,35 @@ module Nvoi
           volumes: []
         }
 
-        # Add volumes if configured
-        service_config.volumes&.each do |vol_key, mount_path|
-          host_path = "/opt/nvoi/volumes/#{@namer.app_volume_name(service_name, vol_key)}"
-          data[:volume_mounts] << { name: vol_key, mount_path: }
-          data[:host_path_volumes] << { name: vol_key, host_path: }
+        # Add mounts if configured (volumes are now server-level)
+        if service_config.mounts && !service_config.mounts.empty?
+          # Validate: single server only for services with mounts
+          if service_config.servers.length > 1
+            raise DeploymentError.new(
+              "validation",
+              "app '#{service_name}' runs on multiple servers #{service_config.servers} " \
+              "and cannot have mounts. Volumes are server-local and would cause data inconsistency."
+            )
+          end
+
+          server_name = service_config.servers.first
+          server_config = @config.deploy.application.servers[server_name]
+
+          service_config.mounts.each do |vol_name, mount_path|
+            # Validate: volume exists on the server
+            unless server_config&.volumes&.key?(vol_name)
+              available = server_config&.volumes&.keys&.join(", ") || "none"
+              raise DeploymentError.new(
+                "validation",
+                "app '#{service_name}' mounts '#{vol_name}' but server '#{server_name}' " \
+                "has no volume named '#{vol_name}'. Available: #{available}"
+              )
+            end
+
+            host_path = @namer.server_volume_host_path(server_name, vol_name)
+            data[:volume_mounts] << { name: vol_name, mount_path: }
+            data[:host_path_volumes] << { name: vol_name, host_path: }
+          end
         end
 
         K8s::Renderer.apply_manifest(@ssh, template, data)
@@ -136,9 +160,12 @@ module Nvoi
           host_path: nil
         }
 
-        # Use hostPath for database volume if configured
-        if @config.deploy.application.database.volume
-          data[:host_path] = "/opt/nvoi/volumes/#{@namer.database_volume_name}"
+        # Use hostPath for database volume if configured (mounts reference server volumes)
+        db_mount = @config.deploy.application.database.mount
+        if db_mount && !db_mount.empty?
+          server_name = db_spec.servers.first
+          vol_name = db_mount.keys.first
+          data[:host_path] = @namer.server_volume_host_path(server_name, vol_name)
         end
 
         # Create database secret first
@@ -162,8 +189,12 @@ module Nvoi
         @log.info "Deploying service: %s", service_spec.name
 
         host_path = nil
-        if service_spec.volumes["data"]
-          host_path = "/opt/nvoi/volumes/#{@namer.service_volume_name(service_name, 'data')}"
+        volume_path = nil
+        if service_spec.mounts && !service_spec.mounts.empty?
+          server_name = service_spec.servers.first
+          vol_name, mount_path = service_spec.mounts.first
+          host_path = @namer.server_volume_host_path(server_name, vol_name)
+          volume_path = mount_path
         end
 
         data = {
@@ -173,7 +204,7 @@ module Nvoi
           command: service_spec.command,
           env_vars: service_spec.env,
           env_keys: service_spec.env.keys.sort,
-          volume_path: service_spec.volumes["data"],
+          volume_path:,
           host_path:,
           affinity_server_names: service_spec.servers
         }
