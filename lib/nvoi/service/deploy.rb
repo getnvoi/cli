@@ -8,12 +8,15 @@ module Nvoi
 
       attr_accessor :config_dir, :dockerfile_path
 
-      def initialize(config_path, working_dir, log)
+      def initialize(config_path, working_dir, log, override: nil)
         @working_dir = working_dir
         @log = log
 
         # Load configuration
         @config = Config.load(config_path)
+
+        # Apply override for branch deployments
+        override&.apply(@config)
 
         # Initialize provider
         @provider = init_provider(@config)

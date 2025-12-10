@@ -97,6 +97,9 @@ func setupRouter() *gin.Engine {
 	// Main endpoint: creates user on every visit, returns all users
 	router.GET("/", handleVisit)
 
+	// Test custom error pages (nginx intercepts 502, 503, 504)
+	router.GET("/error/:code", handleError)
+
 	return router
 }
 
@@ -162,6 +165,21 @@ func handleVisit(c *gin.Context) {
 		"total_users": len(users),
 		"all_users":   users,
 	})
+}
+
+// Error handler for testing custom error pages (nginx intercepts 502, 503, 504)
+func handleError(c *gin.Context) {
+	code := c.Param("code")
+	switch code {
+	case "502":
+		c.AbortWithStatus(http.StatusBadGateway)
+	case "503":
+		c.AbortWithStatus(http.StatusServiceUnavailable)
+	case "504":
+		c.AbortWithStatus(http.StatusGatewayTimeout)
+	default:
+		c.JSON(http.StatusOK, gin.H{"usage": "/error/{502,503,504}"})
+	}
 }
 
 // Generate random name for demo purposes

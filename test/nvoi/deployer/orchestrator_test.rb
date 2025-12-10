@@ -222,6 +222,9 @@ class Nvoi::Deployer::OrchestratorTest < Minitest::Test
       end
 
       def to_service_spec(namer)
+        # Returns nil for sqlite3, matching real behavior
+        return nil if @adapter == "sqlite3"
+
         Struct.new(:name, :image, :port, :secrets, :servers).new(
           namer.database_service_name,
           "postgres:15",
@@ -249,8 +252,12 @@ class Nvoi::Deployer::OrchestratorTest < Minitest::Test
         "db-myapp-secret"
       end
 
-      def database_volume_name
-        "db-myapp-volume"
+      def server_volume_name(server_name, volume_name)
+        "myapp-#{server_name}-#{volume_name}"
+      end
+
+      def server_volume_host_path(server_name, volume_name)
+        "/opt/nvoi/volumes/#{server_volume_name(server_name, volume_name)}"
       end
     end
 end

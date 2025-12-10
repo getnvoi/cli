@@ -6,11 +6,14 @@ module Nvoi
     class ExecService
       include ProviderHelper
 
-      def initialize(config_path, log)
+      def initialize(config_path, log, override: nil)
         @log = log
 
         # Load configuration
         @config = Config.load(config_path)
+
+        # Apply override for branch deployments
+        override&.apply(@config)
 
         # Initialize provider
         @provider = init_provider(@config)

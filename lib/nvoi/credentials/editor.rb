@@ -188,20 +188,30 @@ module Nvoi
 
         def validate_database_secrets(db)
           adapter = db["adapter"]&.downcase
+          url = db["url"]
+
+          return "database.adapter is required" if adapter.nil? || adapter.empty?
+
+          # URL takes precedence - if provided, no secrets needed
+          has_url = url && !url.to_s.empty?
 
           case adapter
           when "postgres", "postgresql"
+            return nil if has_url
+
             %w[POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB].each do |key|
-              return "database.secrets.#{key} is required for postgres" unless db.dig("secrets", key)
+              return "database.secrets.#{key} is required for postgres (or provide database.url)" unless db.dig("secrets", key)
             end
           when "mysql"
+            return nil if has_url
+
             %w[MYSQL_USER MYSQL_PASSWORD MYSQL_DATABASE].each do |key|
-              return "database.secrets.#{key} is required for mysql" unless db.dig("secrets", key)
+              return "database.secrets.#{key} is required for mysql (or provide database.url)" unless db.dig("secrets", key)
             end
-          when "sqlite3"
-            # SQLite doesn't require secrets
-          when nil, ""
-            return "database.adapter is required"
+          when "sqlite", "sqlite3"
+            # SQLite doesn't require secrets - path can be inferred from url, mount, or defaults
+          else
+            return "unsupported database adapter: #{adapter}"
           end
 
           nil
@@ -251,12 +261,14 @@ module Nvoi
             # database:
             #   servers: [master]
             #   adapter: postgres
+            #   url: postgres://myapp:YOUR_DB_PASSWORD@localhost:5432/myapp_production
             #   image: postgres:16-alpine
-            #   volume: postgres_data
-            #   secrets:
-            #     POSTGRES_DB: myapp_production
-            #     POSTGRES_USER: myapp
-            #     POSTGRES_PASSWORD: YOUR_DB_PASSWORD
+            #
+            # Or for SQLite (no container needed):
+            # database:
+            #   servers: [master]
+            #   adapter: sqlite3
+            #   url: sqlite://data/production.sqlite3
 
             env:
               # Add environment variables here

@@ -66,4 +66,14 @@ module Nvoi
 
   # Service errors
   class ServiceError < Error; end
+
+  # Database errors
+  class DatabaseError < Error
+    attr_reader :operation
+
+    def initialize(operation, message, details: nil)
+      @operation = operation
+      super("database #{operation}: #{message}", details:)
+    end
+  end
 end
