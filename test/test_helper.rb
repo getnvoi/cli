@@ -29,3 +29,12 @@ Dir[File.expand_path("../lib/nvoi/external/cloud/*.rb", __dir__)].sort.each { |f
 
 # Load external/dns
 Dir[File.expand_path("../lib/nvoi/external/dns/*.rb", __dir__)].sort.each { |f| require f }
+
+# Load external flat files
+require_relative "../lib/nvoi/external/ssh"
+require_relative "../lib/nvoi/external/kubectl"
+require_relative "../lib/nvoi/external/containerd"
+
+# Load external/database (provider first, then others)
+require_relative "../lib/nvoi/external/database/provider"
+Dir[File.expand_path("../lib/nvoi/external/database/*.rb", __dir__)].sort.each { |f| require f }

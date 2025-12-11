@@ -55,8 +55,8 @@ class DatabaseObjectsTest < Minitest::Test
     assert_equal "/mnt/data/branches", opts.host_path
   end
 
-  def test_create_options_struct
-    opts = Nvoi::Objects::CreateOptions.new(
+  def test_database_create_options_struct
+    opts = Nvoi::Objects::DatabaseCreateOptions.new(
       pod_name: "myapp-db-0",
       database: "myapp_branch",
       user: "postgres",

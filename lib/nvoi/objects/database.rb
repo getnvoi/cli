@@ -14,7 +14,7 @@ module Nvoi
     RestoreOptions = Struct.new(:pod_name, :database, :user, :password, :source_db, :host_path, keyword_init: true)
 
     # Options for creating a database
-    CreateOptions = Struct.new(:pod_name, :database, :user, :password, keyword_init: true)
+    DatabaseCreateOptions = Struct.new(:pod_name, :database, :user, :password, keyword_init: true)
 
     # Branch represents a database branch (snapshot)
     Branch = Struct.new(:id, :created_at, :size, :adapter, :database, keyword_init: true) do
