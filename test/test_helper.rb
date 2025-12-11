@@ -41,3 +41,20 @@ Dir[File.expand_path("../lib/nvoi/external/database/*.rb", __dir__)].sort.each {
 
 # Load CLI (Thor routing only - for basic tests)
 require_relative "../lib/nvoi/cli"
+
+# Define module-level methods that are normally in nvoi.rb
+module Nvoi
+  class << self
+    attr_accessor :logger
+
+    def root
+      File.expand_path("..", __dir__)
+    end
+
+    def templates_path
+      File.join(root, "templates")
+    end
+  end
+
+  self.logger = Utils::Logger.new
+end
