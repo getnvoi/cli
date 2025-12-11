@@ -1,5 +1,14 @@
 # frozen_string_literal: true
 
+require "simplecov"
+SimpleCov.start do
+  add_filter "/test/"
+  add_group "Objects", "lib/nvoi/objects"
+  add_group "Utils", "lib/nvoi/utils"
+  add_group "External", "lib/nvoi/external"
+  add_group "CLI", "lib/nvoi/cli"
+end
+
 $LOAD_PATH.unshift File.expand_path("../lib", __dir__)
 
 require "minitest/autorun"
