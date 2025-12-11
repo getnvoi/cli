@@ -30,9 +30,9 @@ class ErrorsTest < Minitest::Test
   end
 
   def test_ssh_error_hierarchy
-    assert Nvoi::SSHError < Nvoi::Error
-    assert Nvoi::SSHConnectionError < Nvoi::SSHError
-    assert Nvoi::SSHCommandError < Nvoi::SSHError
+    assert Nvoi::SshError < Nvoi::Error
+    assert Nvoi::SshConnectionError < Nvoi::SshError
+    assert Nvoi::SshCommandError < Nvoi::SshError
   end
 
   def test_deployment_error

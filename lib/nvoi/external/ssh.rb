@@ -19,14 +19,14 @@ module Nvoi
 
         if stream
           success = system("ssh", *ssh_args)
-          raise SSHCommandError, "SSH command failed" unless success
+          raise SshCommandError, "SSH command failed" unless success
 
           ""
         else
           output, status = Open3.capture2e("ssh", *ssh_args)
 
           unless status.success?
-            raise SSHCommandError, "SSH command failed (exit code: #{status.exitstatus}): #{output}"
+            raise SshCommandError, "SSH command failed (exit code: #{status.exitstatus}): #{output}"
           end
 
           output.strip
@@ -51,7 +51,7 @@ module Nvoi
         scp_args += [local_path, "#{@user}@#{@ip}:#{remote_path}"]
 
         output, status = Open3.capture2e("scp", *scp_args)
-        raise SSHCommandError, "SCP upload failed: #{output}" unless status.success?
+        raise SshCommandError, "SCP upload failed: #{output}" unless status.success?
       end
 
       def download(remote_path, local_path)
@@ -59,7 +59,7 @@ module Nvoi
         scp_args += ["#{@user}@#{@ip}:#{remote_path}", local_path]
 
         output, status = Open3.capture2e("scp", *scp_args)
-        raise SSHCommandError, "SCP download failed: #{output}" unless status.success?
+        raise SshCommandError, "SCP download failed: #{output}" unless status.success?
       end
 
       def rsync(local_path, remote_path)
@@ -71,7 +71,7 @@ module Nvoi
         ]
 
         output, status = Open3.capture2e("rsync", *rsync_args)
-        raise SSHCommandError, "rsync failed: #{output}" unless status.success?
+        raise SshCommandError, "rsync failed: #{output}" unless status.success?
       end
 
       private

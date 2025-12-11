@@ -40,10 +40,10 @@ module Nvoi
   class TunnelError < CloudflareError; end
   class DNSError < CloudflareError; end
 
-  # SSH errors
-  class SSHError < Error; end
-  class SSHConnectionError < SSHError; end
-  class SSHCommandError < SSHError; end
+  # Ssh errors
+  class SshError < Error; end
+  class SshConnectionError < SshError; end
+  class SshCommandError < SshError; end
 
   # Deployment errors
   class DeploymentError < Error

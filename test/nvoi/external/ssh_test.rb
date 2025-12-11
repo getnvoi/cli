@@ -32,7 +32,7 @@ class ExternalSshTest < Minitest::Test
     status.expect(:exitstatus, 1)
 
     Open3.stub(:capture2e, ["error output", status]) do
-      assert_raises(Nvoi::SSHCommandError) do
+      assert_raises(Nvoi::SshCommandError) do
         @ssh.execute("bad command")
       end
     end
@@ -60,7 +60,7 @@ class ExternalSshTest < Minitest::Test
     status.expect(:success?, false)
 
     Open3.stub(:capture2e, ["Permission denied", status]) do
-      assert_raises(Nvoi::SSHCommandError) do
+      assert_raises(Nvoi::SshCommandError) do
         @ssh.upload("/local/file.txt", "/remote/file.txt")
       end
     end
@@ -77,7 +77,7 @@ class ExternalSshTest < Minitest::Test
     status.expect(:success?, false)
 
     Open3.stub(:capture2e, ["File not found", status]) do
-      assert_raises(Nvoi::SSHCommandError) do
+      assert_raises(Nvoi::SshCommandError) do
         @ssh.download("/remote/file.txt", "/local/file.txt")
       end
     end
@@ -94,7 +94,7 @@ class ExternalSshTest < Minitest::Test
     status.expect(:success?, false)
 
     Open3.stub(:capture2e, ["rsync error", status]) do
-      assert_raises(Nvoi::SSHCommandError) do
+      assert_raises(Nvoi::SshCommandError) do
         @ssh.rsync("/local/dir/", "/remote/dir/")
       end
     end
