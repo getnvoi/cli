@@ -136,17 +136,14 @@ module Nvoi
         end
 
         def wait_for_server(server_id, max_attempts)
-          max_attempts.times do
-            server = get("/servers/#{server_id.to_i}")["server"]
-
-            if server["status"] == "running"
-              return to_server(server)
-            end
-
-            sleep(Utils::Constants::SERVER_READY_INTERVAL)
+          server = Utils::Retry.poll(max_attempts: max_attempts, interval: Utils::Constants::SERVER_READY_INTERVAL) do
+            s = get("/servers/#{server_id.to_i}")["server"]
+            to_server(s) if s["status"] == "running"
           end
 
-          raise Errors::ServerCreationError, "server did not become running after #{max_attempts} attempts"
+          raise Errors::ServerCreationError, "server did not become running after #{max_attempts} attempts" unless server
+
+          server
         end
 
         def delete_server(id)
@@ -213,6 +210,14 @@ module Nvoi
 
         def detach_volume(volume_id)
           post("/volumes/#{volume_id.to_i}/actions/detach", {})
+        end
+
+        def wait_for_device_path(volume_id, _ssh)
+          # Hetzner provides device_path in API response
+          Utils::Retry.poll(max_attempts: 30, interval: 2) do
+            volume = get("/volumes/#{volume_id.to_i}")["volume"]
+            volume["linux_device"] if volume && volume["linux_device"] && !volume["linux_device"].empty?
+          end
         end
 
         # Validation operations

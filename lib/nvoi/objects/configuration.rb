@@ -7,7 +7,7 @@ module Nvoi
       # Root holds the complete configuration including deployment config and runtime settings
       class Root
         attr_accessor :deploy, :ssh_key_path, :ssh_public_key, :server_name,
-                      :firewall_name, :network_name, :docker_network_name, :container_prefix
+                      :firewall_name, :network_name, :docker_network_name, :container_prefix, :namer
 
         def initialize(deploy_config)
           @deploy = deploy_config
@@ -314,7 +314,9 @@ module Nvoi
         attr_accessor :size
 
         def initialize(data = {})
-          @size = data.is_a?(Hash) ? (data["size"]&.to_i || 10) : (data.to_i.positive? ? data.to_i : 10)
+          raise ArgumentError, "volume config must be a hash with 'size' key" unless data.is_a?(Hash)
+
+          @size = data["size"]&.to_i || 10
         end
       end
 

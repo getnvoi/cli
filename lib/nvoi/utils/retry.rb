@@ -62,6 +62,26 @@ module Nvoi
         executor = StepExecutor.new(max_attempts, log)
         executor.execute("operation") { yield }
       end
+
+      # Poll until condition is met or timeout
+      # Returns the result of the block, or nil if timeout
+      def self.poll(max_attempts: 30, interval: 2)
+        max_attempts.times do
+          result = yield
+          return result if result
+
+          sleep(interval)
+        end
+        nil
+      end
+
+      # Poll with error on timeout
+      def self.poll!(max_attempts: 30, interval: 2, error_message: "operation timed out")
+        result = poll(max_attempts: max_attempts, interval: interval) { yield }
+        raise Errors::TimeoutError, error_message unless result
+
+        result
+      end
     end
   end
 end

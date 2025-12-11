@@ -19,3 +19,18 @@ require_relative "../lib/nvoi/cli"
 
 # Load all CLI commands for testing
 Dir[File.expand_path("../lib/nvoi/cli/**/*.rb", __dir__)].sort.each { |f| require f }
+
+# Stub Retry.poll to skip sleep in tests
+module Nvoi
+  module Utils
+    module Retry
+      class << self
+        alias_method :poll_original, :poll
+
+        def poll(max_attempts: 30, interval: 2, &block)
+          poll_original(max_attempts: max_attempts, interval: 0, &block)
+        end
+      end
+    end
+  end
+end

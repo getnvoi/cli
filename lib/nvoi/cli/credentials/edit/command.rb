@@ -346,7 +346,8 @@ module Nvoi
                 # database:
                 #   servers: [master]
                 #   adapter: sqlite3
-                #   url: sqlite://data/production.sqlite3
+                #   mount:
+                #     db: /app/data
 
                 env:
                   # Add environment variables here

@@ -229,18 +229,18 @@ module Nvoi
         end
 
         def wait_for_server(server_id, max_attempts)
-          max_attempts.times do
+          server = Utils::Retry.poll(max_attempts: max_attempts, interval: 5) do
             resp = @client.describe_instances(instance_ids: [server_id])
 
             if resp.reservations.any? && resp.reservations[0].instances.any?
               instance = resp.reservations[0].instances[0]
-              return instance_to_server(instance) if instance.state.name == "running"
+              instance_to_server(instance) if instance.state.name == "running"
             end
-
-            sleep(5)
           end
 
-          raise Errors::ServerCreationError, "instance did not become running after #{max_attempts} attempts"
+          raise Errors::ServerCreationError, "instance did not become running after #{max_attempts} attempts" unless server
+
+          server
         end
 
         def delete_server(id)
@@ -305,6 +305,20 @@ module Nvoi
 
         def detach_volume(volume_id)
           @client.detach_volume(volume_id:)
+        end
+
+        def wait_for_device_path(volume_id, _ssh)
+          # AWS provides device path in attachment info
+          Utils::Retry.poll(max_attempts: 30, interval: 2) do
+            resp = @client.describe_volumes(volume_ids: [volume_id])
+            next nil if resp.volumes.empty?
+
+            vol = resp.volumes[0]
+            next nil if vol.attachments.empty?
+
+            device = vol.attachments[0].device
+            device if device && !device.empty?
+          end
         end
 
         # Validation operations

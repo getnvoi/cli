@@ -89,9 +89,11 @@ module Nvoi
 
               # Attach if not attached
               if volume.server_id.nil? || volume.server_id.empty?
-                @log.info "Attaching existing volume..."
+                @log.info "Attaching existing volume to server..."
                 @provider.attach_volume(volume.id, server.id)
                 volume = @provider.get_volume(volume.id)
+              else
+                @log.info "Volume already attached to server"
               end
 
               # Mount if not mounted
@@ -101,20 +103,22 @@ module Nvoi
             def mount_volume(server_ip, volume, mount_path)
               ssh = External::Ssh.new(server_ip, @config.ssh_key_path)
 
-              # Get device path (refreshed from provider)
-              refreshed = @provider.get_volume(volume.id)
-              device_path = refreshed&.device_path
+              # Get device path from provider
+              @log.info "Waiting for device path..."
+              device_path = @provider.wait_for_device_path(volume.id, ssh)
+              raise Errors::VolumeError, "volume #{volume.id} has no device path after attachment" unless device_path
 
-              return unless device_path && !device_path.empty?
-
-              @log.info "Mounting volume at %s", mount_path
+              @log.info "Device path: %s", device_path
+              @log.info "Waiting for device to be available on server..."
 
               # Wait for device to be available
               wait_for_device(ssh, device_path)
 
-              # Check if already mounted
-              mount_check = ssh.execute("mount | grep #{device_path} || true")
-              if mount_check.include?(mount_path)
+              @log.info "Mounting volume at %s", mount_path
+
+              # Check if already mounted at target path
+              mount_check = ssh.execute("mountpoint -q #{mount_path} && echo 'mounted' || echo 'not'").strip
+              if mount_check == "mounted"
                 @log.info "Volume already mounted at %s", mount_path
                 return
               end
@@ -141,18 +145,24 @@ module Nvoi
                 ssh.execute(cmd)
               end
 
+              # Verify mount succeeded
+              verify_mount(ssh, mount_path)
+
               @log.success "Volume mounted at %s", mount_path
             end
 
             def wait_for_device(ssh, device_path)
-              30.times do
+              ready = Utils::Retry.poll(max_attempts: 30, interval: 2) do
                 check = ssh.execute("test -b #{device_path} && echo 'ready' || true")
-                return if check.strip == "ready"
-
-                sleep(2)
+                check.strip == "ready"
               end
 
-              raise Errors::VolumeError, "device not available: #{device_path}"
+              raise Errors::VolumeError, "device not available: #{device_path}" unless ready
+            end
+
+            def verify_mount(ssh, mount_path)
+              check = ssh.execute("mountpoint -q #{mount_path} && echo 'mounted' || echo 'not mounted'")
+              raise Errors::VolumeError, "volume not mounted at #{mount_path}" unless check.strip == "mounted"
             end
         end
       end

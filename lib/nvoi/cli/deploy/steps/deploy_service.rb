@@ -197,8 +197,17 @@ module Nvoi
                 volumes: []
               }
 
+              # Collect all mounts: explicit app mounts + sqlite3 database mount
+              all_mounts = (service_config.mounts || {}).dup
+
+              # For sqlite3, add database.mount to app services
+              db = @config.deploy.application.database
+              if db&.adapter&.downcase&.start_with?("sqlite") && db.mount && !db.mount.empty?
+                db.mount.each { |k, v| all_mounts[k] ||= v }
+              end
+
               # Add mounts if configured
-              if service_config.mounts && !service_config.mounts.empty?
+              if !all_mounts.empty?
                 if service_config.servers.length > 1
                   raise Errors::DeploymentError.new(
                     "validation",
@@ -210,7 +219,7 @@ module Nvoi
                 server_name = service_config.servers.first
                 server_config = @config.deploy.application.servers[server_name]
 
-                service_config.mounts.each do |vol_name, mount_path|
+                all_mounts.each do |vol_name, mount_path|
                   unless server_config&.volumes&.key?(vol_name)
                     available = server_config&.volumes&.keys&.join(", ") || "none"
                     raise Errors::DeploymentError.new(

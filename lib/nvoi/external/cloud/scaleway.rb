@@ -36,8 +36,7 @@ module Nvoi
 
           network = post(vpc_url("/private-networks"), {
             name:,
-            project_id: @project_id,
-            subnets: [Utils::Constants::SUBNET_CIDR]
+            project_id: @project_id
           })
 
           to_network(network)
@@ -171,17 +170,14 @@ module Nvoi
         end
 
         def wait_for_server(server_id, max_attempts)
-          max_attempts.times do
-            server = get_server_api(server_id)
-
-            if server["state"] == "running" && server.dig("public_ip", "address")
-              return to_server(server)
-            end
-
-            sleep(Utils::Constants::SERVER_READY_INTERVAL)
+          server = Utils::Retry.poll(max_attempts: max_attempts, interval: Utils::Constants::SERVER_READY_INTERVAL) do
+            s = get_server_api(server_id)
+            to_server(s) if s["state"] == "running" && s.dig("public_ip", "address")
           end
 
-          raise Errors::ServerCreationError, "server did not become running after #{max_attempts} attempts"
+          raise Errors::ServerCreationError, "server did not become running after #{max_attempts} attempts" unless server
+
+          server
         end
 
         def delete_server(id)
@@ -270,6 +266,18 @@ module Nvoi
           end
         end
 
+        def wait_for_device_path(volume_id, ssh)
+          # Scaleway doesn't provide device_path in API
+          # Find device by volume ID in /dev/disk/by-id/
+          Utils::Retry.poll(max_attempts: 30, interval: 2) do
+            output = ssh.execute("ls /dev/disk/by-id/ 2>/dev/null | grep -i '#{volume_id}' || true").strip
+            next nil if output.empty?
+
+            device_name = output.lines.first.strip
+            "/dev/disk/by-id/#{device_name}"
+          end
+        end
+
         # Validation operations
 
         def validate_instance_type(instance_type)
@@ -336,7 +344,7 @@ module Nvoi
 
           def post(url, payload = {})
             response = @conn.post(url, payload)
-            handle_response(response)
+            handle_response(response, url, payload)
           end
 
           def patch(url, payload = {})
@@ -350,7 +358,7 @@ module Nvoi
             handle_response(response)
           end
 
-          def handle_response(response)
+          def handle_response(response, url = nil, payload = nil)
             case response.status
             when 200..299
               response.body
@@ -367,15 +375,18 @@ module Nvoi
             when 429
               raise Errors::RateLimitError, "Rate limited, retry later"
             else
-              raise Errors::ApiError, parse_error(response)
+              debug = "HTTP #{response.status}: #{parse_error(response)}"
+              debug += "\nURL: #{url}" if url
+              debug += "\nPayload: #{payload.inspect}" if payload
+              raise Errors::ApiError, debug
             end
           end
 
           def parse_error(response)
             if response.body.is_a?(Hash)
-              response.body["message"] || response.body.to_s
+              response.body["message"] || response.body.inspect
             else
-              "HTTP #{response.status}: #{response.body}"
+              response.body.to_s
             end
           end
 
@@ -439,13 +450,10 @@ module Nvoi
           end
 
           def wait_for_server_state(server_id, target_state, max_attempts)
-            max_attempts.times do
+            Utils::Retry.poll(max_attempts: max_attempts, interval: 2) do
               server = get_server_api(server_id)
-              return server if server["state"] == target_state
-
-              sleep(2)
+              server if server["state"] == target_state
             end
-            nil
           end
 
           def find_network_by_name(name)

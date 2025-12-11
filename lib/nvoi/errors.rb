@@ -47,6 +47,9 @@ module Nvoi
     class SshConnectionError < SshError; end
     class SshCommandError < SshError; end
 
+    # Timeout errors
+    class TimeoutError < Error; end
+
     # Deployment errors
     class DeploymentError < Error
       attr_reader :step, :retryable

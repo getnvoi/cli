@@ -48,7 +48,7 @@ module Nvoi
 
           # Handle database URL
           if db.adapter == "sqlite3"
-            env["DATABASE_URL"] = "sqlite://data/db/production.sqlite3"
+            env["DATABASE_URL"] = sqlite_database_url(db)
           elsif db.url && !db.url.empty?
             env["DATABASE_URL"] = db.url
           end
@@ -57,6 +57,14 @@ module Nvoi
           db.secrets&.each do |key, value|
             env[key] = value
           end
+        end
+
+        def sqlite_database_url(db)
+          raise Errors::ConfigError, "sqlite3 requires database.mount to be configured" if db.mount.nil? || db.mount.empty?
+
+          mount_path = db.mount.values.first
+          app_name = @config.deploy.application.name
+          "sqlite://#{mount_path}/#{app_name}-database.sqlite3"
         end
     end
   end

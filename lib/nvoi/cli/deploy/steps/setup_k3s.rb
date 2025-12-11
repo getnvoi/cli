@@ -165,20 +165,18 @@ module Nvoi
             def wait_for_cloud_init(ssh)
               @log.info "Waiting for cloud-init to complete"
 
-              60.times do
+              ready = Utils::Retry.poll(max_attempts: 60, interval: 5) do
                 begin
                   output = ssh.execute("test -f /var/lib/cloud/instance/boot-finished && echo 'ready'")
-                  if output.include?("ready")
-                    @log.success "Cloud-init complete"
-                    return
-                  end
+                  output.include?("ready")
                 rescue Errors::SshCommandError
-                  # Not ready yet
+                  false
                 end
-                sleep(5)
               end
 
-              raise Errors::K8sError, "cloud-init timeout"
+              raise Errors::K8sError, "cloud-init timeout" unless ready
+
+              @log.success "Cloud-init complete"
             end
 
             def get_cluster_token(ssh)
@@ -269,20 +267,18 @@ module Nvoi
             def wait_for_k3s_ready(ssh)
               @log.info "Waiting for K3s to be ready"
 
-              60.times do
+              ready = Utils::Retry.poll(max_attempts: 60, interval: 5) do
                 begin
                   output = ssh.execute("kubectl get nodes")
-                  if output.include?("Ready")
-                    @log.success "K3s is ready"
-                    return
-                  end
+                  output.include?("Ready")
                 rescue Errors::SshCommandError
-                  # Not ready yet
+                  false
                 end
-                sleep(5)
               end
 
-              raise Errors::K8sError, "K3s failed to become ready"
+              raise Errors::K8sError, "K3s failed to become ready" unless ready
+
+              @log.success "K3s is ready"
             end
 
             def label_node(ssh, node_name, labels)
@@ -296,21 +292,22 @@ module Nvoi
             def label_worker_from_master(master_ssh, worker_name, group_name)
               @log.info "Labeling worker node: %s", worker_name
 
-              30.times do
+              joined = Utils::Retry.poll(max_attempts: 30, interval: 5) do
                 begin
                   output = master_ssh.execute("kubectl get nodes -o name")
-                  if output.include?(worker_name)
-                    master_ssh.execute("kubectl label node #{worker_name} nvoi.io/server-name=#{group_name} --overwrite")
-                    @log.success "Worker labeled: %s", worker_name
-                    return
-                  end
+                  output.include?(worker_name)
                 rescue Errors::SshCommandError
-                  # Not ready
+                  false
                 end
-                sleep(5)
               end
 
-              @log.warning "Worker node did not join cluster in time: %s", worker_name
+              unless joined
+                @log.warning "Worker node did not join cluster in time: %s", worker_name
+                return
+              end
+
+              master_ssh.execute("kubectl label node #{worker_name} nvoi.io/server-name=#{group_name} --overwrite")
+              @log.success "Worker labeled: %s", worker_name
             end
 
             def setup_registry(ssh)
@@ -372,20 +369,19 @@ module Nvoi
 
               # Wait for registry to be ready
               @log.info "Waiting for registry to be ready"
-              24.times do
+
+              ready = Utils::Retry.poll(max_attempts: 24, interval: 5) do
                 begin
                   output = ssh.execute("kubectl get deployment nvoi-registry -n default -o jsonpath='{.status.readyReplicas}'")
-                  if output.strip == "1"
-                    @log.success "In-cluster registry running on :30500"
-                    return
-                  end
+                  output.strip == "1"
                 rescue Errors::SshCommandError
-                  # Not ready
+                  false
                 end
-                sleep(5)
               end
 
-              raise Errors::K8sError, "registry failed to become ready"
+              raise Errors::K8sError, "registry failed to become ready" unless ready
+
+              @log.success "In-cluster registry running on :30500"
             end
 
             def setup_ingress_controller(ssh)
@@ -394,46 +390,42 @@ module Nvoi
               ssh.execute("kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.0/deploy/static/provider/baremetal/deploy.yaml", stream: true)
 
               @log.info "Waiting for NGINX Ingress Controller to be ready"
-              60.times do
-                begin
-                  ready = ssh.execute("kubectl get deployment ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.readyReplicas}'").strip
-                  desired = ssh.execute("kubectl get deployment ingress-nginx-controller -n ingress-nginx -o jsonpath='{.spec.replicas}'").strip
 
-                  if !ready.empty? && !desired.empty? && ready == desired
-                    @log.success "NGINX Ingress Controller is ready"
-                    deploy_error_backend(ssh)
-                    configure_custom_error_pages(ssh)
-                    return
-                  end
+              ready = Utils::Retry.poll(max_attempts: 60, interval: 10) do
+                begin
+                  ready_replicas = ssh.execute("kubectl get deployment ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.readyReplicas}'").strip
+                  desired_replicas = ssh.execute("kubectl get deployment ingress-nginx-controller -n ingress-nginx -o jsonpath='{.spec.replicas}'").strip
+
+                  !ready_replicas.empty? && !desired_replicas.empty? && ready_replicas == desired_replicas
                 rescue Errors::SshCommandError
-                  # Not ready
+                  false
                 end
-                sleep(10)
               end
 
-              raise Errors::K8sError, "NGINX Ingress Controller failed to become ready"
+              raise Errors::K8sError, "NGINX Ingress Controller failed to become ready" unless ready
+
+              @log.success "NGINX Ingress Controller is ready"
+              deploy_error_backend(ssh)
+              configure_custom_error_pages(ssh)
             end
 
             def deploy_error_backend(ssh)
               @log.info "Deploying custom error backend"
 
-              manifest = Utils::Templates.load_template_content("error-backend.yaml.erb")
-              ssh.execute("cat <<'EOF' | kubectl apply -f -\n#{manifest}\nEOF")
+              Utils::Templates.apply_manifest(ssh, "error-backend.yaml", {})
 
-              30.times do
+              ready = Utils::Retry.poll(max_attempts: 30, interval: 2) do
                 begin
-                  ready = ssh.execute("kubectl get deployment nvoi-error-backend -n ingress-nginx -o jsonpath='{.status.readyReplicas}'").strip
-                  if ready == "1"
-                    @log.success "Error backend is ready"
-                    return
-                  end
+                  replicas = ssh.execute("kubectl get deployment nvoi-error-backend -n ingress-nginx -o jsonpath='{.status.readyReplicas}'").strip
+                  replicas == "1"
                 rescue Errors::SshCommandError
-                  # Not ready
+                  false
                 end
-                sleep(2)
               end
 
-              raise Errors::K8sError, "Error backend failed to become ready"
+              raise Errors::K8sError, "Error backend failed to become ready" unless ready
+
+              @log.success "Error backend is ready"
             end
 
             def configure_custom_error_pages(ssh)
