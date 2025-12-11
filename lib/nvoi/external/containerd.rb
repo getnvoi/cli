@@ -43,7 +43,7 @@ module Nvoi
 
           begin
             @ssh.execute("sudo ctr -n k8s.io images tag #{full_image_ref} #{tag}")
-          rescue SshCommandError => e
+          rescue Errors::SshCommandError => e
             list_output = @ssh.execute("sudo ctr -n k8s.io images ls") rescue ""
             raise Errors::SshError, "failed to tag imported image: #{e.message}\nAvailable images:\n#{list_output}"
           end
@@ -59,7 +59,7 @@ module Nvoi
         return [] if output.empty?
 
         output.split("\n")
-      rescue SshCommandError
+      rescue Errors::SshCommandError
         []
       end
 

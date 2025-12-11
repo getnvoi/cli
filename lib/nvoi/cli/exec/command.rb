@@ -89,9 +89,8 @@ module Nvoi
             mutex = Mutex.new
             threads = server_names.map do |name|
               Thread.new do
-                actual_name = resolve_server_name(name)
                 begin
-                  server = find_server(actual_name)
+                  server = find_server(name)
                   ssh = External::Ssh.new(server.public_ipv4, @config.ssh_key_path)
 
                   @log.info "[%s] Executing...", name

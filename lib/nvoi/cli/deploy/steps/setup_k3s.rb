@@ -72,7 +72,7 @@ module Nvoi
                 token = get_cluster_token(ssh)
                 private_ip = get_private_ip(ssh)
                 return [token, private_ip]
-              rescue SshCommandError
+              rescue Errors::SshCommandError
                 # Not running, continue installation
               end
 
@@ -139,7 +139,7 @@ module Nvoi
                 worker_ssh.execute("systemctl is-active k3s-agent")
                 @log.info "K3s agent already running on %s", worker_name
                 return
-              rescue SshCommandError
+              rescue Errors::SshCommandError
                 # Not running, continue
               end
 
@@ -172,7 +172,7 @@ module Nvoi
                     @log.success "Cloud-init complete"
                     return
                   end
-                rescue SshCommandError
+                rescue Errors::SshCommandError
                   # Not ready yet
                 end
                 sleep(5)
@@ -203,7 +203,7 @@ module Nvoi
               begin
                 ssh.execute("systemctl is-active docker")
                 @log.info "Docker already running, skipping installation"
-              rescue SshCommandError
+              rescue Errors::SshCommandError
                 docker_install = <<~CMD
                 sudo apt-get update && sudo apt-get install -y docker.io
                 sudo systemctl start docker
@@ -276,7 +276,7 @@ module Nvoi
                     @log.success "K3s is ready"
                     return
                   end
-                rescue SshCommandError
+                rescue Errors::SshCommandError
                   # Not ready yet
                 end
                 sleep(5)
@@ -304,7 +304,7 @@ module Nvoi
                     @log.success "Worker labeled: %s", worker_name
                     return
                   end
-                rescue SshCommandError
+                rescue Errors::SshCommandError
                   # Not ready
                 end
                 sleep(5)
@@ -379,7 +379,7 @@ module Nvoi
                     @log.success "In-cluster registry running on :30500"
                     return
                   end
-                rescue SshCommandError
+                rescue Errors::SshCommandError
                   # Not ready
                 end
                 sleep(5)
@@ -405,7 +405,7 @@ module Nvoi
                     configure_custom_error_pages(ssh)
                     return
                   end
-                rescue SshCommandError
+                rescue Errors::SshCommandError
                   # Not ready
                 end
                 sleep(10)
@@ -427,7 +427,7 @@ module Nvoi
                     @log.success "Error backend is ready"
                     return
                   end
-                rescue SshCommandError
+                rescue Errors::SshCommandError
                   # Not ready
                 end
                 sleep(2)

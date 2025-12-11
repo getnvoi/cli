@@ -328,7 +328,7 @@ module Nvoi
                     consecutive_success = 0
                     @log.info "[%d/%d] %s", attempt + 1, max_attempts, result[:message]
                   end
-                rescue SshCommandError
+                rescue Errors::SshCommandError
                   consecutive_success = 0
                   @log.info "[%d/%d] Public URL check failed", attempt + 1, max_attempts
                 end
@@ -371,7 +371,7 @@ module Nvoi
               begin
                 output = @ssh.execute(exec_cmd)
                 @log.info "Pre-run command output:\n%s", output unless output.empty?
-              rescue SshCommandError => e
+              rescue Errors::SshCommandError => e
                 @log.error "Pre-run command failed: %s", e.message
 
                 logs = @ssh.execute("kubectl logs #{pod_name} --tail=50")

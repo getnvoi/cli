@@ -127,7 +127,7 @@ module Nvoi
                     @log.success "SSH ready"
                     return
                   end
-                rescue SshCommandError
+                rescue Errors::SshCommandError
                   # SSH not ready yet
                 end
 

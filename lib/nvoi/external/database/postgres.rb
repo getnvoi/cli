@@ -41,7 +41,7 @@ module Nvoi
           cmd = "kubectl exec -n default #{opts.pod_name} -- " \
                 "pg_dump -U #{opts.user} -d #{opts.database} --no-owner --no-acl"
           ssh.execute(cmd)
-        rescue SshCommandError => e
+        rescue Errors::SshCommandError => e
           raise Errors::DatabaseError.new("dump", "pg_dump failed: #{e.message}")
         end
 
@@ -65,7 +65,7 @@ module Nvoi
 
           ssh.execute_ignore_errors("rm -f #{temp_file}")
           ssh.execute_ignore_errors("kubectl exec -n default #{opts.pod_name} -- rm -f #{temp_file}")
-        rescue SshCommandError => e
+        rescue Errors::SshCommandError => e
           raise Errors::DatabaseError.new("restore", "psql restore failed: #{e.message}")
         end
 
@@ -73,7 +73,7 @@ module Nvoi
           cmd = "kubectl exec -n default #{opts.pod_name} -- " \
                 "psql -U #{opts.user} -c \"CREATE DATABASE #{opts.database}\""
           ssh.execute(cmd)
-        rescue SshCommandError => e
+        rescue Errors::SshCommandError => e
           raise Errors::DatabaseError.new("create_database", "failed to create database: #{e.message}")
         end
       end

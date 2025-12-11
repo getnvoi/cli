@@ -40,7 +40,7 @@ module Nvoi
           raise Errors::DatabaseError.new("dump", "host_path required for SQLite dump") unless db_path
 
           ssh.execute("sqlite3 #{db_path} .dump")
-        rescue SshCommandError => e
+        rescue Errors::SshCommandError => e
           raise Errors::DatabaseError.new("dump", "sqlite3 dump failed: #{e.message}")
         end
 
@@ -59,7 +59,7 @@ module Nvoi
           ssh.execute_ignore_errors("rm -f #{temp_file}")
 
           new_db_path
-        rescue SshCommandError => e
+        rescue Errors::SshCommandError => e
           raise Errors::DatabaseError.new("restore", "sqlite3 restore failed: #{e.message}")
         end
 

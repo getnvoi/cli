@@ -43,7 +43,7 @@ module Nvoi
                 "mysqldump -u #{opts.user} -p#{opts.password} #{opts.database} " \
                 "--single-transaction --routines --triggers"
           ssh.execute(cmd)
-        rescue SshCommandError => e
+        rescue Errors::SshCommandError => e
           raise Errors::DatabaseError.new("dump", "mysqldump failed: #{e.message}")
         end
 
@@ -67,7 +67,7 @@ module Nvoi
 
           ssh.execute_ignore_errors("rm -f #{temp_file}")
           ssh.execute_ignore_errors("kubectl exec -n default #{opts.pod_name} -- rm -f #{temp_file}")
-        rescue SshCommandError => e
+        rescue Errors::SshCommandError => e
           raise Errors::DatabaseError.new("restore", "mysql restore failed: #{e.message}")
         end
 
@@ -75,7 +75,7 @@ module Nvoi
           cmd = "kubectl exec -n default #{opts.pod_name} -- " \
                 "mysql -u #{opts.user} -p#{opts.password} -e \"CREATE DATABASE #{opts.database}\""
           ssh.execute(cmd)
-        rescue SshCommandError => e
+        rescue Errors::SshCommandError => e
           raise Errors::DatabaseError.new("create_database", "failed to create database: #{e.message}")
         end
       end
