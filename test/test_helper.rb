@@ -26,3 +26,6 @@ Dir[File.expand_path("../lib/nvoi/utils/*.rb", __dir__)].each { |f| require f }
 # Load external/cloud (base first, then others)
 require_relative "../lib/nvoi/external/cloud/base"
 Dir[File.expand_path("../lib/nvoi/external/cloud/*.rb", __dir__)].sort.each { |f| require f }
+
+# Load external/dns
+Dir[File.expand_path("../lib/nvoi/external/dns/*.rb", __dir__)].sort.each { |f| require f }
