@@ -20,6 +20,7 @@ require_relative "nvoi/utils/retry"
 require_relative "nvoi/utils/namer"
 require_relative "nvoi/utils/env_resolver"
 require_relative "nvoi/utils/templates"
+require_relative "nvoi/utils/config_loader"
 
 # Objects
 require_relative "nvoi/objects/server"
@@ -31,6 +32,7 @@ require_relative "nvoi/objects/dns"
 require_relative "nvoi/objects/database"
 require_relative "nvoi/objects/service_spec"
 require_relative "nvoi/objects/config_override"
+require_relative "nvoi/objects/config"
 
 # External
 require_relative "nvoi/external/cloud/base"

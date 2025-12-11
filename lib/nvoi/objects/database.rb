@@ -5,7 +5,7 @@ require "json"
 module Nvoi
   module Objects
     # Parsed credentials from database URL
-    DatabaseCredentials = Struct.new(:user, :password, :host, :port, :database, :path, keyword_init: true)
+    DatabaseCredentials = Struct.new(:user, :password, :host, :port, :database, :path, :host_path, keyword_init: true)
 
     # Options for dumping a database
     DatabaseDumpOptions = Struct.new(:pod_name, :database, :user, :password, :host_path, keyword_init: true)

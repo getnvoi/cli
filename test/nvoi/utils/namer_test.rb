@@ -12,7 +12,7 @@ class NamerTest < Minitest::Test
     app = MockApplication.new(name: "myapp")
     deploy = MockDeploy.new(application: app)
     @config = MockConfig.new(deploy: deploy, container_prefix: "user-repo-myapp")
-    @namer = Nvoi::Utils::ResourceNamer.new(@config)
+    @namer = Nvoi::Utils::Namer.new(@config)
   end
 
   def test_server_name
@@ -96,6 +96,13 @@ class NamerTest < Minitest::Test
   def test_hostname_without_subdomain
     assert_equal "example.com", @namer.hostname(nil, "example.com")
     assert_equal "example.com", @namer.hostname("", "example.com")
+    assert_equal "example.com", @namer.hostname("@", "example.com")
+  end
+
+  def test_build_hostname_class_method
+    assert_equal "app.example.com", Nvoi::Utils::Namer.build_hostname("app", "example.com")
+    assert_equal "example.com", Nvoi::Utils::Namer.build_hostname(nil, "example.com")
+    assert_equal "example.com", Nvoi::Utils::Namer.build_hostname("@", "example.com")
   end
 
   def test_registry_names

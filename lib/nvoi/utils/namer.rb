@@ -4,8 +4,8 @@ require "digest"
 
 module Nvoi
   module Utils
-    # ResourceNamer handles resource naming and inference
-    class ResourceNamer
+    # Namer handles resource naming and inference
+    class Namer
       def initialize(config)
         @config = config
       end
@@ -173,7 +173,16 @@ module Nvoi
 
       # Build full hostname from subdomain and domain
       def hostname(subdomain, domain)
-        subdomain && !subdomain.empty? ? "#{subdomain}.#{domain}" : domain
+        self.class.build_hostname(subdomain, domain)
+      end
+
+      # Class method for building hostname without instance
+      def self.build_hostname(subdomain, domain)
+        if subdomain.nil? || subdomain.empty? || subdomain == "@"
+          domain
+        else
+          "#{subdomain}.#{domain}"
+        end
       end
 
       private
