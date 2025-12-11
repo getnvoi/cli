@@ -13,15 +13,15 @@ module Nvoi
           working_dir = config_path && !config_path.empty? ? File.dirname(config_path) : "."
           enc_path = credentials_path.nil? || credentials_path.empty? ? config_path : credentials_path
 
-          manager = Crypto.new(working_dir, enc_path, master_key_path)
+          manager = CredentialStore.new(working_dir, enc_path, master_key_path)
           plaintext = manager.read
-          raise ConfigError, "Failed to decrypt credentials" unless plaintext
+          raise Errors::ConfigError, "Failed to decrypt credentials" unless plaintext
 
           data = YAML.safe_load(plaintext, permitted_classes: [Symbol])
-          raise ConfigError, "Invalid config format" unless data.is_a?(Hash)
+          raise Errors::ConfigError, "Invalid config format" unless data.is_a?(Hash)
 
-          deploy_config = Objects::DeployConfig.new(data)
-          cfg = Objects::Configuration.new(deploy_config)
+          deploy_config = Objects::Configuration::Deploy.new(data)
+          cfg = Objects::Configuration::Root.new(deploy_config)
 
           load_ssh_keys(cfg)
           cfg.validate_config
@@ -47,40 +47,40 @@ module Nvoi
               host_path = resolve_sqlite_host_path(db_config, namer, creds.database || "app.db")
             end
 
-            return Objects::DatabaseCredentials.new(
+            return Objects::Database::Credentials.new(
               user: creds.user,
               password: creds.password,
               host: creds.host,
               port: creds.port,
               database: creds.database,
               path: creds.path,
-              host_path: host_path
+              host_path:
             )
           end
 
           # Fall back to secrets-based credentials
           case adapter
           when "postgres", "postgresql"
-            Objects::DatabaseCredentials.new(
+            Objects::Database::Credentials.new(
               port: provider.default_port,
               user: db_config.secrets["POSTGRES_USER"],
               password: db_config.secrets["POSTGRES_PASSWORD"],
               database: db_config.secrets["POSTGRES_DB"]
             )
           when "mysql", "mysql2"
-            Objects::DatabaseCredentials.new(
+            Objects::Database::Credentials.new(
               port: provider.default_port,
               user: db_config.secrets["MYSQL_USER"],
               password: db_config.secrets["MYSQL_PASSWORD"],
               database: db_config.secrets["MYSQL_DATABASE"]
             )
           when "sqlite", "sqlite3"
-            Objects::DatabaseCredentials.new(
+            Objects::Database::Credentials.new(
               database: "app.db",
               host_path: resolve_sqlite_host_path(db_config, namer, "app.db")
             )
           else
-            raise ConfigError, "Unsupported database adapter: #{adapter}"
+            raise Errors::ConfigError, "Unsupported database adapter: #{adapter}"
           end
         end
 
@@ -90,11 +90,11 @@ module Nvoi
             ssh_keys = cfg.deploy.application.ssh_keys
 
             unless ssh_keys
-              raise ConfigError, "ssh_keys section is required in config. Run 'nvoi credentials edit' to generate keys."
+              raise Errors::ConfigError, "ssh_keys section is required in config. Run 'nvoi credentials edit' to generate keys."
             end
 
-            raise ConfigError, "ssh_keys.private_key is required" unless ssh_keys.private_key && !ssh_keys.private_key.empty?
-            raise ConfigError, "ssh_keys.public_key is required" unless ssh_keys.public_key && !ssh_keys.public_key.empty?
+            raise Errors::ConfigError, "ssh_keys.private_key is required" unless ssh_keys.private_key && !ssh_keys.private_key.empty?
+            raise Errors::ConfigError, "ssh_keys.public_key is required" unless ssh_keys.public_key && !ssh_keys.public_key.empty?
 
             temp_dir = Dir.mktmpdir("nvoi-ssh-")
 
@@ -157,7 +157,7 @@ module Nvoi
             out: File::NULL, err: File::NULL
           )
 
-          raise ConfigError, "Failed to generate SSH keypair (ssh-keygen not available?)" unless result
+          raise Errors::ConfigError, "Failed to generate SSH keypair (ssh-keygen not available?)" unless result
 
           private_key = File.read(key_path)
           public_key = File.read("#{key_path}.pub").strip

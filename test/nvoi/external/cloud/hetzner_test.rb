@@ -47,7 +47,7 @@ class HetznerCloudTest < Minitest::Test
     stub_request(:get, "https://api.hetzner.cloud/v1/networks")
       .to_return(status: 200, body: { networks: [] }.to_json, headers: { "Content-Type" => "application/json" })
 
-    assert_raises(Nvoi::NetworkError) do
+    assert_raises(Nvoi::Errors::NetworkError) do
       @provider.get_network_by_name("nonexistent")
     end
   end
@@ -173,7 +173,7 @@ class HetznerCloudTest < Minitest::Test
     stub_request(:get, "https://api.hetzner.cloud/v1/server_types")
       .to_return(status: 401, body: { error: { message: "invalid token" } }.to_json, headers: { "Content-Type" => "application/json" })
 
-    assert_raises(Nvoi::ValidationError) do
+    assert_raises(Nvoi::Errors::ValidationError) do
       @provider.validate_credentials
     end
   end
@@ -191,7 +191,7 @@ class HetznerCloudTest < Minitest::Test
     stub_request(:get, "https://api.hetzner.cloud/v1/server_types")
       .to_return(status: 200, body: { server_types: [] }.to_json, headers: { "Content-Type" => "application/json" })
 
-    assert_raises(Nvoi::ValidationError) do
+    assert_raises(Nvoi::Errors::ValidationError) do
       @provider.validate_instance_type("invalid-type")
     end
   end
@@ -209,7 +209,7 @@ class HetznerCloudTest < Minitest::Test
     stub_request(:get, "https://api.hetzner.cloud/v1/locations")
       .to_return(status: 200, body: { locations: [] }.to_json, headers: { "Content-Type" => "application/json" })
 
-    assert_raises(Nvoi::ValidationError) do
+    assert_raises(Nvoi::Errors::ValidationError) do
       @provider.validate_region("invalid-location")
     end
   end
@@ -220,7 +220,7 @@ class HetznerCloudTest < Minitest::Test
     stub_request(:get, "https://api.hetzner.cloud/v1/volumes/999")
       .to_return(status: 404, body: { error: { message: "not found" } }.to_json, headers: { "Content-Type" => "application/json" })
 
-    assert_raises(Nvoi::NotFoundError) do
+    assert_raises(Nvoi::Errors::NotFoundError) do
       @provider.get_volume(999)
     end
   end
@@ -232,7 +232,7 @@ class HetznerCloudTest < Minitest::Test
     stub_request(:get, "https://api.hetzner.cloud/v1/networks")
       .to_return(status: 200, body: { networks: [] }.to_json, headers: { "Content-Type" => "application/json" })
 
-    assert_raises(Nvoi::ValidationError) do
+    assert_raises(Nvoi::Errors::ValidationError) do
       @provider.find_or_create_network("test")
     end
   end
@@ -241,7 +241,7 @@ class HetznerCloudTest < Minitest::Test
     stub_request(:get, "https://api.hetzner.cloud/v1/servers")
       .to_return(status: 500, body: { error: { message: "internal error" } }.to_json, headers: { "Content-Type" => "application/json" })
 
-    assert_raises(Nvoi::APIError) do
+    assert_raises(Nvoi::Errors::ApiError) do
       @provider.list_servers
     end
   end
@@ -323,7 +323,7 @@ class HetznerCloudTest < Minitest::Test
     stub_request(:get, "https://api.hetzner.cloud/v1/firewalls")
       .to_return(status: 200, body: { firewalls: [] }.to_json, headers: { "Content-Type" => "application/json" })
 
-    assert_raises(Nvoi::FirewallError) do
+    assert_raises(Nvoi::Errors::FirewallError) do
       @provider.get_firewall_by_name("nonexistent")
     end
   end
@@ -368,7 +368,7 @@ class HetznerCloudTest < Minitest::Test
         }
       }.to_json, headers: { "Content-Type" => "application/json" })
 
-    opts = Nvoi::Objects::ServerCreateOptions.new(
+    opts = Nvoi::Objects::Server::CreateOptions.new(
       name: "new-server",
       type: "cpx11",
       image: "ubuntu-22.04",
@@ -404,7 +404,7 @@ class HetznerCloudTest < Minitest::Test
         }
       }.to_json, headers: { "Content-Type" => "application/json" })
 
-    opts = Nvoi::Objects::VolumeCreateOptions.new(
+    opts = Nvoi::Objects::Volume::CreateOptions.new(
       name: "new-vol",
       size: 50,
       server_id: "123"
@@ -437,7 +437,7 @@ class HetznerCloudTest < Minitest::Test
     stub_request(:get, "https://api.hetzner.cloud/v1/servers")
       .to_return(status: 401, body: { error: { message: "unauthorized" } }.to_json, headers: { "Content-Type" => "application/json" })
 
-    assert_raises(Nvoi::AuthenticationError) do
+    assert_raises(Nvoi::Errors::AuthenticationError) do
       @provider.list_servers
     end
   end

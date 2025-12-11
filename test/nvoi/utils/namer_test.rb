@@ -11,7 +11,7 @@ class NamerTest < Minitest::Test
   def setup
     app = MockApplication.new(name: "myapp")
     deploy = MockDeploy.new(application: app)
-    @config = MockConfig.new(deploy: deploy, container_prefix: "user-repo-myapp")
+    @config = MockConfig.new(deploy:, container_prefix: "user-repo-myapp")
     @namer = Nvoi::Utils::Namer.new(@config)
   end
 

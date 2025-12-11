@@ -16,12 +16,12 @@ module Nvoi
         local_build_cmd = "cd #{path} && DOCKER_BUILDKIT=1 docker build --platform linux/amd64 #{cache_args} --build-arg BUILDKIT_INLINE_CACHE=1 -t #{tag} ."
 
         unless system("bash", "-c", local_build_cmd)
-          raise SshError, "local build failed"
+          raise Errors::SshError, "local build failed"
         end
 
         tar_file = "/tmp/#{tag.tr(':', '_')}.tar"
         unless system("docker", "save", tag, "-o", tar_file)
-          raise SshError, "docker save failed"
+          raise Errors::SshError, "docker save failed"
         end
 
         begin
@@ -34,7 +34,7 @@ module Nvoi
           ]
 
           unless system(*rsync_cmd)
-            raise SshError, "rsync failed"
+            raise Errors::SshError, "rsync failed"
           end
 
           @ssh.execute("sudo ctr -n k8s.io images import #{remote_tar_path}")
@@ -45,7 +45,7 @@ module Nvoi
             @ssh.execute("sudo ctr -n k8s.io images tag #{full_image_ref} #{tag}")
           rescue SshCommandError => e
             list_output = @ssh.execute("sudo ctr -n k8s.io images ls") rescue ""
-            raise SshError, "failed to tag imported image: #{e.message}\nAvailable images:\n#{list_output}"
+            raise Errors::SshError, "failed to tag imported image: #{e.message}\nAvailable images:\n#{list_output}"
           end
 
           @ssh.execute_ignore_errors("rm #{remote_tar_path}")

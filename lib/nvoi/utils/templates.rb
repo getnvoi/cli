@@ -4,22 +4,22 @@ require "erb"
 
 module Nvoi
   module Utils
-    # TemplateBinding provides a clean binding for ERB templates
-    class TemplateBinding
-      def initialize(data)
-        data.each do |key, value|
-          instance_variable_set("@#{key}", value)
-          define_singleton_method(key) { instance_variable_get("@#{key}") }
+    # Templates handles K8s manifest template loading and rendering
+    module Templates
+      # TemplateBinding provides a clean binding for ERB templates
+      class TemplateBinding
+        def initialize(data)
+          data.each do |key, value|
+            instance_variable_set("@#{key}", value)
+            define_singleton_method(key) { instance_variable_get("@#{key}") }
+          end
+        end
+
+        def get_binding
+          binding
         end
       end
 
-      def get_binding
-        binding
-      end
-    end
-
-    # Templates handles K8s manifest template loading and rendering
-    module Templates
       class << self
         def template_path(name)
           File.join(Nvoi.templates_path, "#{name}.erb")
@@ -27,7 +27,7 @@ module Nvoi
 
         def load_template(name)
           path = template_path(name)
-          raise TemplateError, "template #{name} not found at #{path}" unless File.exist?(path)
+          raise Errors::TemplateError, "template #{name} not found at #{path}" unless File.exist?(path)
 
           ERB.new(File.read(path), trim_mode: "-")
         end
@@ -43,6 +43,18 @@ module Nvoi
           template = load_template(name)
           binding_obj = TemplateBinding.new(data)
           template.result(binding_obj.get_binding)
+        end
+
+        # Render a template and apply it via kubectl
+        def apply_manifest(ssh, template_name, data)
+          manifest = render(template_name, data)
+          cmd = "cat <<'EOF' | kubectl apply -f -\n#{manifest}\nEOF"
+          ssh.execute(cmd)
+        end
+
+        # Wait for a deployment to be ready
+        def wait_for_deployment(ssh, name, namespace: "default", timeout: 300)
+          ssh.execute("kubectl rollout status deployment/#{name} -n #{namespace} --timeout=#{timeout}s")
         end
       end
     end

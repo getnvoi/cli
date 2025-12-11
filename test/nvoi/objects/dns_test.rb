@@ -4,7 +4,7 @@ require "test_helper"
 
 class DNSTest < Minitest::Test
   def test_zone_struct
-    zone = Nvoi::Objects::Zone.new(
+    zone = Nvoi::Objects::Dns::Zone.new(
       id: "zone-123",
       name: "example.com"
     )
@@ -14,7 +14,7 @@ class DNSTest < Minitest::Test
   end
 
   def test_dns_record_struct
-    record = Nvoi::Objects::DNSRecord.new(
+    record = Nvoi::Objects::Dns::Record.new(
       id: "rec-123",
       type: "CNAME",
       name: "app.example.com",

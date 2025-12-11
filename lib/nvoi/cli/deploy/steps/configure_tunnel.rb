@@ -43,9 +43,9 @@ module Nvoi
 
               tunnel = setup_tunnel(tunnel_name, hostname, service_url, service_config.domain)
 
-              Objects::TunnelInfo.new(
-                service_name: service_name,
-                hostname: hostname,
+              Objects::Tunnel::Info.new(
+                service_name:,
+                hostname:,
                 tunnel_id: tunnel.tunnel_id,
                 tunnel_token: tunnel.tunnel_token
               )
@@ -81,14 +81,14 @@ module Nvoi
               # Create DNS record
               @log.info "Creating DNS CNAME record: %s", hostname
               zone = @cf_client.find_zone(domain)
-              raise CloudflareError, "zone not found: #{domain}" unless zone
+              raise Errors::CloudflareError, "zone not found: #{domain}" unless zone
 
               tunnel_cname = "#{tunnel.id}.cfargotunnel.com"
               @cf_client.create_or_update_dns_record(zone.id, hostname, "CNAME", tunnel_cname, proxied: true)
 
               @log.success "Tunnel configured: %s", tunnel_name
 
-              Objects::TunnelInfo.new(
+              Objects::Tunnel::Info.new(
                 tunnel_id: tunnel.id,
                 tunnel_token: token
               )

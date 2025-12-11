@@ -7,12 +7,12 @@ module Nvoi
   module External
     module Cloud
       # AWS provider implements the compute provider interface for AWS EC2
-      class AWS < Base
+      class Aws < Base
         def initialize(access_key_id, secret_access_key, region)
           @region = region || "us-east-1"
-          @client = Aws::EC2::Client.new(
+          @client = ::Aws::EC2::Client.new(
             region: @region,
-            credentials: Aws::Credentials.new(access_key_id, secret_access_key)
+            credentials: ::Aws::Credentials.new(access_key_id, secret_access_key)
           )
         end
 
@@ -21,7 +21,7 @@ module Nvoi
         def find_or_create_network(name)
           vpc = find_vpc_by_name(name)
           if vpc
-            return Objects::Network.new(
+            return Objects::Network::Record.new(
               id: vpc.vpc_id,
               name:,
               ip_range: vpc.cidr_block
@@ -89,7 +89,7 @@ module Nvoi
             subnet_id: subnet_resp.subnet.subnet_id
           )
 
-          Objects::Network.new(
+          Objects::Network::Record.new(
             id: vpc_id,
             name:,
             ip_range: create_resp.vpc.cidr_block
@@ -98,9 +98,9 @@ module Nvoi
 
         def get_network_by_name(name)
           vpc = find_vpc_by_name(name)
-          raise NetworkError, "network not found: #{name}" unless vpc
+          raise Errors::NetworkError, "network not found: #{name}" unless vpc
 
-          Objects::Network.new(
+          Objects::Network::Record.new(
             id: vpc.vpc_id,
             name:,
             ip_range: vpc.cidr_block
@@ -116,12 +116,12 @@ module Nvoi
         def find_or_create_firewall(name)
           sg = find_security_group_by_name(name)
           if sg
-            return Objects::Firewall.new(id: sg.group_id, name:)
+            return Objects::Firewall::Record.new(id: sg.group_id, name:)
           end
 
           # Get default VPC
           vpcs = @client.describe_vpcs(filters: [{ name: "isDefault", values: ["true"] }])
-          raise NetworkError, "no default VPC found" if vpcs.vpcs.empty?
+          raise Errors::NetworkError, "no default VPC found" if vpcs.vpcs.empty?
 
           # Create security group
           create_resp = @client.create_security_group(
@@ -145,14 +145,14 @@ module Nvoi
             }]
           )
 
-          Objects::Firewall.new(id: create_resp.group_id, name:)
+          Objects::Firewall::Record.new(id: create_resp.group_id, name:)
         end
 
         def get_firewall_by_name(name)
           sg = find_security_group_by_name(name)
-          raise FirewallError, "firewall not found: #{name}" unless sg
+          raise Errors::FirewallError, "firewall not found: #{name}" unless sg
 
-          Objects::Firewall.new(id: sg.group_id, name:)
+          Objects::Firewall::Record.new(id: sg.group_id, name:)
         end
 
         def delete_firewall(id)
@@ -166,6 +166,15 @@ module Nvoi
           return nil unless instance
 
           instance_to_server(instance)
+        end
+
+        def find_server_by_id(id)
+          result = @client.describe_instances(instance_ids: [id])
+          return nil if result.reservations.empty? || result.reservations[0].instances.empty?
+
+          instance_to_server(result.reservations[0].instances[0])
+        rescue ::Aws::EC2::Errors::InvalidInstanceIDNotFound
+          nil
         end
 
         def list_servers
@@ -214,7 +223,7 @@ module Nvoi
           end
 
           result = @client.run_instances(input)
-          raise ServerCreationError, "no instance created" if result.instances.empty?
+          raise Errors::ServerCreationError, "no instance created" if result.instances.empty?
 
           instance_to_server(result.instances[0])
         end
@@ -231,7 +240,7 @@ module Nvoi
             sleep(5)
           end
 
-          raise ServerCreationError, "instance did not become running after #{max_attempts} attempts"
+          raise Errors::ServerCreationError, "instance did not become running after #{max_attempts} attempts"
         end
 
         def delete_server(id)
@@ -242,7 +251,7 @@ module Nvoi
 
         def create_volume(opts)
           resp = @client.describe_instances(instance_ids: [opts.server_id])
-          raise VolumeError, "instance not found: #{opts.server_id}" if resp.reservations.empty?
+          raise Errors::VolumeError, "instance not found: #{opts.server_id}" if resp.reservations.empty?
 
           instance = resp.reservations[0].instances[0]
           az = instance.placement.availability_zone
@@ -257,7 +266,7 @@ module Nvoi
             }]
           )
 
-          Objects::Volume.new(
+          Objects::Volume::Record.new(
             id: create_resp.volume_id,
             name: opts.name,
             size: create_resp.size,
@@ -302,14 +311,14 @@ module Nvoi
 
         def validate_instance_type(instance_type)
           resp = @client.describe_instance_types(instance_types: [instance_type])
-          raise ValidationError, "invalid AWS instance type: #{instance_type}" if resp.instance_types.empty?
+          raise Errors::ValidationError, "invalid AWS instance type: #{instance_type}" if resp.instance_types.empty?
 
           true
         end
 
         def validate_region(region)
           resp = @client.describe_regions(region_names: [region])
-          raise ValidationError, "invalid AWS region: #{region}" if resp.regions.empty?
+          raise Errors::ValidationError, "invalid AWS region: #{region}" if resp.regions.empty?
 
           true
         end
@@ -318,7 +327,7 @@ module Nvoi
           @client.describe_regions
           true
         rescue StandardError => e
-          raise ValidationError, "aws credentials invalid: #{e.message}"
+          raise Errors::ValidationError, "aws credentials invalid: #{e.message}"
         end
 
         private
@@ -360,7 +369,7 @@ module Nvoi
               ]
             )
 
-            raise ProviderError, "no Ubuntu 22.04 AMI found" if resp.images.empty?
+            raise Errors::ProviderError, "no Ubuntu 22.04 AMI found" if resp.images.empty?
 
             latest = resp.images.max_by(&:creation_date)
             latest.image_id
@@ -369,7 +378,7 @@ module Nvoi
           def instance_to_server(instance)
             name = instance.tags&.find { |t| t.key == "Name" }&.value || ""
 
-            Objects::Server.new(
+            Objects::Server::Record.new(
               id: instance.instance_id,
               name:,
               status: instance.state.name,
@@ -380,7 +389,7 @@ module Nvoi
           def volume_to_object(vol)
             name = vol.tags&.find { |t| t.key == "Name" }&.value || ""
 
-            v = Objects::Volume.new(
+            v = Objects::Volume::Record.new(
               id: vol.volume_id,
               name:,
               size: vol.size,

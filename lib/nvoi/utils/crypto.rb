@@ -45,7 +45,7 @@ module Nvoi
 
           min_size = NONCE_SIZE + 16 # nonce + auth tag
           if ciphertext.bytesize < min_size
-            raise DecryptionError, "ciphertext too short: need at least #{min_size} bytes, got #{ciphertext.bytesize}"
+            raise Errors::DecryptionError, "ciphertext too short: need at least #{min_size} bytes, got #{ciphertext.bytesize}"
           end
 
           # Extract nonce and auth tag
@@ -62,18 +62,18 @@ module Nvoi
           begin
             cipher.update(encrypted_data) + cipher.final
           rescue OpenSSL::Cipher::CipherError => e
-            raise DecryptionError, "decryption failed (wrong key or corrupted data): #{e.message}"
+            raise Errors::DecryptionError, "decryption failed (wrong key or corrupted data): #{e.message}"
           end
         end
 
         # Validate a hex-encoded key
         def validate_key(hex_key)
           unless hex_key.length == KEY_HEX_LENGTH
-            raise InvalidKeyError, "invalid key length: expected #{KEY_HEX_LENGTH} hex characters, got #{hex_key.length}"
+            raise Errors::InvalidKeyError, "invalid key length: expected #{KEY_HEX_LENGTH} hex characters, got #{hex_key.length}"
           end
 
           unless hex_key.match?(/\A[0-9a-fA-F]+\z/)
-            raise InvalidKeyError, "invalid hex key: contains non-hex characters"
+            raise Errors::InvalidKeyError, "invalid hex key: contains non-hex characters"
           end
 
           true

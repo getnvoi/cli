@@ -67,7 +67,7 @@ module Nvoi
             branch = @options[:branch]
             return if branch.nil? || branch.empty?
 
-            override = Objects::ConfigOverride.new(branch: branch)
+            override = Objects::ConfigOverride.new(branch:)
             override.apply(@config)
           end
 
@@ -157,7 +157,7 @@ module Nvoi
                 age = Time.now - lock_time
 
                 if age < Utils::Constants::STALE_DEPLOYMENT_LOCK_AGE
-                  raise DeploymentError.new(
+                  raise Errors::DeploymentError.new(
                     "lock",
                     "deployment already in progress (started #{age.round}s ago). Wait or remove lock file: #{lock_file}"
                   )

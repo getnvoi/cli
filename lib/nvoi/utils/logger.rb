@@ -42,6 +42,16 @@ module Nvoi
         log(:magenta, "DEBUG", format_message(message, args))
       end
 
+      # Step indicator for multi-step operations
+      def step(message, *args)
+        log(:cyan, "STEP", format_message(message, args))
+      end
+
+      # OK indicator for step completion
+      def ok(message, *args)
+        log(:green, "OK", format_message(message, args))
+      end
+
       def separator
         @output.puts colorize(:cyan, "-" * 60)
       end

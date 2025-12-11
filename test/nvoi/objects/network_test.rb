@@ -4,7 +4,7 @@ require "test_helper"
 
 class NetworkTest < Minitest::Test
   def test_network_struct
-    network = Nvoi::Objects::Network.new(
+    network = Nvoi::Objects::Network::Record.new(
       id: "net-123",
       name: "myapp-network",
       ip_range: "10.0.0.0/16"

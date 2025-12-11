@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require_relative "../../../../../lib/nvoi/cli/delete/steps/teardown_server"
 
 class TeardownServerStepTest < Minitest::Test
   MockNamer = Struct.new(:app_name) do
@@ -17,15 +16,15 @@ class TeardownServerStepTest < Minitest::Test
 
   def test_run_deletes_servers
     servers = { "master" => MockServerConfig.new(count: 1, master: true) }
-    app = MockApplication.new(servers: servers)
+    app = MockApplication.new(servers:)
     deploy = MockDeploy.new(application: app)
     namer = MockNamer.new("myapp")
-    config = MockConfig.new(deploy: deploy, namer: namer)
+    config = MockConfig.new(deploy:, namer:)
 
     mock_provider = Minitest::Mock.new
     mock_log = Minitest::Mock.new
 
-    server = Nvoi::Objects::Server.new(id: "srv-123", name: "myapp-master-1")
+    server = Nvoi::Objects::Server::Record.new(id: "srv-123", name: "myapp-master-1")
 
     mock_log.expect(:info, nil, ["Deleting %d server(s) from group '%s'", 1, "master"])
     mock_log.expect(:info, nil, ["Deleting server: %s", "myapp-master-1"])
@@ -42,16 +41,16 @@ class TeardownServerStepTest < Minitest::Test
 
   def test_run_handles_multiple_servers
     servers = { "workers" => MockServerConfig.new(count: 2, master: false) }
-    app = MockApplication.new(servers: servers)
+    app = MockApplication.new(servers:)
     deploy = MockDeploy.new(application: app)
     namer = MockNamer.new("myapp")
-    config = MockConfig.new(deploy: deploy, namer: namer)
+    config = MockConfig.new(deploy:, namer:)
 
     mock_provider = Minitest::Mock.new
     mock_log = Minitest::Mock.new
 
-    server1 = Nvoi::Objects::Server.new(id: "srv-1", name: "myapp-workers-1")
-    server2 = Nvoi::Objects::Server.new(id: "srv-2", name: "myapp-workers-2")
+    server1 = Nvoi::Objects::Server::Record.new(id: "srv-1", name: "myapp-workers-1")
+    server2 = Nvoi::Objects::Server::Record.new(id: "srv-2", name: "myapp-workers-2")
 
     mock_log.expect(:info, nil, ["Deleting %d server(s) from group '%s'", 2, "workers"])
     mock_log.expect(:info, nil, ["Deleting server: %s", "myapp-workers-1"])
@@ -74,7 +73,7 @@ class TeardownServerStepTest < Minitest::Test
     app = MockApplication.new(servers: {})
     deploy = MockDeploy.new(application: app)
     namer = MockNamer.new("myapp")
-    config = MockConfig.new(deploy: deploy, namer: namer)
+    config = MockConfig.new(deploy:, namer:)
 
     mock_provider = Minitest::Mock.new
     mock_log = Minitest::Mock.new

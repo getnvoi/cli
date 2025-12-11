@@ -22,6 +22,9 @@ Gem::Specification.new do |spec|
   spec.executables   = ["nvoi"]
   spec.require_paths = ["lib"]
 
+  # Autoloading
+  spec.add_dependency "zeitwerk", "~> 2.6"
+
   # CLI
   spec.add_dependency "thor", "~> 1.3"
 

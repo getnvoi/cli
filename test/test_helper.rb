@@ -12,49 +12,10 @@ end
 $LOAD_PATH.unshift File.expand_path("../lib", __dir__)
 
 require "minitest/autorun"
-require "json"
+require "nvoi"
 
-# Load errors first (needed by other modules)
-require_relative "../lib/nvoi/utils/errors"
-
-# Load objects
-Dir[File.expand_path("../lib/nvoi/objects/*.rb", __dir__)].each { |f| require f }
-
-# Load utils
-Dir[File.expand_path("../lib/nvoi/utils/*.rb", __dir__)].each { |f| require f }
-
-# Load external/cloud (base first, then others)
-require_relative "../lib/nvoi/external/cloud/base"
-Dir[File.expand_path("../lib/nvoi/external/cloud/*.rb", __dir__)].sort.each { |f| require f }
-
-# Load external/dns
-Dir[File.expand_path("../lib/nvoi/external/dns/*.rb", __dir__)].sort.each { |f| require f }
-
-# Load external flat files
-require_relative "../lib/nvoi/external/ssh"
-require_relative "../lib/nvoi/external/kubectl"
-require_relative "../lib/nvoi/external/containerd"
-
-# Load external/database (provider first, then others)
-require_relative "../lib/nvoi/external/database/provider"
-Dir[File.expand_path("../lib/nvoi/external/database/*.rb", __dir__)].sort.each { |f| require f }
-
-# Load CLI (Thor routing only - for basic tests)
+# Load CLI (ignored by Zeitwerk for lazy loading in production)
 require_relative "../lib/nvoi/cli"
 
-# Define module-level methods that are normally in nvoi.rb
-module Nvoi
-  class << self
-    attr_accessor :logger
-
-    def root
-      File.expand_path("..", __dir__)
-    end
-
-    def templates_path
-      File.join(root, "templates")
-    end
-  end
-
-  self.logger = Utils::Logger.new
-end
+# Load all CLI commands for testing
+Dir[File.expand_path("../lib/nvoi/cli/**/*.rb", __dir__)].sort.each { |f| require f }

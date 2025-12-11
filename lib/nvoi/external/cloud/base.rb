@@ -36,6 +36,10 @@ module Nvoi
           raise NotImplementedError
         end
 
+        def find_server_by_id(id)
+          raise NotImplementedError
+        end
+
         def list_servers
           raise NotImplementedError
         end

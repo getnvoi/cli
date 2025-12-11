@@ -17,7 +17,7 @@ module Nvoi
 
             firewall = @provider.get_firewall_by_name(@config.firewall_name)
             delete_firewall_with_retry(firewall.id) if firewall
-          rescue FirewallError => e
+          rescue Errors::FirewallError => e
             @log.warning "Firewall not found: %s", e.message
           end
 
@@ -31,7 +31,7 @@ module Nvoi
                   return
                 rescue StandardError => e
                   if i == max_retries - 1
-                    raise ServiceError, "failed to delete firewall after #{max_retries} attempts: #{e.message}"
+                    raise Errors::ServiceError, "failed to delete firewall after #{max_retries} attempts: #{e.message}"
                   end
 
                   @log.info "Firewall still in use, waiting 3s before retry (%d/%d)", i + 1, max_retries

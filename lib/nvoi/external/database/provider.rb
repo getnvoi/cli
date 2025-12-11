@@ -47,32 +47,18 @@ module Nvoi
 
         protected
 
-        def parse_standard_url(url, default_port)
-          uri = URI.parse(url)
-          Objects::DatabaseCredentials.new(
-            user: uri.user,
-            password: uri.password,
-            host: uri.host,
-            port: (uri.port || default_port).to_s,
-            database: uri.path&.sub(%r{^/}, "")
-          )
-        rescue URI::InvalidURIError => e
-          raise DatabaseError.new("parse_url", "invalid URL format: #{e.message}")
-        end
-      end
-
-      # Factory method to create provider by adapter name
-      def self.provider_for(adapter)
-        case adapter&.downcase
-        when "postgres", "postgresql"
-          Postgres.new
-        when "mysql", "mysql2"
-          Mysql.new
-        when "sqlite", "sqlite3"
-          Sqlite.new
-        else
-          raise ArgumentError, "Unsupported database adapter: #{adapter}"
-        end
+          def parse_standard_url(url, default_port)
+            uri = URI.parse(url)
+            Objects::Database::Credentials.new(
+              user: uri.user,
+              password: uri.password,
+              host: uri.host,
+              port: (uri.port || default_port).to_s,
+              database: uri.path&.sub(%r{^/}, "")
+            )
+          rescue URI::InvalidURIError => e
+            raise Errors::DatabaseError.new("parse_url", "invalid URL format: #{e.message}")
+          end
       end
     end
   end

@@ -4,7 +4,7 @@ require "test_helper"
 
 class VolumeTest < Minitest::Test
   def test_volume_struct
-    volume = Nvoi::Objects::Volume.new(
+    volume = Nvoi::Objects::Volume::Record.new(
       id: "vol-123",
       name: "myapp-data",
       size: 20,
@@ -24,7 +24,7 @@ class VolumeTest < Minitest::Test
   end
 
   def test_volume_create_options_struct
-    opts = Nvoi::Objects::VolumeCreateOptions.new(
+    opts = Nvoi::Objects::Volume::CreateOptions.new(
       name: "myapp-data",
       size: 20,
       server_id: "srv-123"
@@ -36,7 +36,7 @@ class VolumeTest < Minitest::Test
   end
 
   def test_mount_options_struct
-    opts = Nvoi::Objects::MountOptions.new(
+    opts = Nvoi::Objects::Volume::MountOptions.new(
       device_path: "/dev/sdb",
       mount_path: "/mnt/data",
       fs_type: "xfs"

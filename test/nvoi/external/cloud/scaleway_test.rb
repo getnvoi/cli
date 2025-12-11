@@ -167,7 +167,7 @@ class ScalewayCloudTest < Minitest::Test
     stub_request(:get, "https://api.scaleway.com/instance/v1/zones/fr-par-1/products/servers")
       .to_return(status: 401, body: { message: "invalid token" }.to_json, headers: { "Content-Type" => "application/json" })
 
-    assert_raises(Nvoi::ValidationError) do
+    assert_raises(Nvoi::Errors::ValidationError) do
       @provider.validate_credentials
     end
   end
@@ -185,7 +185,7 @@ class ScalewayCloudTest < Minitest::Test
     stub_request(:get, "https://api.scaleway.com/instance/v1/zones/fr-par-1/products/servers")
       .to_return(status: 200, body: { servers: {} }.to_json, headers: { "Content-Type" => "application/json" })
 
-    assert_raises(Nvoi::ValidationError) do
+    assert_raises(Nvoi::Errors::ValidationError) do
       @provider.validate_instance_type("invalid-type")
     end
   end
@@ -197,7 +197,7 @@ class ScalewayCloudTest < Minitest::Test
   end
 
   def test_validate_region_failure
-    assert_raises(Nvoi::ValidationError) do
+    assert_raises(Nvoi::Errors::ValidationError) do
       @provider.validate_region("invalid-zone")
     end
   end
@@ -214,7 +214,7 @@ class ScalewayCloudTest < Minitest::Test
     stub_request(:get, "https://api.scaleway.com/instance/v1/zones/fr-par-1/servers")
       .to_return(status: 401, body: { message: "unauthorized" }.to_json, headers: { "Content-Type" => "application/json" })
 
-    assert_raises(Nvoi::AuthenticationError) do
+    assert_raises(Nvoi::Errors::AuthenticationError) do
       @provider.list_servers
     end
   end
@@ -223,7 +223,7 @@ class ScalewayCloudTest < Minitest::Test
     stub_request(:get, "https://api.scaleway.com/instance/v1/zones/fr-par-1/servers")
       .to_return(status: 403, body: { message: "forbidden" }.to_json, headers: { "Content-Type" => "application/json" })
 
-    assert_raises(Nvoi::AuthenticationError) do
+    assert_raises(Nvoi::Errors::AuthenticationError) do
       @provider.list_servers
     end
   end
@@ -232,7 +232,7 @@ class ScalewayCloudTest < Minitest::Test
     stub_request(:get, "https://api.scaleway.com/instance/v1/zones/fr-par-1/servers")
       .to_return(status: 429, body: {}.to_json, headers: { "Content-Type" => "application/json" })
 
-    assert_raises(Nvoi::RateLimitError) do
+    assert_raises(Nvoi::Errors::RateLimitError) do
       @provider.list_servers
     end
   end
@@ -241,7 +241,7 @@ class ScalewayCloudTest < Minitest::Test
     stub_request(:get, "https://api.scaleway.com/instance/v1/zones/fr-par-1/servers")
       .to_return(status: 409, body: { message: "conflict" }.to_json, headers: { "Content-Type" => "application/json" })
 
-    assert_raises(Nvoi::ConflictError) do
+    assert_raises(Nvoi::Errors::ConflictError) do
       @provider.list_servers
     end
   end
@@ -250,7 +250,7 @@ class ScalewayCloudTest < Minitest::Test
     stub_request(:get, "https://api.scaleway.com/instance/v1/zones/fr-par-1/servers")
       .to_return(status: 500, body: { message: "internal error" }.to_json, headers: { "Content-Type" => "application/json" })
 
-    assert_raises(Nvoi::APIError) do
+    assert_raises(Nvoi::Errors::ApiError) do
       @provider.list_servers
     end
   end
@@ -304,7 +304,7 @@ class ScalewayCloudTest < Minitest::Test
     stub_request(:get, "https://api.scaleway.com/vpc/v2/regions/fr-par/private-networks")
       .to_return(status: 200, body: { private_networks: [] }.to_json, headers: { "Content-Type" => "application/json" })
 
-    assert_raises(Nvoi::NetworkError) do
+    assert_raises(Nvoi::Errors::NetworkError) do
       @provider.get_network_by_name("nonexistent")
     end
   end
@@ -325,7 +325,7 @@ class ScalewayCloudTest < Minitest::Test
     stub_request(:get, "https://api.scaleway.com/instance/v1/zones/fr-par-1/security_groups")
       .to_return(status: 200, body: { security_groups: [] }.to_json, headers: { "Content-Type" => "application/json" })
 
-    assert_raises(Nvoi::FirewallError) do
+    assert_raises(Nvoi::Errors::FirewallError) do
       @provider.get_firewall_by_name("nonexistent")
     end
   end
@@ -410,7 +410,7 @@ class ScalewayCloudTest < Minitest::Test
         }
       }.to_json, headers: { "Content-Type" => "application/json" })
 
-    opts = Nvoi::Objects::ServerCreateOptions.new(
+    opts = Nvoi::Objects::Server::CreateOptions.new(
       name: "new-server",
       type: "DEV1-S",
       image: "Ubuntu 22.04",
@@ -444,7 +444,7 @@ class ScalewayCloudTest < Minitest::Test
         status: "creating"
       }.to_json, headers: { "Content-Type" => "application/json" })
 
-    opts = Nvoi::Objects::VolumeCreateOptions.new(
+    opts = Nvoi::Objects::Volume::CreateOptions.new(
       name: "new-volume",
       size: 50,
       server_id: "srv-123"

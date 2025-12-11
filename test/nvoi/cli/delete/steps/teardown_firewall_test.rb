@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require_relative "../../../../../lib/nvoi/cli/delete/steps/teardown_firewall"
 
 class TeardownFirewallStepTest < Minitest::Test
   MockConfig = Struct.new(:firewall_name, keyword_init: true)
@@ -12,7 +11,7 @@ class TeardownFirewallStepTest < Minitest::Test
     mock_provider = Minitest::Mock.new
     mock_log = Minitest::Mock.new
 
-    firewall = Nvoi::Objects::Firewall.new(id: "fw-123", name: "test-firewall")
+    firewall = Nvoi::Objects::Firewall::Record.new(id: "fw-123", name: "test-firewall")
 
     mock_log.expect(:info, nil, ["Deleting firewall: %s", "test-firewall"])
     mock_provider.expect(:get_firewall_by_name, firewall, ["test-firewall"])
@@ -33,7 +32,7 @@ class TeardownFirewallStepTest < Minitest::Test
     mock_log = Minitest::Mock.new
 
     mock_log.expect(:info, nil, ["Deleting firewall: %s", "test-firewall"])
-    mock_provider.expect(:get_firewall_by_name, nil) { raise Nvoi::FirewallError, "not found" }
+    mock_provider.expect(:get_firewall_by_name, nil) { raise Nvoi::Errors::FirewallError, "not found" }
     mock_log.expect(:warning, nil, ["Firewall not found: %s", "not found"])
 
     step = Nvoi::Cli::Delete::Steps::TeardownFirewall.new(config, mock_provider, mock_log)

@@ -81,7 +81,7 @@ module Nvoi
 
               Utils::Templates.apply_manifest(@ssh, "app-secret.yaml", {
                 name: secret_name,
-                env_vars: env_vars
+                env_vars:
               })
 
               @log.success "App secret deployed"
@@ -146,8 +146,8 @@ module Nvoi
                 command: service_spec.command,
                 env_vars: service_spec.env,
                 env_keys: service_spec.env.keys.sort,
-                volume_path: volume_path,
-                host_path: host_path,
+                volume_path:,
+                host_path:,
                 affinity_server_names: service_spec.servers
               }
 
@@ -190,8 +190,8 @@ module Nvoi
                 env_keys: env.keys.sort,
                 affinity_server_names: service_config.servers,
                 resources: DEFAULT_RESOURCES,
-                readiness_probe: readiness_probe,
-                liveness_probe: liveness_probe,
+                readiness_probe:,
+                liveness_probe:,
                 volume_mounts: [],
                 host_path_volumes: [],
                 volumes: []
@@ -200,7 +200,7 @@ module Nvoi
               # Add mounts if configured
               if service_config.mounts && !service_config.mounts.empty?
                 if service_config.servers.length > 1
-                  raise DeploymentError.new(
+                  raise Errors::DeploymentError.new(
                     "validation",
                     "app '#{service_name}' runs on multiple servers #{service_config.servers} " \
                     "and cannot have mounts. Volumes are server-local and would cause data inconsistency."
@@ -213,7 +213,7 @@ module Nvoi
                 service_config.mounts.each do |vol_name, mount_path|
                   unless server_config&.volumes&.key?(vol_name)
                     available = server_config&.volumes&.keys&.join(", ") || "none"
-                    raise DeploymentError.new(
+                    raise Errors::DeploymentError.new(
                       "validation",
                       "app '#{service_name}' mounts '#{vol_name}' but server '#{server_name}' " \
                       "has no volume named '#{vol_name}'. Available: #{available}"
@@ -221,8 +221,8 @@ module Nvoi
                   end
 
                   host_path = @namer.server_volume_host_path(server_name, vol_name)
-                  data[:volume_mounts] << { name: vol_name, mount_path: mount_path }
-                  data[:host_path_volumes] << { name: vol_name, host_path: host_path }
+                  data[:volume_mounts] << { name: vol_name, mount_path: }
+                  data[:host_path_volumes] << { name: vol_name, host_path: }
                 end
               end
 
@@ -336,7 +336,7 @@ module Nvoi
                 sleep(Utils::Constants::TRAFFIC_VERIFY_INTERVAL)
               end
 
-              raise DeploymentError.new(
+              raise Errors::DeploymentError.new(
                 "traffic_verification",
                 "public URL verification failed after #{max_attempts} attempts. Cloudflare tunnel may not be routing correctly."
               )
@@ -350,11 +350,11 @@ module Nvoi
               has_error_header = output.lines.any? { |line| line.downcase.start_with?("x-nvoi-error:") }
 
               if http_code == "200" && !has_error_header
-                { success: true, http_code: http_code, message: "OK" }
+                { success: true, http_code:, message: "OK" }
               elsif has_error_header
-                { success: false, http_code: http_code, message: "Error backend responding (X-Nvoi-Error header present) - app is down" }
+                { success: false, http_code:, message: "Error backend responding (X-Nvoi-Error header present) - app is down" }
               else
-                { success: false, http_code: http_code, message: "HTTP #{http_code} (expected: 200)" }
+                { success: false, http_code:, message: "HTTP #{http_code} (expected: 200)" }
               end
             end
 
@@ -377,7 +377,7 @@ module Nvoi
                 logs = @ssh.execute("kubectl logs #{pod_name} --tail=50")
                 @log.error "Pod logs:\n%s", logs
 
-                raise DeploymentError.new("pre_run_command", "deployment aborted: pre-run command failed: #{e.message}")
+                raise Errors::DeploymentError.new("pre_run_command", "deployment aborted: pre-run command failed: #{e.message}")
               end
             end
         end

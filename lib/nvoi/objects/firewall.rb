@@ -2,7 +2,10 @@
 
 module Nvoi
   module Objects
-    # Firewall represents a firewall configuration
-    Firewall = Struct.new(:id, :name, keyword_init: true)
+    # Firewall-related structs
+    module Firewall
+      # Record represents a firewall configuration
+      Record = Struct.new(:id, :name, keyword_init: true)
+    end
   end
 end

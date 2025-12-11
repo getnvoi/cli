@@ -45,7 +45,7 @@ module Nvoi
 
         def get_network_by_name(name)
           network = find_network_by_name(name)
-          raise NetworkError, "network not found: #{name}" unless network
+          raise Errors::NetworkError, "network not found: #{name}" unless network
 
           to_network(network)
         end
@@ -95,7 +95,7 @@ module Nvoi
 
         def get_firewall_by_name(name)
           sg = find_security_group_by_name(name)
-          raise FirewallError, "security group not found: #{name}" unless sg
+          raise Errors::FirewallError, "security group not found: #{name}" unless sg
 
           to_firewall(sg)
         end
@@ -113,6 +113,15 @@ module Nvoi
           to_server(server)
         end
 
+        def find_server_by_id(id)
+          server = get(instance_url("/servers/#{id}"))["server"]
+          return nil unless server
+
+          to_server(server)
+        rescue Errors::NotFoundError
+          nil
+        end
+
         def list_servers
           list_servers_api.map { |s| to_server(s) }
         end
@@ -121,12 +130,12 @@ module Nvoi
           # Validate server type
           server_types = list_server_types
           unless server_types.key?(opts.type)
-            raise ValidationError, "invalid server type: #{opts.type}"
+            raise Errors::ValidationError, "invalid server type: #{opts.type}"
           end
 
           # Resolve image
           image = find_image(opts.image)
-          raise ValidationError, "invalid image: #{opts.image}" unless image
+          raise Errors::ValidationError, "invalid image: #{opts.image}" unless image
 
           create_opts = {
             name: opts.name,
@@ -172,7 +181,7 @@ module Nvoi
             sleep(Utils::Constants::SERVER_READY_INTERVAL)
           end
 
-          raise ServerCreationError, "server did not become running after #{max_attempts} attempts"
+          raise Errors::ServerCreationError, "server did not become running after #{max_attempts} attempts"
         end
 
         def delete_server(id)
@@ -201,7 +210,7 @@ module Nvoi
 
         def create_volume(opts)
           server = get_server_api(opts.server_id)
-          raise VolumeError, "server not found: #{opts.server_id}" unless server
+          raise Errors::VolumeError, "server not found: #{opts.server_id}" unless server
 
           volume = post(block_url("/volumes"), {
             name: opts.name,
@@ -218,7 +227,7 @@ module Nvoi
           return nil unless volume
 
           to_volume(volume)
-        rescue NotFoundError
+        rescue Errors::NotFoundError
           nil
         end
 
@@ -235,7 +244,7 @@ module Nvoi
 
         def attach_volume(volume_id, server_id)
           server = get_server_api(server_id)
-          raise VolumeError, "server not found: #{server_id}" unless server
+          raise Errors::VolumeError, "server not found: #{server_id}" unless server
 
           wait_for_volume_available(volume_id)
 
@@ -266,7 +275,7 @@ module Nvoi
         def validate_instance_type(instance_type)
           server_types = list_server_types
           unless server_types.key?(instance_type)
-            raise ValidationError, "invalid scaleway server type: #{instance_type}"
+            raise Errors::ValidationError, "invalid scaleway server type: #{instance_type}"
           end
 
           true
@@ -274,7 +283,7 @@ module Nvoi
 
         def validate_region(region)
           unless VALID_ZONES.include?(region)
-            raise ValidationError, "invalid scaleway zone: #{region}. Valid: #{VALID_ZONES.join(", ")}"
+            raise Errors::ValidationError, "invalid scaleway zone: #{region}. Valid: #{VALID_ZONES.join(", ")}"
           end
 
           true
@@ -283,8 +292,8 @@ module Nvoi
         def validate_credentials
           list_server_types
           true
-        rescue AuthenticationError => e
-          raise ValidationError, "scaleway credentials invalid: #{e.message}"
+        rescue Errors::AuthenticationError => e
+          raise Errors::ValidationError, "scaleway credentials invalid: #{e.message}"
         end
 
         # Server IP lookup for exec/db commands
@@ -346,19 +355,19 @@ module Nvoi
             when 200..299
               response.body
             when 401
-              raise AuthenticationError, "Invalid Scaleway API token"
+              raise Errors::AuthenticationError, "Invalid Scaleway API token"
             when 403
-              raise AuthenticationError, "Forbidden: check project_id and permissions"
+              raise Errors::AuthenticationError, "Forbidden: check project_id and permissions"
             when 404
-              raise NotFoundError, parse_error(response)
+              raise Errors::NotFoundError, parse_error(response)
             when 409
-              raise ConflictError, parse_error(response)
+              raise Errors::ConflictError, parse_error(response)
             when 422
-              raise ValidationError, parse_error(response)
+              raise Errors::ValidationError, parse_error(response)
             when 429
-              raise RateLimitError, "Rate limited, retry later"
+              raise Errors::RateLimitError, "Rate limited, retry later"
             else
-              raise APIError, parse_error(response)
+              raise Errors::ApiError, parse_error(response)
             end
           end
 
@@ -423,7 +432,7 @@ module Nvoi
               vol = get(block_url("/volumes/#{volume_id}"))
               return if vol && vol["status"] == "available"
 
-              raise VolumeError, "volume #{volume_id} did not become available" if Time.now > deadline
+              raise Errors::VolumeError, "volume #{volume_id} did not become available" if Time.now > deadline
 
               sleep 2
             end
@@ -468,7 +477,7 @@ module Nvoi
           end
 
           def to_network(data)
-            Objects::Network.new(
+            Objects::Network::Record.new(
               id: data["id"],
               name: data["name"],
               ip_range: data.dig("subnets", 0, "subnet") || data["subnets"]&.first
@@ -476,14 +485,14 @@ module Nvoi
           end
 
           def to_firewall(data)
-            Objects::Firewall.new(
+            Objects::Firewall::Record.new(
               id: data["id"],
               name: data["name"]
             )
           end
 
           def to_server(data)
-            Objects::Server.new(
+            Objects::Server::Record.new(
               id: data["id"],
               name: data["name"],
               status: data["state"],
@@ -496,7 +505,7 @@ module Nvoi
               r["product_resource_type"] == "instance_server"
             }&.dig("product_resource_id")
 
-            Objects::Volume.new(
+            Objects::Volume::Record.new(
               id: data["id"],
               name: data["name"],
               size: (data["size"] || 0) / 1_000_000_000,

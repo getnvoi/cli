@@ -6,7 +6,7 @@ require "aws-sdk-ec2"
 class AWSCloudTest < Minitest::Test
   def setup
     Aws.config.update(stub_responses: true)
-    @provider = Nvoi::External::Cloud::AWS.new("fake-key", "fake-secret", "us-east-1")
+    @provider = Nvoi::External::Cloud::Aws.new("fake-key", "fake-secret", "us-east-1")
     @client = @provider.instance_variable_get(:@client)
   end
 
@@ -31,7 +31,7 @@ class AWSCloudTest < Minitest::Test
   def test_get_network_by_name_raises_when_not_found
     @client.stub_responses(:describe_vpcs, { vpcs: [] })
 
-    assert_raises(Nvoi::NetworkError) do
+    assert_raises(Nvoi::Errors::NetworkError) do
       @provider.get_network_by_name("nonexistent")
     end
   end
@@ -68,7 +68,7 @@ class AWSCloudTest < Minitest::Test
   def test_get_firewall_by_name_raises_when_not_found
     @client.stub_responses(:describe_security_groups, { security_groups: [] })
 
-    assert_raises(Nvoi::FirewallError) do
+    assert_raises(Nvoi::Errors::FirewallError) do
       @provider.get_firewall_by_name("nonexistent")
     end
   end
@@ -226,7 +226,7 @@ class AWSCloudTest < Minitest::Test
   def test_validate_instance_type_failure
     @client.stub_responses(:describe_instance_types, { instance_types: [] })
 
-    assert_raises(Nvoi::ValidationError) do
+    assert_raises(Nvoi::Errors::ValidationError) do
       @provider.validate_instance_type("invalid-type")
     end
   end
@@ -242,7 +242,7 @@ class AWSCloudTest < Minitest::Test
   def test_validate_region_failure
     @client.stub_responses(:describe_regions, { regions: [] })
 
-    assert_raises(Nvoi::ValidationError) do
+    assert_raises(Nvoi::Errors::ValidationError) do
       @provider.validate_region("invalid-region")
     end
   end
@@ -256,7 +256,7 @@ class AWSCloudTest < Minitest::Test
   def test_validate_credentials_failure
     @client.stub_responses(:describe_regions, "UnauthorizedOperation")
 
-    assert_raises(Nvoi::ValidationError) do
+    assert_raises(Nvoi::Errors::ValidationError) do
       @provider.validate_credentials
     end
   end
@@ -315,7 +315,7 @@ class AWSCloudTest < Minitest::Test
       }]
     })
 
-    opts = Nvoi::Objects::ServerCreateOptions.new(
+    opts = Nvoi::Objects::Server::CreateOptions.new(
       name: "new-server",
       type: "t3.micro",
       location: "us-east-1"
@@ -343,7 +343,7 @@ class AWSCloudTest < Minitest::Test
       }]
     })
 
-    opts = Nvoi::Objects::ServerCreateOptions.new(
+    opts = Nvoi::Objects::Server::CreateOptions.new(
       name: "new-server2",
       type: "t3.micro",
       location: "us-east-1",
@@ -373,7 +373,7 @@ class AWSCloudTest < Minitest::Test
       state: "creating"
     })
 
-    opts = Nvoi::Objects::VolumeCreateOptions.new(
+    opts = Nvoi::Objects::Volume::CreateOptions.new(
       name: "new-volume",
       size: 50,
       server_id: "i-123"
@@ -388,13 +388,13 @@ class AWSCloudTest < Minitest::Test
   def test_create_volume_raises_when_instance_not_found
     @client.stub_responses(:describe_instances, { reservations: [] })
 
-    opts = Nvoi::Objects::VolumeCreateOptions.new(
+    opts = Nvoi::Objects::Volume::CreateOptions.new(
       name: "vol",
       size: 10,
       server_id: "i-nonexistent"
     )
 
-    assert_raises(Nvoi::VolumeError) do
+    assert_raises(Nvoi::Errors::VolumeError) do
       @provider.create_volume(opts)
     end
   end
@@ -405,13 +405,13 @@ class AWSCloudTest < Minitest::Test
     })
     @client.stub_responses(:run_instances, { instances: [] })
 
-    opts = Nvoi::Objects::ServerCreateOptions.new(
+    opts = Nvoi::Objects::Server::CreateOptions.new(
       name: "test",
       type: "t3.micro",
       location: "us-east-1"
     )
 
-    assert_raises(Nvoi::ServerCreationError) do
+    assert_raises(Nvoi::Errors::ServerCreationError) do
       @provider.create_server(opts)
     end
   end
@@ -419,13 +419,13 @@ class AWSCloudTest < Minitest::Test
   def test_get_ubuntu_ami_raises_when_no_ami_found
     @client.stub_responses(:describe_images, { images: [] })
 
-    opts = Nvoi::Objects::ServerCreateOptions.new(
+    opts = Nvoi::Objects::Server::CreateOptions.new(
       name: "test",
       type: "t3.micro",
       location: "us-east-1"
     )
 
-    assert_raises(Nvoi::ProviderError) do
+    assert_raises(Nvoi::Errors::ProviderError) do
       @provider.create_server(opts)
     end
   end
@@ -434,7 +434,7 @@ class AWSCloudTest < Minitest::Test
     @client.stub_responses(:describe_security_groups, { security_groups: [] })
     @client.stub_responses(:describe_vpcs, { vpcs: [] })
 
-    assert_raises(Nvoi::NetworkError) do
+    assert_raises(Nvoi::Errors::NetworkError) do
       @provider.find_or_create_firewall("test-fw")
     end
   end

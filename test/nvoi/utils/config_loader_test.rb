@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require_relative "../../../lib/nvoi/utils/config_loader"
 
 class ConfigLoaderTest < Minitest::Test
   def test_get_database_credentials_returns_nil_for_nil_config
@@ -10,13 +9,13 @@ class ConfigLoaderTest < Minitest::Test
   end
 
   def test_get_database_credentials_returns_nil_for_missing_adapter
-    db_config = Nvoi::Objects::DatabaseConfig.new({})
+    db_config = Nvoi::Objects::Configuration::DatabaseCfg.new({})
     result = Nvoi::Utils::ConfigLoader.get_database_credentials(db_config)
     assert_nil result
   end
 
   def test_get_database_credentials_parses_postgres_from_secrets
-    db_config = Nvoi::Objects::DatabaseConfig.new({
+    db_config = Nvoi::Objects::Configuration::DatabaseCfg.new({
       "adapter" => "postgres",
       "secrets" => {
         "POSTGRES_USER" => "admin",
@@ -34,7 +33,7 @@ class ConfigLoaderTest < Minitest::Test
   end
 
   def test_get_database_credentials_parses_mysql_from_secrets
-    db_config = Nvoi::Objects::DatabaseConfig.new({
+    db_config = Nvoi::Objects::Configuration::DatabaseCfg.new({
       "adapter" => "mysql",
       "secrets" => {
         "MYSQL_USER" => "admin",
@@ -52,7 +51,7 @@ class ConfigLoaderTest < Minitest::Test
   end
 
   def test_get_database_credentials_handles_sqlite
-    db_config = Nvoi::Objects::DatabaseConfig.new({
+    db_config = Nvoi::Objects::Configuration::DatabaseCfg.new({
       "adapter" => "sqlite3"
     })
 
@@ -62,7 +61,7 @@ class ConfigLoaderTest < Minitest::Test
   end
 
   def test_get_database_credentials_raises_for_unsupported_adapter
-    db_config = Nvoi::Objects::DatabaseConfig.new({
+    db_config = Nvoi::Objects::Configuration::DatabaseCfg.new({
       "adapter" => "oracle"
     })
 
@@ -73,7 +72,7 @@ class ConfigLoaderTest < Minitest::Test
   end
 
   def test_get_database_credentials_parses_url_for_postgres
-    db_config = Nvoi::Objects::DatabaseConfig.new({
+    db_config = Nvoi::Objects::Configuration::DatabaseCfg.new({
       "adapter" => "postgres",
       "url" => "postgres://user:pass@localhost:5432/testdb"
     })

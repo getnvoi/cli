@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require_relative "../../../lib/nvoi/utils/env_resolver"
 
 class EnvResolverTest < Minitest::Test
   MockAppService = Struct.new(:env, keyword_init: true)
@@ -19,7 +18,7 @@ class EnvResolverTest < Minitest::Test
       database: nil
     )
     deploy = MockDeploy.new(application: app)
-    config = MockConfig.new(deploy: deploy)
+    config = MockConfig.new(deploy:)
 
     resolver = Nvoi::Utils::EnvResolver.new(config)
     result = resolver.env_for_service("web")
@@ -39,7 +38,7 @@ class EnvResolverTest < Minitest::Test
       database: nil
     )
     deploy = MockDeploy.new(application: app)
-    config = MockConfig.new(deploy: deploy)
+    config = MockConfig.new(deploy:)
 
     resolver = Nvoi::Utils::EnvResolver.new(config)
     result = resolver.env_for_service("web")
@@ -57,7 +56,7 @@ class EnvResolverTest < Minitest::Test
       database: nil
     )
     deploy = MockDeploy.new(application: app)
-    config = MockConfig.new(deploy: deploy)
+    config = MockConfig.new(deploy:)
 
     resolver = Nvoi::Utils::EnvResolver.new(config)
     result = resolver.env_for_service("web")
@@ -75,7 +74,7 @@ class EnvResolverTest < Minitest::Test
       database: nil
     )
     deploy = MockDeploy.new(application: app)
-    config = MockConfig.new(deploy: deploy)
+    config = MockConfig.new(deploy:)
 
     resolver = Nvoi::Utils::EnvResolver.new(config)
     result = resolver.env_for_service("unknown")

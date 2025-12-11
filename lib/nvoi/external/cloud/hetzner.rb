@@ -40,7 +40,7 @@ module Nvoi
 
         def get_network_by_name(name)
           network = find_network_by_name(name)
-          raise NetworkError, "network not found: #{name}" unless network
+          raise Errors::NetworkError, "network not found: #{name}" unless network
 
           to_network(network)
         end
@@ -70,7 +70,7 @@ module Nvoi
 
         def get_firewall_by_name(name)
           firewall = find_firewall_by_name(name)
-          raise FirewallError, "firewall not found: #{name}" unless firewall
+          raise Errors::FirewallError, "firewall not found: #{name}" unless firewall
 
           to_firewall(firewall)
         end
@@ -88,6 +88,15 @@ module Nvoi
           to_server(server)
         end
 
+        def find_server_by_id(id)
+          server = get("/servers/#{id.to_i}")["server"]
+          return nil unless server
+
+          to_server(server)
+        rescue Errors::NotFoundError
+          nil
+        end
+
         def list_servers
           get("/servers")["servers"].map { |s| to_server(s) }
         end
@@ -95,13 +104,13 @@ module Nvoi
         def create_server(opts)
           # Resolve IDs
           server_type = find_server_type(opts.type)
-          raise ValidationError, "invalid server type: #{opts.type}" unless server_type
+          raise Errors::ValidationError, "invalid server type: #{opts.type}" unless server_type
 
           image = find_image(opts.image)
-          raise ValidationError, "invalid image: #{opts.image}" unless image
+          raise Errors::ValidationError, "invalid image: #{opts.image}" unless image
 
           location = find_location(opts.location)
-          raise ValidationError, "invalid location: #{opts.location}" unless location
+          raise Errors::ValidationError, "invalid location: #{opts.location}" unless location
 
           create_opts = {
             name: opts.name,
@@ -137,7 +146,7 @@ module Nvoi
             sleep(Utils::Constants::SERVER_READY_INTERVAL)
           end
 
-          raise ServerCreationError, "server did not become running after #{max_attempts} attempts"
+          raise Errors::ServerCreationError, "server did not become running after #{max_attempts} attempts"
         end
 
         def delete_server(id)
@@ -168,7 +177,7 @@ module Nvoi
 
         def create_volume(opts)
           server = get("/servers/#{opts.server_id.to_i}")["server"]
-          raise VolumeError, "server not found: #{opts.server_id}" unless server
+          raise Errors::VolumeError, "server not found: #{opts.server_id}" unless server
 
           volume = post("/volumes", {
             name: opts.name,
@@ -210,14 +219,14 @@ module Nvoi
 
         def validate_instance_type(instance_type)
           server_type = find_server_type(instance_type)
-          raise ValidationError, "invalid hetzner server type: #{instance_type}" unless server_type
+          raise Errors::ValidationError, "invalid hetzner server type: #{instance_type}" unless server_type
 
           true
         end
 
         def validate_region(region)
           location = find_location(region)
-          raise ValidationError, "invalid hetzner location: #{region}" unless location
+          raise Errors::ValidationError, "invalid hetzner location: #{region}" unless location
 
           true
         end
@@ -225,8 +234,8 @@ module Nvoi
         def validate_credentials
           get("/server_types")
           true
-        rescue AuthenticationError => e
-          raise ValidationError, "hetzner credentials invalid: #{e.message}"
+        rescue Errors::AuthenticationError => e
+          raise Errors::ValidationError, "hetzner credentials invalid: #{e.message}"
         end
 
         private
@@ -252,13 +261,13 @@ module Nvoi
             when 200..299
               response.body
             when 401
-              raise AuthenticationError, "Invalid Hetzner API token"
+              raise Errors::AuthenticationError, "Invalid Hetzner API token"
             when 404
-              raise NotFoundError, parse_error(response)
+              raise Errors::NotFoundError, parse_error(response)
             when 422
-              raise ValidationError, parse_error(response)
+              raise Errors::ValidationError, parse_error(response)
             else
-              raise APIError, parse_error(response)
+              raise Errors::ApiError, parse_error(response)
             end
           end
 
@@ -318,7 +327,7 @@ module Nvoi
           end
 
           def to_network(data)
-            Objects::Network.new(
+            Objects::Network::Record.new(
               id: data["id"].to_s,
               name: data["name"],
               ip_range: data["ip_range"]
@@ -326,14 +335,14 @@ module Nvoi
           end
 
           def to_firewall(data)
-            Objects::Firewall.new(
+            Objects::Firewall::Record.new(
               id: data["id"].to_s,
               name: data["name"]
             )
           end
 
           def to_server(data)
-            Objects::Server.new(
+            Objects::Server::Record.new(
               id: data["id"].to_s,
               name: data["name"],
               status: data["status"],
@@ -342,7 +351,7 @@ module Nvoi
           end
 
           def to_volume(data)
-            Objects::Volume.new(
+            Objects::Volume::Record.new(
               id: data["id"].to_s,
               name: data["name"],
               size: data["size"],

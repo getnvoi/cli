@@ -18,12 +18,12 @@ module Nvoi
 
             # Find master server group
             master_group, master_config = find_master_group
-            raise K8sError, "no master server group found" unless master_group
+            raise Errors::K8sError, "no master server group found" unless master_group
 
             # Setup K3s on master
             master_name = @config.namer.server_name(master_group, 1)
             master = @provider.find_server(master_name)
-            raise K8sError, "master server not found: #{master_name}" unless master
+            raise Errors::K8sError, "master server not found: #{master_name}" unless master
 
             master_ssh = External::Ssh.new(master.public_ipv4, @config.ssh_key_path)
 
@@ -178,14 +178,14 @@ module Nvoi
                 sleep(5)
               end
 
-              raise K8sError, "cloud-init timeout"
+              raise Errors::K8sError, "cloud-init timeout"
             end
 
             def get_cluster_token(ssh)
               @log.info "Retrieving K3s cluster token"
               output = ssh.execute("sudo cat /var/lib/rancher/k3s/server/node-token")
               token = output.strip
-              raise K8sError, "cluster token is empty" if token.empty?
+              raise Errors::K8sError, "cluster token is empty" if token.empty?
 
               @log.success "Cluster token retrieved"
               token
@@ -194,7 +194,7 @@ module Nvoi
             def get_private_ip(ssh)
               output = ssh.execute("ip addr show | grep 'inet 10\\.' | awk '{print $2}' | cut -d/ -f1 | head -1")
               private_ip = output.strip
-              raise SshError, "private IP not found" if private_ip.empty?
+              raise Errors::SshError, "private IP not found" if private_ip.empty?
 
               private_ip
             end
@@ -282,7 +282,7 @@ module Nvoi
                 sleep(5)
               end
 
-              raise K8sError, "K3s failed to become ready"
+              raise Errors::K8sError, "K3s failed to become ready"
             end
 
             def label_node(ssh, node_name, labels)
@@ -385,7 +385,7 @@ module Nvoi
                 sleep(5)
               end
 
-              raise K8sError, "registry failed to become ready"
+              raise Errors::K8sError, "registry failed to become ready"
             end
 
             def setup_ingress_controller(ssh)
@@ -411,7 +411,7 @@ module Nvoi
                 sleep(10)
               end
 
-              raise K8sError, "NGINX Ingress Controller failed to become ready"
+              raise Errors::K8sError, "NGINX Ingress Controller failed to become ready"
             end
 
             def deploy_error_backend(ssh)
@@ -433,7 +433,7 @@ module Nvoi
                 sleep(2)
               end
 
-              raise K8sError, "Error backend failed to become ready"
+              raise Errors::K8sError, "Error backend failed to become ready"
             end
 
             def configure_custom_error_pages(ssh)

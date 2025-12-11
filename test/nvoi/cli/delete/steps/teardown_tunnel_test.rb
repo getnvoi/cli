@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require_relative "../../../../../lib/nvoi/cli/delete/steps/teardown_tunnel"
 
 class TeardownTunnelStepTest < Minitest::Test
   MockNamer = Struct.new(:app_name) do
@@ -20,12 +19,12 @@ class TeardownTunnelStepTest < Minitest::Test
     app = MockApplication.new(app: { "web" => service })
     deploy = MockDeploy.new(application: app)
     namer = MockNamer.new("myapp")
-    config = MockConfig.new(deploy: deploy, namer: namer)
+    config = MockConfig.new(deploy:, namer:)
 
     mock_cf = Minitest::Mock.new
     mock_log = Minitest::Mock.new
 
-    tunnel = Nvoi::Objects::Tunnel.new(id: "tun-123", name: "myapp-web-tunnel")
+    tunnel = Nvoi::Objects::Tunnel::Record.new(id: "tun-123", name: "myapp-web-tunnel")
 
     mock_log.expect(:info, nil, ["Deleting Cloudflare tunnel: %s", "myapp-web-tunnel"])
     mock_cf.expect(:find_tunnel, tunnel, ["myapp-web-tunnel"])
@@ -44,7 +43,7 @@ class TeardownTunnelStepTest < Minitest::Test
     app = MockApplication.new(app: { "web" => service })
     deploy = MockDeploy.new(application: app)
     namer = MockNamer.new("myapp")
-    config = MockConfig.new(deploy: deploy, namer: namer)
+    config = MockConfig.new(deploy:, namer:)
 
     mock_cf = Minitest::Mock.new
     mock_log = Minitest::Mock.new
@@ -64,7 +63,7 @@ class TeardownTunnelStepTest < Minitest::Test
     app = MockApplication.new(app: { "web" => service })
     deploy = MockDeploy.new(application: app)
     namer = MockNamer.new("myapp")
-    config = MockConfig.new(deploy: deploy, namer: namer)
+    config = MockConfig.new(deploy:, namer:)
 
     mock_cf = Minitest::Mock.new
     mock_log = Minitest::Mock.new
@@ -80,7 +79,7 @@ class TeardownTunnelStepTest < Minitest::Test
     app = MockApplication.new(app: { "web" => service })
     deploy = MockDeploy.new(application: app)
     namer = MockNamer.new("myapp")
-    config = MockConfig.new(deploy: deploy, namer: namer)
+    config = MockConfig.new(deploy:, namer:)
 
     mock_cf = Minitest::Mock.new
     mock_log = Minitest::Mock.new

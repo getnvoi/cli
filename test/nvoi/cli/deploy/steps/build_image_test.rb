@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require_relative "../../../../../lib/nvoi/cli/deploy/steps/build_image"
 
 class BuildImageStepTest < Minitest::Test
   def setup

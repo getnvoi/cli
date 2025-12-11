@@ -59,4 +59,24 @@ class LoggerTest < Minitest::Test
     @logger.info("test")
     assert_match(/\[\d{2}:\d{2}:\d{2}\]/, @output.string)
   end
+
+  def test_step_logs_message
+    @logger.step("installing dependencies")
+    assert_match(/\[STEP\] installing dependencies/, @output.string)
+  end
+
+  def test_step_with_format_args
+    @logger.step("deploying %s", "myapp")
+    assert_match(/\[STEP\] deploying myapp/, @output.string)
+  end
+
+  def test_ok_logs_message
+    @logger.ok("dependencies installed")
+    assert_match(/\[OK\] dependencies installed/, @output.string)
+  end
+
+  def test_ok_with_format_args
+    @logger.ok("installed %d packages", 42)
+    assert_match(/\[OK\] installed 42 packages/, @output.string)
+  end
 end

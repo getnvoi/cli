@@ -4,58 +4,58 @@ require "test_helper"
 
 class ErrorsTest < Minitest::Test
   def test_base_error
-    error = Nvoi::Error.new("something failed", details: { code: 500 })
+    error = Nvoi::Errors::Error.new("something failed", details: { code: 500 })
     assert_equal "something failed", error.message
     assert_equal({ code: 500 }, error.details)
   end
 
   def test_config_error_hierarchy
-    assert Nvoi::ConfigError < Nvoi::Error
-    assert Nvoi::ConfigNotFoundError < Nvoi::ConfigError
-    assert Nvoi::ConfigValidationError < Nvoi::ConfigError
+    assert Nvoi::Errors::ConfigError < Nvoi::Errors::Error
+    assert Nvoi::Errors::ConfigNotFoundError < Nvoi::Errors::ConfigError
+    assert Nvoi::Errors::ConfigValidationError < Nvoi::Errors::ConfigError
   end
 
   def test_credential_error_hierarchy
-    assert Nvoi::CredentialError < Nvoi::Error
-    assert Nvoi::DecryptionError < Nvoi::CredentialError
-    assert Nvoi::EncryptionError < Nvoi::CredentialError
-    assert Nvoi::InvalidKeyError < Nvoi::CredentialError
+    assert Nvoi::Errors::CredentialError < Nvoi::Errors::Error
+    assert Nvoi::Errors::DecryptionError < Nvoi::Errors::CredentialError
+    assert Nvoi::Errors::EncryptionError < Nvoi::Errors::CredentialError
+    assert Nvoi::Errors::InvalidKeyError < Nvoi::Errors::CredentialError
   end
 
   def test_provider_error_hierarchy
-    assert Nvoi::ProviderError < Nvoi::Error
-    assert Nvoi::ServerCreationError < Nvoi::ProviderError
-    assert Nvoi::NetworkError < Nvoi::ProviderError
-    assert Nvoi::VolumeError < Nvoi::ProviderError
+    assert Nvoi::Errors::ProviderError < Nvoi::Errors::Error
+    assert Nvoi::Errors::ServerCreationError < Nvoi::Errors::ProviderError
+    assert Nvoi::Errors::NetworkError < Nvoi::Errors::ProviderError
+    assert Nvoi::Errors::VolumeError < Nvoi::Errors::ProviderError
   end
 
   def test_ssh_error_hierarchy
-    assert Nvoi::SshError < Nvoi::Error
-    assert Nvoi::SshConnectionError < Nvoi::SshError
-    assert Nvoi::SshCommandError < Nvoi::SshError
+    assert Nvoi::Errors::SshError < Nvoi::Errors::Error
+    assert Nvoi::Errors::SshConnectionError < Nvoi::Errors::SshError
+    assert Nvoi::Errors::SshCommandError < Nvoi::Errors::SshError
   end
 
   def test_deployment_error
-    error = Nvoi::DeploymentError.new("provision_server", "timeout", retryable: true)
+    error = Nvoi::Errors::DeploymentError.new("provision_server", "timeout", retryable: true)
     assert_equal "provision_server: timeout", error.message
     assert_equal "provision_server", error.step
     assert error.retryable?
   end
 
   def test_deployment_error_not_retryable
-    error = Nvoi::DeploymentError.new("validate_config", "invalid yaml", retryable: false)
+    error = Nvoi::Errors::DeploymentError.new("validate_config", "invalid yaml", retryable: false)
     refute error.retryable?
   end
 
   def test_database_error
-    error = Nvoi::DatabaseError.new("dump", "connection refused")
+    error = Nvoi::Errors::DatabaseError.new("dump", "connection refused")
     assert_equal "database dump: connection refused", error.message
     assert_equal "dump", error.operation
   end
 
   def test_cloudflare_error_hierarchy
-    assert Nvoi::CloudflareError < Nvoi::Error
-    assert Nvoi::TunnelError < Nvoi::CloudflareError
-    assert Nvoi::DNSError < Nvoi::CloudflareError
+    assert Nvoi::Errors::CloudflareError < Nvoi::Errors::Error
+    assert Nvoi::Errors::TunnelError < Nvoi::Errors::CloudflareError
+    assert Nvoi::Errors::DnsError < Nvoi::Errors::CloudflareError
   end
 end

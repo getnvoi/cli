@@ -35,7 +35,7 @@ class CloudFactoryTest < Minitest::Test
   def test_for_unknown_provider
     config = MockConfig.new(provider_name: "unknown")
 
-    assert_raises(Nvoi::ProviderError) do
+    assert_raises(Nvoi::Errors::ProviderError) do
       Nvoi::External::Cloud::Factory.for(config)
     end
   end

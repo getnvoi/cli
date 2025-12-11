@@ -20,7 +20,7 @@ module Nvoi
               @provider.delete_network(network.id)
               @log.success "Network deleted"
             end
-          rescue NetworkError => e
+          rescue Errors::NetworkError => e
             @log.warning "Network not found: %s", e.message
           end
         end

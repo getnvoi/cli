@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require_relative "../../../../../lib/nvoi/cli/deploy/steps/provision_network"
 
 class ProvisionNetworkStepTest < Minitest::Test
   def setup
@@ -17,8 +16,8 @@ class ProvisionNetworkStepTest < Minitest::Test
   end
 
   def test_run_provisions_network_and_firewall
-    network = Nvoi::Objects::Network.new(id: "net-123", name: "test-network")
-    firewall = Nvoi::Objects::Firewall.new(id: "fw-123", name: "test-firewall")
+    network = Nvoi::Objects::Network::Record.new(id: "net-123", name: "test-network")
+    firewall = Nvoi::Objects::Firewall::Record.new(id: "fw-123", name: "test-firewall")
 
     @mock_log.expect(:info, nil, ["Provisioning network infrastructure"])
     @mock_log.expect(:info, nil, ["Provisioning network: %s", "test-network"])

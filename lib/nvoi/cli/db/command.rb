@@ -60,7 +60,7 @@ module Nvoi
             result = ssh.execute("test -f #{metadata_file} && cat #{metadata_file} || echo '{}'")
 
             begin
-              metadata = Objects::BranchMetadata.from_json(result)
+              metadata = Objects::Database::BranchMetadata.from_json(result)
               branches = metadata.branches
             rescue JSON::ParserError
               branches = []
@@ -99,7 +99,7 @@ module Nvoi
             dump_file = "#{branches_path}/#{branch_id}.#{@db_provider.extension}"
 
             unless ssh.execute("test -f #{dump_file} && echo yes || echo no").strip == "yes"
-              raise ServiceError, "Branch not found: #{branch_id}"
+              raise Errors::ServiceError, "Branch not found: #{branch_id}"
             end
 
             @log.step "Reading branch data"
@@ -139,7 +139,7 @@ module Nvoi
             dump_file = "#{branches_path}/#{branch_id}.#{@db_provider.extension}"
 
             unless ssh.execute("test -f #{dump_file} && echo yes || echo no").strip == "yes"
-              raise ServiceError, "Branch not found: #{branch_id}"
+              raise Errors::ServiceError, "Branch not found: #{branch_id}"
             end
 
             dump_data = ssh.execute("cat #{dump_file}")
@@ -163,10 +163,10 @@ module Nvoi
             @provider = External::Cloud.for(@config)
 
             @db_config = @config.deploy.application.database
-            raise ServiceError, "No database configured" unless @db_config
+            raise Errors::ServiceError, "No database configured" unless @db_config
 
             adapter = @db_config.adapter&.downcase
-            raise ServiceError, "No database adapter configured" unless adapter
+            raise Errors::ServiceError, "No database adapter configured" unless adapter
 
             @db_provider = External::Database.provider_for(adapter)
             @creds = Utils::ConfigLoader.get_database_credentials(@db_config, @config.namer)
@@ -187,7 +187,7 @@ module Nvoi
             branch = @options[:branch]
             return if branch.nil? || branch.empty?
 
-            override = Objects::ConfigOverride.new(branch: branch)
+            override = Objects::ConfigOverride.new(branch:)
             override.apply(@config)
           end
 
@@ -195,7 +195,7 @@ module Nvoi
             server_name = @db_config.servers.first
             resolved_name = @config.namer.server_name(server_name, 1)
             server = @provider.find_server(resolved_name)
-            raise ServiceError, "Could not find server: #{server_name}" unless server
+            raise Errors::ServiceError, "Could not find server: #{server_name}" unless server
 
             ssh = External::Ssh.new(server.public_ipv4, @config.ssh_key_path)
 
@@ -204,12 +204,12 @@ module Nvoi
 
           def build_dump_options
             if @db_provider.is_a?(External::Database::Sqlite)
-              Objects::DatabaseDumpOptions.new(
+              Objects::Database::DumpOptions.new(
                 host_path: @creds.host_path,
                 database: @creds.database
               )
             else
-              Objects::DatabaseDumpOptions.new(
+              Objects::Database::DumpOptions.new(
                 pod_name: @config.namer.database_pod_name,
                 database: @creds.database,
                 user: @creds.user,
@@ -222,12 +222,12 @@ module Nvoi
             sanitized_name = sanitize_db_name(new_db_name)
 
             if @db_provider.is_a?(External::Database::Sqlite)
-              Objects::DatabaseRestoreOptions.new(
+              Objects::Database::RestoreOptions.new(
                 host_path: @creds.host_path,
                 database: sanitized_name
               )
             else
-              Objects::DatabaseRestoreOptions.new(
+              Objects::Database::RestoreOptions.new(
                 pod_name: @config.namer.database_pod_name,
                 database: sanitized_name,
                 user: @creds.user,
@@ -255,15 +255,15 @@ module Nvoi
             result = ssh.execute("test -f #{metadata_file} && cat #{metadata_file} || echo '{}'")
 
             metadata = begin
-              Objects::BranchMetadata.from_json(result)
+              Objects::Database::BranchMetadata.from_json(result)
             rescue JSON::ParserError
-              Objects::BranchMetadata.new
+              Objects::Database::BranchMetadata.new
             end
 
-            metadata.branches << Objects::DatabaseBranch.new(
+            metadata.branches << Objects::Database::Branch.new(
               id: branch_id,
               created_at: Time.now.iso8601,
-              size: size,
+              size:,
               adapter: @db_config.adapter,
               database: @creds.database
             )

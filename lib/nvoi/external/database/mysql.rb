@@ -29,7 +29,7 @@ module Nvoi
 
         def app_env(creds, host:)
           {
-            "DATABASE_URL" => build_url(creds, host: host),
+            "DATABASE_URL" => build_url(creds, host:),
             "MYSQL_HOST" => host,
             "MYSQL_PORT" => creds.port,
             "MYSQL_USER" => creds.user,
@@ -44,11 +44,11 @@ module Nvoi
                 "--single-transaction --routines --triggers"
           ssh.execute(cmd)
         rescue SshCommandError => e
-          raise DatabaseError.new("dump", "mysqldump failed: #{e.message}")
+          raise Errors::DatabaseError.new("dump", "mysqldump failed: #{e.message}")
         end
 
         def restore(ssh, data, opts)
-          create_database(ssh, Objects::DatabaseCreateOptions.new(
+          create_database(ssh, Objects::Database::CreateOptions.new(
             pod_name: opts.pod_name,
             database: opts.database,
             user: opts.user,
@@ -68,7 +68,7 @@ module Nvoi
           ssh.execute_ignore_errors("rm -f #{temp_file}")
           ssh.execute_ignore_errors("kubectl exec -n default #{opts.pod_name} -- rm -f #{temp_file}")
         rescue SshCommandError => e
-          raise DatabaseError.new("restore", "mysql restore failed: #{e.message}")
+          raise Errors::DatabaseError.new("restore", "mysql restore failed: #{e.message}")
         end
 
         def create_database(ssh, opts)
@@ -76,7 +76,7 @@ module Nvoi
                 "mysql -u #{opts.user} -p#{opts.password} -e \"CREATE DATABASE #{opts.database}\""
           ssh.execute(cmd)
         rescue SshCommandError => e
-          raise DatabaseError.new("create_database", "failed to create database: #{e.message}")
+          raise Errors::DatabaseError.new("create_database", "failed to create database: #{e.message}")
         end
       end
     end

@@ -2,10 +2,13 @@
 
 module Nvoi
   module Objects
-    # Server represents a compute server/instance
-    Server = Struct.new(:id, :name, :status, :public_ipv4, keyword_init: true)
+    # Server-related structs
+    module Server
+      # Record represents a compute server/instance
+      Record = Struct.new(:id, :name, :status, :public_ipv4, keyword_init: true)
 
-    # ServerCreateOptions contains options for creating a server
-    ServerCreateOptions = Struct.new(:name, :type, :image, :location, :user_data, :network_id, :firewall_id, :ssh_keys, keyword_init: true)
+      # CreateOptions contains options for creating a server
+      CreateOptions = Struct.new(:name, :type, :image, :location, :user_data, :network_id, :firewall_id, :ssh_keys, keyword_init: true)
+    end
   end
 end

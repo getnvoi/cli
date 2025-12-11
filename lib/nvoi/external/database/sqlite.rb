@@ -15,8 +15,8 @@ module Nvoi
 
         def parse_url(url)
           path = url.sub(%r{^sqlite3?:///?}, "")
-          Objects::DatabaseCredentials.new(
-            path: path,
+          Objects::Database::Credentials.new(
+            path:,
             database: File.basename(path)
           )
         end
@@ -37,16 +37,16 @@ module Nvoi
 
         def dump(ssh, opts)
           db_path = opts.host_path
-          raise DatabaseError.new("dump", "host_path required for SQLite dump") unless db_path
+          raise Errors::DatabaseError.new("dump", "host_path required for SQLite dump") unless db_path
 
           ssh.execute("sqlite3 #{db_path} .dump")
         rescue SshCommandError => e
-          raise DatabaseError.new("dump", "sqlite3 dump failed: #{e.message}")
+          raise Errors::DatabaseError.new("dump", "sqlite3 dump failed: #{e.message}")
         end
 
         def restore(ssh, data, opts)
           db_path = opts.host_path
-          raise DatabaseError.new("restore", "host_path required for SQLite restore") unless db_path
+          raise Errors::DatabaseError.new("restore", "host_path required for SQLite restore") unless db_path
 
           dir = File.dirname(db_path)
           new_db_path = "#{dir}/#{opts.database}.sqlite3"
@@ -60,7 +60,7 @@ module Nvoi
 
           new_db_path
         rescue SshCommandError => e
-          raise DatabaseError.new("restore", "sqlite3 restore failed: #{e.message}")
+          raise Errors::DatabaseError.new("restore", "sqlite3 restore failed: #{e.message}")
         end
 
         def create_database(_ssh, _opts)

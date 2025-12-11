@@ -6,7 +6,7 @@ require "securerandom"
 
 module Nvoi
   module External
-    module DNS
+    module Dns
       # Cloudflare handles Cloudflare API operations for DNS and tunnels
       class Cloudflare
         BASE_URL = "https://api.cloudflare.com/client/v4"
@@ -36,7 +36,7 @@ module Nvoi
           })
 
           result = response["result"]
-          Objects::Tunnel.new(
+          Objects::Tunnel::Record.new(
             id: result["id"],
             name: result["name"],
             token: result["token"]
@@ -51,7 +51,7 @@ module Nvoi
           return nil if results.nil? || results.empty?
 
           result = results[0]
-          Objects::Tunnel.new(
+          Objects::Tunnel::Record.new(
             id: result["id"],
             name: result["name"],
             token: result["token"]
@@ -103,7 +103,7 @@ module Nvoi
             sleep(2)
           end
 
-          raise TunnelError, "tunnel configuration not propagated after #{max_attempts} attempts"
+          raise Errors::TunnelError, "tunnel configuration not propagated after #{max_attempts} attempts"
         end
 
         def delete_tunnel(tunnel_id)
@@ -132,7 +132,7 @@ module Nvoi
           zone_data = results.find { |z| z["name"] == domain }
           return nil unless zone_data
 
-          Objects::Zone.new(id: zone_data["id"], name: zone_data["name"])
+          Objects::Dns::Zone.new(id: zone_data["id"], name: zone_data["name"])
         end
 
         def find_dns_record(zone_id, name, record_type)
@@ -145,7 +145,7 @@ module Nvoi
           record_data = results.find { |r| r["name"] == name && r["type"] == record_type }
           return nil unless record_data
 
-          Objects::DNSRecord.new(
+          Objects::Dns::Record.new(
             id: record_data["id"],
             type: record_data["type"],
             name: record_data["name"],
@@ -167,7 +167,7 @@ module Nvoi
           })
 
           result = response["result"]
-          Objects::DNSRecord.new(
+          Objects::Dns::Record.new(
             id: result["id"],
             type: result["type"],
             name: result["name"],
@@ -189,7 +189,7 @@ module Nvoi
           })
 
           result = response["result"]
-          Objects::DNSRecord.new(
+          Objects::Dns::Record.new(
             id: result["id"],
             type: result["type"],
             name: result["name"],
@@ -219,8 +219,8 @@ module Nvoi
         def validate_credentials
           get("user/tokens/verify")
           true
-        rescue CloudflareError => e
-          raise ValidationError, "cloudflare credentials invalid: #{e.message}"
+        rescue Errors::CloudflareError => e
+          raise Errors::ValidationError, "cloudflare credentials invalid: #{e.message}"
         end
 
         private
@@ -272,12 +272,12 @@ module Nvoi
             body = response.body
 
             unless body.is_a?(Hash)
-              raise CloudflareError, "unexpected response format"
+              raise Errors::CloudflareError, "unexpected response format"
             end
 
             unless body["success"]
               errors = body["errors"]&.map { |e| e["message"] }&.join(", ") || "unknown error"
-              raise CloudflareError, "API error: #{errors}"
+              raise Errors::CloudflareError, "API error: #{errors}"
             end
 
             body

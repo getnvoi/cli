@@ -71,12 +71,12 @@ module Nvoi
               # Create cloud-init user data
               user_data = generate_user_data
 
-              opts = Objects::ServerCreateOptions.new(
-                name: name,
+              opts = Objects::Server::CreateOptions.new(
+                name:,
                 type: server_type,
-                image: image,
-                location: location,
-                user_data: user_data,
+                image:,
+                location:,
+                user_data:,
                 network_id: @network.id,
                 firewall_id: @firewall.id
               )
@@ -134,7 +134,7 @@ module Nvoi
                 sleep(Utils::Constants::SSH_READY_INTERVAL)
               end
 
-              raise SshConnectionError, "SSH connection failed after #{Utils::Constants::SSH_READY_MAX_ATTEMPTS} attempts"
+              raise Errors::SshConnectionError, "SSH connection failed after #{Utils::Constants::SSH_READY_MAX_ATTEMPTS} attempts"
             end
         end
       end

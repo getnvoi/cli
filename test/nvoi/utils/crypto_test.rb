@@ -36,7 +36,7 @@ class CryptoTest < Minitest::Test
 
     ciphertext = Nvoi::Utils::Crypto.encrypt(plaintext, key1)
 
-    assert_raises(Nvoi::DecryptionError) do
+    assert_raises(Nvoi::Errors::DecryptionError) do
       Nvoi::Utils::Crypto.decrypt(ciphertext, key2)
     end
   end
@@ -49,7 +49,7 @@ class CryptoTest < Minitest::Test
     corrupted = ciphertext.dup
     corrupted[20] = (corrupted[20].ord ^ 0xFF).chr
 
-    assert_raises(Nvoi::DecryptionError) do
+    assert_raises(Nvoi::Errors::DecryptionError) do
       Nvoi::Utils::Crypto.decrypt(corrupted, key)
     end
   end
@@ -60,14 +60,14 @@ class CryptoTest < Minitest::Test
   end
 
   def test_validate_key_wrong_length
-    assert_raises(Nvoi::InvalidKeyError) do
+    assert_raises(Nvoi::Errors::InvalidKeyError) do
       Nvoi::Utils::Crypto.validate_key("abc123")
     end
   end
 
   def test_validate_key_invalid_characters
     invalid_key = "g" * 64 # 'g' is not a hex character
-    assert_raises(Nvoi::InvalidKeyError) do
+    assert_raises(Nvoi::Errors::InvalidKeyError) do
       Nvoi::Utils::Crypto.validate_key(invalid_key)
     end
   end
@@ -75,7 +75,7 @@ class CryptoTest < Minitest::Test
   def test_decrypt_too_short_ciphertext
     key = Nvoi::Utils::Crypto.generate_key
 
-    assert_raises(Nvoi::DecryptionError) do
+    assert_raises(Nvoi::Errors::DecryptionError) do
       Nvoi::Utils::Crypto.decrypt("short", key)
     end
   end

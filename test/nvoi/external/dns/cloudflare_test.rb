@@ -6,7 +6,7 @@ require "webmock/minitest"
 class CloudflareTest < Minitest::Test
   def setup
     WebMock.disable_net_connect!
-    @client = Nvoi::External::DNS::Cloudflare.new("test-token", "acc-123")
+    @client = Nvoi::External::Dns::Cloudflare.new("test-token", "acc-123")
   end
 
   def teardown
@@ -325,7 +325,7 @@ class CloudflareTest < Minitest::Test
         errors: [{ message: "Invalid API Token" }]
       }.to_json, headers: { "Content-Type" => "application/json" })
 
-    assert_raises(Nvoi::ValidationError) do
+    assert_raises(Nvoi::Errors::ValidationError) do
       @client.validate_credentials
     end
   end
@@ -339,7 +339,7 @@ class CloudflareTest < Minitest::Test
         errors: [{ message: "Bad request" }]
       }.to_json, headers: { "Content-Type" => "application/json" })
 
-    assert_raises(Nvoi::CloudflareError) do
+    assert_raises(Nvoi::Errors::CloudflareError) do
       @client.find_zone("example.com")
     end
   end
@@ -354,7 +354,7 @@ class CloudflareTest < Minitest::Test
         ]
       }.to_json, headers: { "Content-Type" => "application/json" })
 
-    error = assert_raises(Nvoi::CloudflareError) do
+    error = assert_raises(Nvoi::Errors::CloudflareError) do
       @client.find_zone("example.com")
     end
 
@@ -366,7 +366,7 @@ class CloudflareTest < Minitest::Test
     stub_request(:get, "https://api.cloudflare.com/client/v4/zones")
       .to_return(status: 200, body: "not json", headers: { "Content-Type" => "text/plain" })
 
-    assert_raises(Nvoi::CloudflareError) do
+    assert_raises(Nvoi::Errors::CloudflareError) do
       @client.find_zone("example.com")
     end
   end

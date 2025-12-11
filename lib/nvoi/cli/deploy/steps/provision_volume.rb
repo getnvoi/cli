@@ -63,10 +63,10 @@ module Nvoi
 
               # Find server to attach to
               server = @provider.find_server(vol_config[:server_name])
-              raise VolumeError, "server not found: #{vol_config[:server_name]}" unless server
+              raise Errors::VolumeError, "server not found: #{vol_config[:server_name]}" unless server
 
               # Create volume
-              opts = Objects::VolumeCreateOptions.new(
+              opts = Objects::Volume::CreateOptions.new(
                 name: vol_config[:name],
                 size: vol_config[:size],
                 server_id: server.id
@@ -133,10 +133,12 @@ module Nvoi
               # Mount
               ssh.execute("sudo mount #{device_path} #{mount_path}")
 
-              # Add to fstab if not present
-              fstab_check = ssh.execute("grep #{device_path} /etc/fstab || true")
+              # Add to fstab using UUID (more reliable than device path)
+              fstab_check = ssh.execute("grep '#{mount_path}' /etc/fstab || true")
               if fstab_check.empty?
-                ssh.execute("echo '#{device_path} #{mount_path} xfs defaults,nofail 0 2' | sudo tee -a /etc/fstab")
+                cmd = "UUID=$(sudo blkid -s UUID -o value #{device_path}) && " \
+                      "echo \"UUID=$UUID #{mount_path} xfs defaults,nofail 0 2\" | sudo tee -a /etc/fstab"
+                ssh.execute(cmd)
               end
 
               @log.success "Volume mounted at %s", mount_path
@@ -150,7 +152,7 @@ module Nvoi
                 sleep(2)
               end
 
-              raise VolumeError, "device not available: #{device_path}"
+              raise Errors::VolumeError, "device not available: #{device_path}"
             end
         end
       end

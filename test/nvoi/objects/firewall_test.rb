@@ -4,7 +4,7 @@ require "test_helper"
 
 class FirewallTest < Minitest::Test
   def test_firewall_struct
-    firewall = Nvoi::Objects::Firewall.new(
+    firewall = Nvoi::Objects::Firewall::Record.new(
       id: "fw-123",
       name: "myapp-firewall"
     )

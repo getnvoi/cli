@@ -12,7 +12,7 @@ module Nvoi
 
           def run
             working_dir = resolve_working_dir
-            manager = Utils::Crypto.new(working_dir, @options[:credentials], @options[:master_key])
+            manager = Utils::CredentialStore.new(working_dir, @options[:credentials], @options[:master_key])
 
             content = manager.read
             puts content

@@ -28,7 +28,7 @@ module Nvoi
 
         def app_env(creds, host:)
           {
-            "DATABASE_URL" => build_url(creds, host: host),
+            "DATABASE_URL" => build_url(creds, host:),
             "POSTGRES_HOST" => host,
             "POSTGRES_PORT" => creds.port,
             "POSTGRES_USER" => creds.user,
@@ -42,11 +42,11 @@ module Nvoi
                 "pg_dump -U #{opts.user} -d #{opts.database} --no-owner --no-acl"
           ssh.execute(cmd)
         rescue SshCommandError => e
-          raise DatabaseError.new("dump", "pg_dump failed: #{e.message}")
+          raise Errors::DatabaseError.new("dump", "pg_dump failed: #{e.message}")
         end
 
         def restore(ssh, data, opts)
-          create_database(ssh, Objects::DatabaseCreateOptions.new(
+          create_database(ssh, Objects::Database::CreateOptions.new(
             pod_name: opts.pod_name,
             database: opts.database,
             user: opts.user,
@@ -66,7 +66,7 @@ module Nvoi
           ssh.execute_ignore_errors("rm -f #{temp_file}")
           ssh.execute_ignore_errors("kubectl exec -n default #{opts.pod_name} -- rm -f #{temp_file}")
         rescue SshCommandError => e
-          raise DatabaseError.new("restore", "psql restore failed: #{e.message}")
+          raise Errors::DatabaseError.new("restore", "psql restore failed: #{e.message}")
         end
 
         def create_database(ssh, opts)
@@ -74,7 +74,7 @@ module Nvoi
                 "psql -U #{opts.user} -c \"CREATE DATABASE #{opts.database}\""
           ssh.execute(cmd)
         rescue SshCommandError => e
-          raise DatabaseError.new("create_database", "failed to create database: #{e.message}")
+          raise Errors::DatabaseError.new("create_database", "failed to create database: #{e.message}")
         end
       end
     end

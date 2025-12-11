@@ -57,7 +57,7 @@ module Nvoi
             branch = @options[:branch]
             return if branch.nil? || branch.empty?
 
-            override = Objects::ConfigOverride.new(branch: branch)
+            override = Objects::ConfigOverride.new(branch:)
             override.apply(@config)
           end
 
@@ -80,7 +80,7 @@ module Nvoi
           def run_all(command)
             server_names = get_all_server_names
 
-            raise ServiceError, "no servers found in configuration" if server_names.empty?
+            raise Errors::ServiceError, "no servers found in configuration" if server_names.empty?
 
             @log.info "Executing on %d server(s): %s", server_names.size, server_names.join(", ")
             @log.separator
@@ -116,7 +116,7 @@ module Nvoi
             failures = results.select { |_, err| err }.keys
             if failures.any?
               @log.warning "Command failed on %d server(s): %s", failures.size, failures.join(", ")
-              raise ServiceError, "command failed on some servers"
+              raise Errors::ServiceError, "command failed on some servers"
             end
 
             @log.success "Command completed successfully on all servers"
@@ -164,7 +164,7 @@ module Nvoi
 
           def find_server(server_name)
             server = @provider.find_server(server_name)
-            raise ServiceError, "server not found: #{server_name}" unless server
+            raise Errors::ServiceError, "server not found: #{server_name}" unless server
 
             server
           end

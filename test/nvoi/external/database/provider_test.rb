@@ -1,10 +1,6 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require_relative "../../../../lib/nvoi/external/database/provider"
-require_relative "../../../../lib/nvoi/external/database/postgres"
-require_relative "../../../../lib/nvoi/external/database/mysql"
-require_relative "../../../../lib/nvoi/external/database/sqlite"
 
 class DatabaseProviderTest < Minitest::Test
   def test_provider_for_returns_postgres_for_postgres
@@ -69,7 +65,7 @@ class PostgresProviderTest < Minitest::Test
   end
 
   def test_build_url
-    creds = Nvoi::Objects::DatabaseCredentials.new(
+    creds = Nvoi::Objects::Database::Credentials.new(
       user: "admin",
       password: "secret",
       host: "db.example.com",
@@ -83,7 +79,7 @@ class PostgresProviderTest < Minitest::Test
   end
 
   def test_container_env
-    creds = Nvoi::Objects::DatabaseCredentials.new(
+    creds = Nvoi::Objects::Database::Credentials.new(
       user: "admin",
       password: "secret",
       database: "mydb"
@@ -97,7 +93,7 @@ class PostgresProviderTest < Minitest::Test
   end
 
   def test_app_env
-    creds = Nvoi::Objects::DatabaseCredentials.new(
+    creds = Nvoi::Objects::Database::Credentials.new(
       user: "admin",
       password: "secret",
       port: "5432",
@@ -136,7 +132,7 @@ class MysqlProviderTest < Minitest::Test
   end
 
   def test_container_env
-    creds = Nvoi::Objects::DatabaseCredentials.new(
+    creds = Nvoi::Objects::Database::Credentials.new(
       user: "admin",
       password: "secret",
       database: "mydb"
@@ -179,7 +175,7 @@ class SqliteProviderTest < Minitest::Test
   end
 
   def test_container_env
-    creds = Nvoi::Objects::DatabaseCredentials.new(
+    creds = Nvoi::Objects::Database::Credentials.new(
       path: "/data/app.db"
     )
 
@@ -189,7 +185,7 @@ class SqliteProviderTest < Minitest::Test
   end
 
   def test_app_env
-    creds = Nvoi::Objects::DatabaseCredentials.new(
+    creds = Nvoi::Objects::Database::Credentials.new(
       path: "/data/app.db",
       host_path: "/mnt/data/app.db"
     )

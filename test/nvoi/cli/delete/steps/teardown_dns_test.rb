@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require_relative "../../../../../lib/nvoi/cli/delete/steps/teardown_dns"
 
 class TeardownDnsStepTest < Minitest::Test
   MockService = Struct.new(:domain, :subdomain, keyword_init: true)
@@ -13,13 +12,13 @@ class TeardownDnsStepTest < Minitest::Test
     service = MockService.new(domain: "example.com", subdomain: "app")
     app = MockApplication.new(app: { "web" => service })
     deploy = MockDeploy.new(application: app)
-    config = MockConfig.new(deploy: deploy)
+    config = MockConfig.new(deploy:)
 
     mock_cf = Minitest::Mock.new
     mock_log = Minitest::Mock.new
 
-    zone = Nvoi::Objects::Zone.new(id: "zone-123", name: "example.com")
-    record = Nvoi::Objects::DNSRecord.new(id: "dns-123", name: "app.example.com", type: "CNAME")
+    zone = Nvoi::Objects::Dns::Zone.new(id: "zone-123", name: "example.com")
+    record = Nvoi::Objects::Dns::Record.new(id: "dns-123", name: "app.example.com", type: "CNAME")
 
     mock_log.expect(:info, nil, ["Deleting DNS record: %s", "app.example.com"])
     mock_cf.expect(:find_zone, zone, ["example.com"])
@@ -38,7 +37,7 @@ class TeardownDnsStepTest < Minitest::Test
     service = MockService.new(domain: "example.com", subdomain: "app")
     app = MockApplication.new(app: { "web" => service })
     deploy = MockDeploy.new(application: app)
-    config = MockConfig.new(deploy: deploy)
+    config = MockConfig.new(deploy:)
 
     mock_cf = Minitest::Mock.new
     mock_log = Minitest::Mock.new
@@ -58,12 +57,12 @@ class TeardownDnsStepTest < Minitest::Test
     service = MockService.new(domain: "example.com", subdomain: "app")
     app = MockApplication.new(app: { "web" => service })
     deploy = MockDeploy.new(application: app)
-    config = MockConfig.new(deploy: deploy)
+    config = MockConfig.new(deploy:)
 
     mock_cf = Minitest::Mock.new
     mock_log = Minitest::Mock.new
 
-    zone = Nvoi::Objects::Zone.new(id: "zone-123", name: "example.com")
+    zone = Nvoi::Objects::Dns::Zone.new(id: "zone-123", name: "example.com")
 
     mock_log.expect(:info, nil, ["Deleting DNS record: %s", "app.example.com"])
     mock_cf.expect(:find_zone, zone, ["example.com"])
@@ -80,7 +79,7 @@ class TeardownDnsStepTest < Minitest::Test
     service = MockService.new(domain: nil, subdomain: nil)
     app = MockApplication.new(app: { "web" => service })
     deploy = MockDeploy.new(application: app)
-    config = MockConfig.new(deploy: deploy)
+    config = MockConfig.new(deploy:)
 
     mock_cf = Minitest::Mock.new
     mock_log = Minitest::Mock.new
@@ -95,7 +94,7 @@ class TeardownDnsStepTest < Minitest::Test
     service = MockService.new(domain: "example.com", subdomain: nil)
     app = MockApplication.new(app: { "web" => service })
     deploy = MockDeploy.new(application: app)
-    config = MockConfig.new(deploy: deploy)
+    config = MockConfig.new(deploy:)
 
     mock_cf = Minitest::Mock.new
     mock_log = Minitest::Mock.new

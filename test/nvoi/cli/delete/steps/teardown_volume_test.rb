@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require_relative "../../../../../lib/nvoi/cli/delete/steps/teardown_volume"
 
 class TeardownVolumeStepTest < Minitest::Test
   MockNamer = Struct.new(:app_name) do
@@ -18,16 +17,16 @@ class TeardownVolumeStepTest < Minitest::Test
 
   def test_run_deletes_volumes
     volumes = { "data" => MockVolumeConfig.new(size: 20) }
-    servers = { "master" => MockServerConfig.new(volumes: volumes) }
-    app = MockApplication.new(servers: servers)
+    servers = { "master" => MockServerConfig.new(volumes:) }
+    app = MockApplication.new(servers:)
     deploy = MockDeploy.new(application: app)
     namer = MockNamer.new("myapp")
-    config = MockConfig.new(deploy: deploy, namer: namer)
+    config = MockConfig.new(deploy:, namer:)
 
     mock_provider = Minitest::Mock.new
     mock_log = Minitest::Mock.new
 
-    volume = Nvoi::Objects::Volume.new(id: "vol-123", name: "myapp-master-data")
+    volume = Nvoi::Objects::Volume::Record.new(id: "vol-123", name: "myapp-master-data")
 
     mock_log.expect(:info, nil, ["Deleting %d volume(s)", 1])
     mock_log.expect(:info, nil, ["Deleting volume: %s", "myapp-master-data"])
@@ -44,11 +43,11 @@ class TeardownVolumeStepTest < Minitest::Test
 
   def test_run_handles_missing_volume
     volumes = { "data" => MockVolumeConfig.new(size: 20) }
-    servers = { "master" => MockServerConfig.new(volumes: volumes) }
-    app = MockApplication.new(servers: servers)
+    servers = { "master" => MockServerConfig.new(volumes:) }
+    app = MockApplication.new(servers:)
     deploy = MockDeploy.new(application: app)
     namer = MockNamer.new("myapp")
-    config = MockConfig.new(deploy: deploy, namer: namer)
+    config = MockConfig.new(deploy:, namer:)
 
     mock_provider = Minitest::Mock.new
     mock_log = Minitest::Mock.new

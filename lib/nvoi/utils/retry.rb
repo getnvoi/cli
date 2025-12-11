@@ -37,7 +37,7 @@ module Nvoi
           end
         end
 
-        raise DeploymentError.new(step_name, "max retries (#{@max_retries}) exceeded: #{last_error&.message}")
+        raise Errors::DeploymentError.new(step_name, "max retries (#{@max_retries}) exceeded: #{last_error&.message}")
       end
 
       private

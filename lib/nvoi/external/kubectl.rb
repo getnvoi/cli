@@ -40,11 +40,11 @@ module Nvoi
       end
 
       def wait_for_deployment(name, namespace: "default", timeout: 300)
-        rollout_status("deployment", name, namespace: namespace, timeout: timeout)
+        rollout_status("deployment", name, namespace:, timeout:)
       end
 
       def wait_for_statefulset(name, namespace: "default", timeout: 300)
-        rollout_status("statefulset", name, namespace: namespace, timeout: timeout)
+        rollout_status("statefulset", name, namespace:, timeout:)
       end
 
       def label_node(node_name, labels)

@@ -13,12 +13,12 @@ module Nvoi
               Hetzner.new(h.api_token)
             when "aws"
               a = config.aws
-              AWS.new(a.access_key_id, a.secret_access_key, a.region)
+              Aws.new(a.access_key_id, a.secret_access_key, a.region)
             when "scaleway"
               s = config.scaleway
               Scaleway.new(s.secret_key, s.project_id, zone: s.zone)
             else
-              raise ProviderError, "unknown provider: #{config.provider_name}"
+              raise Errors::ProviderError, "unknown provider: #{config.provider_name}"
             end
           end
 
