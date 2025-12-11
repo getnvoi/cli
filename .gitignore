@@ -30,4 +30,4 @@ deploy.key
 # Logs
 *.log
 
-.claude
+.claudecoverage/

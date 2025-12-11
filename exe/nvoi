@@ -3,5 +3,6 @@
 
 $LOAD_PATH.unshift File.expand_path("../lib", __dir__)
 require "nvoi"
+require "nvoi/cli"
 
-Nvoi::CLI.start(ARGV)
+Nvoi::Cli.start(ARGV)
