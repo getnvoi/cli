@@ -28,7 +28,7 @@ module Nvoi
             master_ssh = External::Ssh.new(master.public_ipv4, @config.ssh_key_path)
 
             # Provision master
-            cluster_token, master_private_ip = provision_master(master_ssh, master_group, master_name)
+            cluster_token, master_private_ip = provision_master(master_ssh, master_group, master_name, master.private_ipv4)
 
             # Setup workers
             @config.deploy.application.servers.each do |group_name, group_config|
@@ -61,8 +61,12 @@ module Nvoi
               nil
             end
 
-            def provision_master(ssh, server_role, server_name)
+            def provision_master(ssh, server_role, server_name, private_ip)
               wait_for_cloud_init(ssh)
+
+              # Discover private IP via SSH if not provided by provider
+              private_ip ||= discover_private_ip(ssh)
+              raise Errors::K8sError, "server has no private IP - ensure network is attached" unless private_ip
 
               # Check if K3s is already running
               begin
@@ -70,7 +74,6 @@ module Nvoi
                 @log.info "K3s already running, skipping installation"
                 setup_kubeconfig(ssh)
                 token = get_cluster_token(ssh)
-                private_ip = get_private_ip(ssh)
                 return [token, private_ip]
               rescue Errors::SshCommandError
                 # Not running, continue installation
@@ -78,8 +81,7 @@ module Nvoi
 
               @log.info "Installing K3s server"
 
-              private_ip = get_private_ip(ssh)
-              private_iface = ssh.execute("ip addr show | grep 'inet 10\\.' | awk '{print $NF}' | head -1").strip
+              private_iface = get_interface_for_ip(ssh, private_ip)
 
               @log.info "Installing k3s on private IP: %s, interface: %s", private_ip, private_iface
 
@@ -131,8 +133,14 @@ module Nvoi
               end
 
               worker_ssh = External::Ssh.new(worker.public_ipv4, @config.ssh_key_path)
-
               wait_for_cloud_init(worker_ssh)
+
+              # Discover private IP via SSH if not provided by provider
+              private_ip = worker.private_ipv4 || discover_private_ip(worker_ssh)
+              unless private_ip
+                @log.warning "Worker %s has no private IP, skipping", worker_name
+                return
+              end
 
               # Check if K3s agent is already running
               begin
@@ -145,8 +153,7 @@ module Nvoi
 
               @log.info "Installing K3s agent on %s", worker_name
 
-              private_ip = get_private_ip(worker_ssh)
-              private_iface = worker_ssh.execute("ip addr show | grep 'inet 10\\.' | awk '{print $NF}' | head -1").strip
+              private_iface = get_interface_for_ip(worker_ssh, private_ip)
 
               cmd = <<~CMD
               curl -sfL https://get.k3s.io | K3S_URL="https://#{master_private_ip}:6443" K3S_TOKEN="#{cluster_token}" sh -s - agent \
@@ -189,12 +196,22 @@ module Nvoi
               token
             end
 
-            def get_private_ip(ssh)
-              output = ssh.execute("ip addr show | grep 'inet 10\\.' | awk '{print $2}' | cut -d/ -f1 | head -1")
-              private_ip = output.strip
-              raise Errors::SshError, "private IP not found" if private_ip.empty?
+            def discover_private_ip(ssh)
+              # Match RFC1918 private ranges, exclude docker/bridge interfaces
+              output = ssh.execute("ip addr show | grep -v 'docker\\|br-\\|veth' | grep -E 'inet (10\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.|192\\.168\\.)' | awk '{print $2}' | cut -d/ -f1 | head -1")
+              ip = output.strip
+              ip.empty? ? nil : ip
+            end
 
-              private_ip
+            def get_interface_for_ip(ssh, ip)
+              # Find the interface that has this IP
+              output = ssh.execute("ip addr show | grep 'inet #{ip}/' | awk '{print $NF}'").strip
+              return output unless output.empty?
+
+              # Fallback: find any interface with the IP prefix
+              prefix = ip.split(".")[0..2].join(".")
+              output = ssh.execute("ip addr show | grep -v 'docker\\|br-\\|veth' | grep 'inet #{prefix}\\.' | awk '{print $NF}' | head -1").strip
+              output.empty? ? nil : output
             end
 
             def install_docker(ssh, private_ip)
@@ -252,7 +269,7 @@ module Nvoi
             end
 
             def setup_kubeconfig(ssh, private_ip = nil)
-              private_ip ||= get_private_ip(ssh)
+              private_ip ||= discover_private_ip(ssh)
 
               cmd = <<~CMD
               sudo mkdir -p /home/deploy/.kube

@@ -62,6 +62,56 @@ class SetupK3sStepTest < Minitest::Test
     assert_match(/Error backend failed to become ready/, error.message)
   end
 
+  def test_setup_kubeconfig_uses_provided_private_ip
+    mock_config = mock_config_for_test
+    step = Nvoi::Cli::Deploy::Steps::SetupK3s.new(mock_config, @mock_provider, @mock_log, "1.2.3.4")
+
+    # Expect the command to use the provided private IP
+    @mock_ssh.expect(:execute, "", [/sed -i "s\/127\.0\.0\.1\/10\.0\.0\.5\/g"/])
+
+    step.send(:setup_kubeconfig, @mock_ssh, "10.0.0.5")
+
+    @mock_ssh.verify
+  end
+
+  def test_setup_kubeconfig_discovers_private_ip_when_not_provided
+    mock_config = mock_config_for_test
+    step = Nvoi::Cli::Deploy::Steps::SetupK3s.new(mock_config, @mock_provider, @mock_log, "1.2.3.4")
+
+    # First call discovers private IP
+    @mock_ssh.expect(:execute, "172.16.0.2\n", [/ip addr show.*grep -E 'inet \(10/])
+    # Second call is the kubeconfig setup using discovered IP
+    @mock_ssh.expect(:execute, "", [/sed -i "s\/127\.0\.0\.1\/172\.16\.0\.2\/g"/])
+
+    step.send(:setup_kubeconfig, @mock_ssh, nil)
+
+    @mock_ssh.verify
+  end
+
+  def test_discover_private_ip_returns_ip
+    mock_config = mock_config_for_test
+    step = Nvoi::Cli::Deploy::Steps::SetupK3s.new(mock_config, @mock_provider, @mock_log, "1.2.3.4")
+
+    @mock_ssh.expect(:execute, "172.16.0.2\n", [/ip addr show.*grep -E 'inet \(10/])
+
+    result = step.send(:discover_private_ip, @mock_ssh)
+
+    assert_equal "172.16.0.2", result
+    @mock_ssh.verify
+  end
+
+  def test_discover_private_ip_returns_nil_when_empty
+    mock_config = mock_config_for_test
+    step = Nvoi::Cli::Deploy::Steps::SetupK3s.new(mock_config, @mock_provider, @mock_log, "1.2.3.4")
+
+    @mock_ssh.expect(:execute, "\n", [/ip addr show.*grep -E 'inet \(10/])
+
+    result = step.send(:discover_private_ip, @mock_ssh)
+
+    assert_nil result
+    @mock_ssh.verify
+  end
+
   private
 
   MockNamer = Struct.new(:app_name) do

@@ -396,7 +396,8 @@ module Nvoi
               id: instance.instance_id,
               name:,
               status: instance.state.name,
-              public_ipv4: instance.public_ip_address
+              public_ipv4: instance.public_ip_address,
+              private_ipv4: instance.private_ip_address
             )
           end
 

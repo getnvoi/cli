@@ -109,14 +109,14 @@ module Nvoi
           server = find_server_by_name(name)
           return nil unless server
 
-          to_server(server)
+          to_server(server, fetch_private_ip: true)
         end
 
         def find_server_by_id(id)
           server = get(instance_url("/servers/#{id}"))["server"]
           return nil unless server
 
-          to_server(server)
+          to_server(server, fetch_private_ip: true)
         rescue Errors::NotFoundError
           nil
         end
@@ -499,12 +499,16 @@ module Nvoi
             )
           end
 
-          def to_server(data)
+          def to_server(data, fetch_private_ip: false)
+            # Scaleway doesn't include private_ips in the NIC response directly
+            # We'd need to call IPAM API which adds complexity
+            # Instead, private IP discovery happens via SSH in setup_k3s
             Objects::Server::Record.new(
               id: data["id"],
               name: data["name"],
               status: data["state"],
-              public_ipv4: data.dig("public_ip", "address")
+              public_ipv4: data.dig("public_ip", "address"),
+              private_ipv4: nil
             )
           end
 

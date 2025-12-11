@@ -347,11 +347,15 @@ module Nvoi
           end
 
           def to_server(data)
+            # Get private IP from private_net array
+            private_ip = data["private_net"]&.first&.dig("ip")
+
             Objects::Server::Record.new(
               id: data["id"].to_s,
               name: data["name"],
               status: data["status"],
-              public_ipv4: data.dig("public_net", "ipv4", "ip")
+              public_ipv4: data.dig("public_net", "ipv4", "ip"),
+              private_ipv4: private_ip
             )
           end
 

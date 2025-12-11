@@ -89,6 +89,8 @@ class ScalewayCloudTest < Minitest::Test
     assert_equal "test-server", server.name
     assert_equal "running", server.status
     assert_equal "1.2.3.4", server.public_ipv4
+    # Scaleway private IP is discovered via SSH, not API
+    assert_nil server.private_ipv4
   end
 
   def test_list_servers
