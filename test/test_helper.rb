@@ -38,3 +38,6 @@ require_relative "../lib/nvoi/external/containerd"
 # Load external/database (provider first, then others)
 require_relative "../lib/nvoi/external/database/provider"
 Dir[File.expand_path("../lib/nvoi/external/database/*.rb", __dir__)].sort.each { |f| require f }
+
+# Load CLI (Thor routing only - for basic tests)
+require_relative "../lib/nvoi/cli"

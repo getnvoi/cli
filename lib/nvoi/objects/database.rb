@@ -8,16 +8,16 @@ module Nvoi
     DatabaseCredentials = Struct.new(:user, :password, :host, :port, :database, :path, keyword_init: true)
 
     # Options for dumping a database
-    DumpOptions = Struct.new(:pod_name, :database, :user, :password, :host_path, keyword_init: true)
+    DatabaseDumpOptions = Struct.new(:pod_name, :database, :user, :password, :host_path, keyword_init: true)
 
     # Options for restoring a database
-    RestoreOptions = Struct.new(:pod_name, :database, :user, :password, :source_db, :host_path, keyword_init: true)
+    DatabaseRestoreOptions = Struct.new(:pod_name, :database, :user, :password, :source_db, :host_path, keyword_init: true)
 
     # Options for creating a database
     DatabaseCreateOptions = Struct.new(:pod_name, :database, :user, :password, keyword_init: true)
 
-    # Branch represents a database branch (snapshot)
-    Branch = Struct.new(:id, :created_at, :size, :adapter, :database, keyword_init: true) do
+    # DatabaseBranch represents a database branch (snapshot)
+    DatabaseBranch = Struct.new(:id, :created_at, :size, :adapter, :database, keyword_init: true) do
       def to_h
         { id:, created_at:, size:, adapter:, database: }
       end
@@ -38,7 +38,7 @@ module Nvoi
       def self.from_json(json_str)
         data = JSON.parse(json_str)
         branches = (data["branches"] || []).map do |b|
-          Branch.new(
+          DatabaseBranch.new(
             id: b["id"],
             created_at: b["created_at"],
             size: b["size"],

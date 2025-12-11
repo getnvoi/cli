@@ -30,6 +30,7 @@ require_relative "nvoi/objects/tunnel"
 require_relative "nvoi/objects/dns"
 require_relative "nvoi/objects/database"
 require_relative "nvoi/objects/service_spec"
+require_relative "nvoi/objects/config_override"
 
 # External
 require_relative "nvoi/external/cloud/base"
@@ -48,6 +49,9 @@ require_relative "nvoi/external/database/provider"
 require_relative "nvoi/external/database/postgres"
 require_relative "nvoi/external/database/mysql"
 require_relative "nvoi/external/database/sqlite"
+
+# CLI (Thor routing only - commands are lazy-loaded)
+require_relative "nvoi/cli"
 
 module Nvoi
   class << self
