@@ -13,6 +13,16 @@ require_relative "nvoi/constants"
 require_relative "nvoi/errors"
 require_relative "nvoi/logger"
 
+# Objects (domain entities)
+require_relative "nvoi/objects/server"
+require_relative "nvoi/objects/network"
+require_relative "nvoi/objects/firewall"
+require_relative "nvoi/objects/volume"
+require_relative "nvoi/objects/tunnel"
+require_relative "nvoi/objects/dns"
+require_relative "nvoi/objects/database"
+require_relative "nvoi/objects/service_spec"
+
 require_relative "nvoi/database/provider"
 require_relative "nvoi/database/postgres"
 require_relative "nvoi/database/mysql"
