@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "ostruct"
 require "tty/prompt/test"
 require "nvoi/cli/onboard/command"
 
@@ -9,6 +10,36 @@ class TestOnboardCommand < Minitest::Test
     # Verify the file can be required in isolation (catches missing requires)
     output = `ruby -e "require './lib/nvoi/cli/onboard/command'" 2>&1`
     assert $?.success?, "File failed to load in isolation: #{output}"
+  end
+
+  def test_save_config
+    prompt = TTY::Prompt::Test.new
+
+    prompt.input << "myapp\n"
+    prompt.input << "\r"                # hetzner
+    prompt.input << "token\n"
+    prompt.input << "\r"                # server type
+    prompt.input << "\r"                # location
+    prompt.input << "n\n"               # no cloudflare
+    prompt.input << "web\n"             # app name
+    prompt.input << "puma\n"
+    prompt.input << "3000\n"
+    prompt.input << "\n"
+    prompt.input << "n\n"               # no more apps
+    prompt.input << "\e[B\e[B\e[B\r"    # no database
+    prompt.input << "\e[B\e[B\r"        # done with env
+    prompt.input << "\r"                # Save configuration (1st option)
+    prompt.input.rewind
+
+    with_hetzner_mock do
+      with_config_api_mock do
+        cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
+        cmd.run
+      end
+    end
+
+    assert File.exist?("deploy.enc"), "deploy.enc should be created"
+    assert File.exist?("deploy.key"), "deploy.key should be created"
   end
 
   def setup
@@ -459,6 +490,27 @@ class TestOnboardCommand < Minitest::Test
 
       Nvoi::External::Dns::Cloudflare.stub :new, mock do
         yield
+      end
+    end
+
+    def with_config_api_mock
+      fake_result = OpenStruct.new(
+        failure?: false,
+        config: "encrypted_data",
+        master_key: "test_master_key_32_chars_long!!"
+      )
+
+      # Mock ConfigApi.init
+      Nvoi::ConfigApi.stub :init, fake_result do
+        # Mock Crypto.decrypt to return valid YAML
+        Nvoi::Utils::Crypto.stub :decrypt, ->(_data, _key) {
+          YAML.dump({ "application" => { "name" => "test", "ssh_keys" => { "private" => "key", "public" => "pub" } } })
+        } do
+          # Mock Crypto.encrypt
+          Nvoi::Utils::Crypto.stub :encrypt, "encrypted" do
+            yield
+          end
+        end
       end
     end
 
