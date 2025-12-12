@@ -19,6 +19,9 @@ module Nvoi
           raise Errors::SshError, "local build failed"
         end
 
+        # Tag as :latest for next build's cache
+        system("docker", "tag", tag, cache_from) if cache_from
+
         tar_file = "/tmp/#{tag.tr(':', '_')}.tar"
         unless system("docker", "save", tag, "-o", tar_file)
           raise Errors::SshError, "docker save failed"
