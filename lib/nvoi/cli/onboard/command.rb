@@ -28,8 +28,7 @@ module Nvoi
           step_database
           step_env
 
-          show_summary
-          save_config if confirm_save?
+          summary_loop
 
           show_next_steps
         rescue TTY::Reader::InputInterrupt
@@ -481,8 +480,134 @@ module Nvoi
             puts
           end
 
-          def confirm_save?
-            @prompt.yes?("Save configuration?")
+          def summary_loop
+            loop do
+              show_summary
+
+              action = @prompt.select("What would you like to do?") do |menu|
+                menu.choice "Save configuration", :save
+                menu.choice "Edit application name", :app_name
+                menu.choice "Edit compute provider", :compute
+                menu.choice "Edit domain provider", :domain
+                menu.choice "Edit apps", :apps
+                menu.choice "Edit database", :database
+                menu.choice "Edit environment variables", :env
+                menu.choice "Start over", :restart
+                menu.choice "Cancel (discard)", :cancel
+              end
+
+              case action
+              when :save
+                save_config
+                return
+              when :cancel
+                return if @prompt.yes?("Discard all changes?")
+              when :app_name
+                step_app_name
+              when :compute
+                step_compute_provider
+              when :domain
+                step_domain_provider
+              when :apps
+                edit_apps
+              when :database
+                step_database
+              when :env
+                step_env
+              when :restart
+                if @prompt.yes?("This will clear all data. Continue?")
+                  @data = { "application" => {} }
+                  @cloudflare_client = nil
+                  @cloudflare_zones = nil
+                  step_app_name
+                  step_compute_provider
+                  step_domain_provider
+                  step_apps
+                  step_database
+                  step_env
+                end
+              end
+            end
+          end
+
+          def edit_apps
+            loop do
+              app_names = @data["application"]["app"]&.keys || []
+
+              choices = app_names.map { |name| { name: "Edit #{name}", value: [:edit, name] } }
+              choices += app_names.map { |name| { name: "Delete #{name}", value: [:delete, name] } }
+              choices << { name: "Add new app", value: [:add, nil] }
+              choices << { name: "Done", value: [:done, nil] }
+
+              action, name = @prompt.select("Apps:", choices)
+
+              case action
+              when :edit
+                edit_single_app(name)
+              when :delete
+                if @prompt.yes?("Delete #{name}?")
+                  @data["application"]["app"].delete(name)
+                end
+              when :add
+                add_single_app
+              when :done
+                return
+              end
+            end
+          end
+
+          def edit_single_app(name)
+            app = @data["application"]["app"][name]
+
+            new_name = @prompt.ask("App name:", default: name) { |q| q.required true }
+            command = @prompt.ask("Run command:", default: app["command"])
+            port = @prompt.ask("Port:", default: app["port"]&.to_s, convert: :int)
+
+            new_config = {
+              "servers" => app["servers"] || ["main"],
+              "command" => command,
+              "port" => port
+            }
+
+            if @cloudflare_zones&.any?
+              domain, subdomain = prompt_domain_selection
+              if domain
+                new_config["domain"] = domain
+                new_config["subdomain"] = subdomain unless subdomain.to_s.empty?
+              end
+            end
+
+            pre_run = @prompt.ask("Pre-run command:", default: app["pre_run_command"])
+            new_config["pre_run_command"] = pre_run unless pre_run.to_s.empty?
+
+            # Handle rename
+            @data["application"]["app"].delete(name) if new_name != name
+            @data["application"]["app"][new_name] = new_config
+          end
+
+          def add_single_app
+            name = @prompt.ask("App name:") { |q| q.required true }
+            command = @prompt.ask("Run command:", default: "bundle exec puma -C config/puma.rb")
+            port = @prompt.ask("Port:", default: "3000", convert: :int)
+
+            app_config = {
+              "servers" => ["main"],
+              "command" => command,
+              "port" => port
+            }
+
+            if @cloudflare_zones&.any?
+              domain, subdomain = prompt_domain_selection
+              if domain
+                app_config["domain"] = domain
+                app_config["subdomain"] = subdomain unless subdomain.to_s.empty?
+              end
+            end
+
+            pre_run = @prompt.ask("Pre-run command (e.g. migrations):")
+            app_config["pre_run_command"] = pre_run unless pre_run.to_s.empty?
+
+            @data["application"]["app"][name] = app_config
           end
 
           def save_config

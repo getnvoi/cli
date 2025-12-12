@@ -36,7 +36,8 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "myapp\n"           # db user
     prompt.input << "secret123\n"       # db password
     prompt.input << "\e[B\e[B\r"        # Done with env (down twice, select)
-    prompt.input << "n\n"               # don't save (test file creation separately)
+    prompt.input << "\e[B\e[B\e[B\e[B\e[B\e[B\e[B\e[B\r"  # Cancel (9th option)
+    prompt.input << "y\n"               # confirm discard
     prompt.input.rewind
 
     with_hetzner_mock do
@@ -69,7 +70,8 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "n\n"               # no more apps
     prompt.input << "\e[B\e[B\e[B\r"    # None for db (down 3x)
     prompt.input << "\e[B\e[B\r"        # Done for env
-    prompt.input << "n\n"               # don't save
+    prompt.input << "\e[B\e[B\e[B\e[B\e[B\e[B\e[B\e[B\r"  # Cancel (9th option)
+    prompt.input << "y\n"               # confirm discard
     prompt.input.rewind
 
     call_count = 0
@@ -113,7 +115,8 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "n\n"
     prompt.input << "\e[B\e[B\e[B\r"    # None for db
     prompt.input << "\e[B\e[B\r"        # Done for env
-    prompt.input << "n\n"
+    prompt.input << "\e[B\e[B\e[B\e[B\e[B\e[B\e[B\e[B\r"  # Cancel (9th option)
+    prompt.input << "y\n"               # confirm discard
     prompt.input.rewind
 
     with_aws_mock do
@@ -142,7 +145,8 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "n\n"
     prompt.input << "\e[B\e[B\e[B\r"    # None for db
     prompt.input << "\e[B\e[B\r"        # Done for env
-    prompt.input << "n\n"
+    prompt.input << "\e[B\e[B\e[B\e[B\e[B\e[B\e[B\e[B\r"  # Cancel (9th option)
+    prompt.input << "y\n"               # confirm discard
     prompt.input.rewind
 
     with_scaleway_mock do
@@ -179,7 +183,8 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "n\n"               # done with apps
     prompt.input << "\e[B\e[B\e[B\r"    # no database
     prompt.input << "\e[B\e[B\r"        # done with env
-    prompt.input << "n\n"               # don't save
+    prompt.input << "\e[B\e[B\e[B\e[B\e[B\e[B\e[B\e[B\r"  # Cancel (9th option)
+    prompt.input << "y\n"               # confirm discard
     prompt.input.rewind
 
     with_hetzner_mock do
@@ -212,7 +217,8 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "n\n"               # no more apps
     prompt.input << "\e[B\e[B\e[B\r"    # no database
     prompt.input << "\e[B\e[B\r"        # done with env
-    prompt.input << "n\n"               # don't save
+    prompt.input << "\e[B\e[B\e[B\e[B\e[B\e[B\e[B\e[B\r"  # Cancel (9th option)
+    prompt.input << "y\n"               # confirm discard
     prompt.input.rewind
 
     with_hetzner_mock do
@@ -248,7 +254,8 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "n\n"               # no more apps
     prompt.input << "\e[B\e[B\e[B\r"    # no database
     prompt.input << "\e[B\e[B\r"        # done with env
-    prompt.input << "n\n"               # don't save
+    prompt.input << "\e[B\e[B\e[B\e[B\e[B\e[B\e[B\e[B\r"  # Cancel (9th option)
+    prompt.input << "y\n"               # confirm discard
     prompt.input.rewind
 
     with_hetzner_mock do
@@ -262,6 +269,84 @@ class TestOnboardCommand < Minitest::Test
     # Verify cloudflare setup and skip domain flow
     assert_match(/Cloudflare/, output)
     assert_match(/Skip.*no domain/i, output)
+  end
+
+  def test_edit_app_from_summary
+    prompt = TTY::Prompt::Test.new
+
+    prompt.input << "myapp\n"
+    prompt.input << "\r"                # hetzner
+    prompt.input << "token\n"
+    prompt.input << "\r"                # server type
+    prompt.input << "\r"                # location
+    prompt.input << "n\n"               # no cloudflare
+    prompt.input << "web\n"             # app name
+    prompt.input << "puma\n"
+    prompt.input << "3000\n"
+    prompt.input << "\n"
+    prompt.input << "n\n"               # no more apps
+    prompt.input << "\e[B\e[B\e[B\r"    # no database
+    prompt.input << "\e[B\e[B\r"        # done with env
+    # Now at summary menu
+    prompt.input << "\e[B\e[B\e[B\e[B\r" # Edit apps (5th option)
+    prompt.input << "\r"                # Edit web (first option)
+    prompt.input << "webserver\n"       # rename to webserver
+    prompt.input << "rails s\n"         # new command
+    prompt.input << "8080\n"            # new port
+    prompt.input << "\n"                # no pre-run
+    prompt.input << "\e[B\e[B\e[B\r"    # Done (4th: Edit, Delete, Add, Done)
+    prompt.input << "\e[B\e[B\e[B\e[B\e[B\e[B\e[B\e[B\r"  # Cancel
+    prompt.input << "y\n"               # confirm discard
+    prompt.input.rewind
+
+    with_hetzner_mock do
+      cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
+      cmd.run
+    end
+
+    output = prompt.output.string
+    assert_match(/webserver/, output)
+    assert_match(/8080/, output)
+  end
+
+  def test_delete_app_from_summary
+    prompt = TTY::Prompt::Test.new
+
+    prompt.input << "myapp\n"
+    prompt.input << "\r"                # hetzner
+    prompt.input << "token\n"
+    prompt.input << "\r"                # server type
+    prompt.input << "\r"                # location
+    prompt.input << "n\n"               # no cloudflare
+    prompt.input << "web\n"             # first app
+    prompt.input << "puma\n"
+    prompt.input << "3000\n"
+    prompt.input << "\n"
+    prompt.input << "y\n"               # add another
+    prompt.input << "worker\n"          # second app
+    prompt.input << "sidekiq\n"
+    prompt.input << "\n"                # no port
+    prompt.input << "\n"
+    prompt.input << "n\n"               # done with apps
+    prompt.input << "\e[B\e[B\e[B\r"    # no database
+    prompt.input << "\e[B\e[B\r"        # done with env
+    # Summary menu - delete web app
+    prompt.input << "\e[B\e[B\e[B\e[B\r" # Edit apps (5th option)
+    prompt.input << "\e[B\e[B\r"        # Delete web (3rd option: Edit web, Edit worker, Delete web)
+    prompt.input << "y\n"               # confirm delete
+    prompt.input << "\e[B\e[B\e[B\r"    # Done (4th: Edit worker, Delete worker, Add, Done)
+    prompt.input << "\e[B\e[B\e[B\e[B\e[B\e[B\e[B\e[B\r"  # Cancel
+    prompt.input << "y\n"               # confirm discard
+    prompt.input.rewind
+
+    with_hetzner_mock do
+      cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
+      cmd.run
+    end
+
+    output = prompt.output.string
+    # After deletion, summary should only show worker
+    assert_match(/worker/, output)
   end
 
   def test_subdomain_unavailable_retry
@@ -285,7 +370,8 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "n\n"               # no more apps
     prompt.input << "\e[B\e[B\e[B\r"    # no database
     prompt.input << "\e[B\e[B\r"        # done with env
-    prompt.input << "n\n"               # don't save
+    prompt.input << "\e[B\e[B\e[B\e[B\e[B\e[B\e[B\e[B\r"  # Cancel (9th option)
+    prompt.input << "y\n"               # confirm discard
     prompt.input.rewind
 
     with_hetzner_mock do
