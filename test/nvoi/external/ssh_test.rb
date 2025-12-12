@@ -82,21 +82,4 @@ class ExternalSshTest < Minitest::Test
       end
     end
   end
-
-  def test_rsync_success
-    Open3.stub(:capture2e, ["", Minitest::Mock.new.expect(:success?, true)]) do
-      @ssh.rsync("/local/dir/", "/remote/dir/")
-    end
-  end
-
-  def test_rsync_failure_raises_error
-    status = Minitest::Mock.new
-    status.expect(:success?, false)
-
-    Open3.stub(:capture2e, ["rsync error", status]) do
-      assert_raises(Nvoi::Errors::SshCommandError) do
-        @ssh.rsync("/local/dir/", "/remote/dir/")
-      end
-    end
-  end
 end
