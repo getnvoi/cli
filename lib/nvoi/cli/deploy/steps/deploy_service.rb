@@ -22,10 +22,9 @@ module Nvoi
             @kubectl = External::Kubectl.new(ssh)
           end
 
-          def run(image_tag, timestamp)
-            # Push to in-cluster registry
-            registry_tag = "localhost:#{Utils::Constants::REGISTRY_PORT}/#{@config.container_prefix}:#{timestamp}"
-            push_to_registry(image_tag, registry_tag)
+          def run(registry_tag, timestamp)
+            # Image is already in registry (pushed via SSH tunnel in BuildImage step)
+            @log.info "Using image from registry: %s", registry_tag
 
             # Gather env vars
             first_service = @config.deploy.application.app.keys.first
@@ -64,15 +63,6 @@ module Nvoi
           end
 
           private
-
-            def push_to_registry(local_tag, registry_tag)
-              @log.info "Pushing to in-cluster registry: %s", registry_tag
-
-              @ssh.execute("sudo ctr -n k8s.io images tag #{local_tag} #{registry_tag}")
-              @ssh.execute("sudo ctr -n k8s.io images push --plain-http #{registry_tag}")
-
-              @log.success "Image pushed to registry"
-            end
 
             def deploy_app_secret(env_vars)
               secret_name = @namer.app_secret_name

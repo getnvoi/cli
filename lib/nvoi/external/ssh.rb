@@ -62,18 +62,6 @@ module Nvoi
         raise Errors::SshCommandError, "SCP download failed: #{output}" unless status.success?
       end
 
-      def rsync(local_path, remote_path)
-        rsync_args = [
-          "-avz",
-          "-e", "ssh #{build_ssh_args.join(' ')}",
-          local_path,
-          "#{@user}@#{@ip}:#{remote_path}"
-        ]
-
-        output, status = Open3.capture2e("rsync", *rsync_args)
-        raise Errors::SshCommandError, "rsync failed: #{output}" unless status.success?
-      end
-
       private
 
         def build_ssh_args

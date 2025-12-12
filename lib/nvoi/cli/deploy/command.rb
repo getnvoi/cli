@@ -123,24 +123,40 @@ module Nvoi
             require_relative "steps/cleanup_images"
 
             ssh = External::Ssh.new(server_ip, @config.ssh_key_path)
+            registry_port = Utils::Constants::REGISTRY_PORT
 
-            # Acquire deployment lock
-            acquire_lock(ssh)
+            # Start SSH tunnel to registry
+            registry_tunnel = External::SshTunnel.new(
+              ip: server_ip,
+              user: "deploy",
+              key_path: @config.ssh_key_path,
+              local_port: registry_port,
+              remote_port: registry_port
+            )
+
+            registry_tunnel.start
 
             begin
-              # Build and push image
-              timestamp = Time.now.strftime("%Y%m%d%H%M%S")
-              image_tag = @config.namer.image_tag(timestamp)
+              # Acquire deployment lock
+              acquire_lock(ssh)
 
-              Steps::BuildImage.new(@config, ssh, @log).run(working_dir, image_tag)
+              begin
+                # Build and push image via tunnel
+                timestamp = Time.now.strftime("%Y%m%d%H%M%S")
+                image_tag = @config.namer.image_tag(timestamp)
 
-              # Deploy all services
-              Steps::DeployService.new(@config, ssh, tunnels, @log).run(image_tag, timestamp)
+                registry_tag = Steps::BuildImage.new(@config, @log).run(working_dir, image_tag)
 
-              # Cleanup old images
-              Steps::CleanupImages.new(@config, ssh, @log).run(timestamp)
+                # Deploy all services (image already in registry)
+                Steps::DeployService.new(@config, ssh, tunnels, @log).run(registry_tag, timestamp)
+
+                # Cleanup old images
+                Steps::CleanupImages.new(@config, ssh, @log).run(timestamp)
+              ensure
+                release_lock(ssh)
+              end
             ensure
-              release_lock(ssh)
+              registry_tunnel.stop
             end
           end
 
