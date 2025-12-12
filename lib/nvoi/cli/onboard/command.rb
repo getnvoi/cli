@@ -2,36 +2,45 @@
 
 require "stringio"
 require "tty-prompt"
-require "tty-box"
-require "tty-spinner"
-require "tty-table"
 require "nvoi/utils/credential_store"
+require_relative "ui"
+require_relative "steps/app_name"
+require_relative "steps/compute"
+require_relative "steps/domain"
+require_relative "steps/app"
+require_relative "steps/database"
+require_relative "steps/env"
 
 module Nvoi
   class Cli
     module Onboard
       # Interactive onboarding wizard for quick setup
       class Command
-        MAX_RETRIES = 3
+        include UI
+
+        SUMMARY_ACTIONS = [
+          { name: "Save configuration", value: :save },
+          { name: "Edit application name", value: :app_name },
+          { name: "Edit compute provider", value: :compute },
+          { name: "Edit domain provider", value: :domain },
+          { name: "Edit apps", value: :apps },
+          { name: "Edit database", value: :database },
+          { name: "Edit environment variables", value: :env },
+          { name: "Start over", value: :restart },
+          { name: "Cancel (discard)", value: :cancel }
+        ].freeze
 
         def initialize(prompt: nil)
           @prompt = prompt || TTY::Prompt.new
-          @data = { "application" => {} }
           @test_mode = prompt&.input.is_a?(StringIO)
+          @data = default_data
+          @domain_step = nil
         end
 
         def run
           show_welcome
-
-          step_app_name
-          step_compute_provider
-          step_domain_provider
-          step_apps
-          step_database
-          step_env
-
+          collect_all
           summary_loop
-
           show_next_steps
         rescue TTY::Reader::InputInterrupt
           puts "\n\nSetup cancelled."
@@ -40,721 +49,273 @@ module Nvoi
 
         private
 
-          # ─────────────────────────────────────────────────────────────────
-          # Welcome
-          # ─────────────────────────────────────────────────────────────────
+        def default_data
+          {
+            name: nil,
+            compute: nil,
+            domain: nil,
+            apps: {},
+            database: nil,
+            volumes: nil,
+            env: {},
+            secrets: {}
+          }
+        end
 
-          def show_welcome
-            box = TTY::Box.frame(
-              "NVOI Quick Setup",
-              padding: [0, 2],
-              align: :center,
-              border: :light
+        def collect_all
+          @data[:name] = Steps::AppName.new(@prompt, test_mode: @test_mode).call
+          @data[:compute] = Steps::Compute.new(@prompt, test_mode: @test_mode).call
+
+          @domain_step = Steps::Domain.new(@prompt, test_mode: @test_mode)
+          @data[:domain] = @domain_step.call
+
+          collect_apps
+          collect_database
+          collect_env
+        end
+
+        def collect_apps
+          section "Applications"
+
+          loop do
+            name, config = Steps::App.new(@prompt, test_mode: @test_mode).call(
+              zones: @domain_step&.zones || [],
+              cloudflare_client: @domain_step&.client
             )
-            puts box
-            puts
+            @data[:apps][name] = config
+
+            break unless @prompt.yes?("Add another app?")
           end
+        end
 
-          # ─────────────────────────────────────────────────────────────────
-          # Step 1: App Name
-          # ─────────────────────────────────────────────────────────────────
+        def collect_database
+          db_config, volume_config = Steps::Database.new(@prompt, test_mode: @test_mode)
+            .call(app_name: @data[:name])
 
-          def step_app_name
-            name = @prompt.ask("Application name:") do |q|
-              q.required true
-              q.validate(/\A[a-z0-9_-]+\z/i, "Only letters, numbers, dashes, underscores")
-            end
-            @data["application"]["name"] = name
-          end
+          @data[:database] = db_config
+          @data[:volumes] = volume_config
+        end
 
-          # ─────────────────────────────────────────────────────────────────
-          # Step 2: Compute Provider
-          # ─────────────────────────────────────────────────────────────────
+        def collect_env
+          @data[:env], @data[:secrets] = Steps::Env.new(@prompt, test_mode: @test_mode)
+            .call(existing_env: @data[:env], existing_secrets: @data[:secrets])
+        end
 
-          def step_compute_provider
-            puts
-            puts section("Compute Provider")
+        # ─── Summary Loop ───
 
-            provider = @prompt.select("Select provider:") do |menu|
-              menu.choice "Hetzner (recommended)", :hetzner
-              menu.choice "AWS", :aws
-              menu.choice "Scaleway", :scaleway
-            end
+        def summary_loop
+          loop do
+            show_summary
 
-            case provider
-            when :hetzner then setup_hetzner
-            when :aws then setup_aws
-            when :scaleway then setup_scaleway
-            end
-          end
-
-          def setup_hetzner
-            token = prompt_with_retry("Hetzner API Token:", mask: true) do |t|
-              client = External::Cloud::Hetzner.new(t)
-              client.validate_credentials
-              @hetzner_client = client
-            end
-
-            types, locations = with_spinner("Fetching options...") do
-              [@hetzner_client.list_server_types, @hetzner_client.list_locations]
-            end
-
-            type_choices = types.sort_by { |t| t[:name] }.map do |t|
-              price = t[:price] ? " - #{t[:price]}/mo" : ""
-              { name: "#{t[:name]} (#{t[:cores]} vCPU, #{t[:memory] / 1024}GB#{price})", value: t[:name] }
-            end
-
-            location_choices = locations.map do |l|
-              { name: "#{l[:name]} (#{l[:city]}, #{l[:country]})", value: l[:name] }
-            end
-
-            server_type = @prompt.select("Server type:", type_choices, per_page: 10)
-            location = @prompt.select("Location:", location_choices)
-
-            @data["application"]["compute_provider"] = {
-              "hetzner" => {
-                "api_token" => token,
-                "server_type" => server_type,
-                "server_location" => location
-              }
-            }
-          end
-
-          def setup_aws
-            access_key = prompt_with_retry("AWS Access Key ID:") do |k|
-              raise Errors::ValidationError, "Invalid format" unless k.match?(/\AAKIA/)
-            end
-
-            secret_key = @prompt.mask("AWS Secret Access Key:")
-
-            # Get regions first with temp client
-            temp_client = External::Cloud::Aws.new(access_key, secret_key, "us-east-1")
-            regions = with_spinner("Validating credentials...") do
-              temp_client.validate_credentials
-              temp_client.list_regions
-            end
-
-            region_choices = regions.map { |r| r[:name] }.sort
-            region = @prompt.select("Region:", region_choices, per_page: 10, filter: true)
-
-            # Now get instance types for selected region
-            client = External::Cloud::Aws.new(access_key, secret_key, region)
-            types = client.list_instance_types
-
-            type_choices = types.map do |t|
-              mem = t[:memory] ? " #{t[:memory] / 1024}GB" : ""
-              { name: "#{t[:name]} (#{t[:vcpus]} vCPU#{mem})", value: t[:name] }
-            end
-
-            instance_type = @prompt.select("Instance type:", type_choices)
-
-            @data["application"]["compute_provider"] = {
-              "aws" => {
-                "access_key_id" => access_key,
-                "secret_access_key" => secret_key,
-                "region" => region,
-                "instance_type" => instance_type
-              }
-            }
-          end
-
-          def setup_scaleway
-            secret_key = prompt_with_retry("Scaleway Secret Key:", mask: true)
-            project_id = @prompt.ask("Scaleway Project ID:") { |q| q.required true }
-
-            # Get zones (static list)
-            temp_client = External::Cloud::Scaleway.new(secret_key, project_id)
-            zones = temp_client.list_zones
-
-            zone_choices = zones.map { |z| { name: "#{z[:name]} (#{z[:city]})", value: z[:name] } }
-            zone = @prompt.select("Zone:", zone_choices)
-
-            # Validate and get server types
-            client = External::Cloud::Scaleway.new(secret_key, project_id, zone:)
-            types = with_spinner("Validating credentials...") do
-              client.validate_credentials
-              client.list_server_types
-            end
-
-            type_choices = types.map do |t|
-              { name: "#{t[:name]} (#{t[:cores]} cores)", value: t[:name] }
-            end
-
-            server_type = @prompt.select("Server type:", type_choices, per_page: 10, filter: true)
-
-            @data["application"]["compute_provider"] = {
-              "scaleway" => {
-                "secret_key" => secret_key,
-                "project_id" => project_id,
-                "zone" => zone,
-                "server_type" => server_type
-              }
-            }
-          end
-
-          # ─────────────────────────────────────────────────────────────────
-          # Step 3: Domain Provider
-          # ─────────────────────────────────────────────────────────────────
-
-          def step_domain_provider
-            puts
-            puts section("Domain Provider")
-
-            setup = @prompt.yes?("Configure Cloudflare for domains/tunnels?")
-            return unless setup
-
-            token = prompt_with_retry("Cloudflare API Token:", mask: true)
-            account_id = @prompt.ask("Cloudflare Account ID:") { |q| q.required true }
-
-            @cloudflare_client = External::Dns::Cloudflare.new(token, account_id)
-
-            @cloudflare_zones = with_spinner("Fetching domains...") do
-              @cloudflare_client.validate_credentials
-              @cloudflare_client.list_zones.select { |z| z[:status] == "active" }
-            end
-
-            if @cloudflare_zones.empty?
-              warn "No active domains found in Cloudflare account"
-            end
-
-            @data["application"]["domain_provider"] = {
-              "cloudflare" => {
-                "api_token" => token,
-                "account_id" => account_id
-              }
-            }
-          end
-
-          # ─────────────────────────────────────────────────────────────────
-          # Step 4: Apps (loop)
-          # ─────────────────────────────────────────────────────────────────
-
-          def step_apps
-            puts
-            puts section("Applications")
-
-            # Ensure we have a server
-            @data["application"]["servers"] ||= {}
-            @data["application"]["servers"]["main"] = { "master" => true, "count" => 1 }
-
-            @data["application"]["app"] ||= {}
-
-            loop do
-              name = @prompt.ask("App name:") { |q| q.required true }
-              command = @prompt.ask("Run command (optional, leave blank for Docker entrypoint):")
-              port = @prompt.ask("Port (optional, leave blank for background workers):")
-              port = port.to_i if port && !port.to_s.empty?
-
-              app_config = { "servers" => ["main"] }
-              app_config["command"] = command unless command.to_s.empty?
-              app_config["port"] = port if port && port > 0
-
-              # Domain selection only if port is set (web-facing) and Cloudflare configured
-              if port && port > 0 && @cloudflare_zones&.any?
-                domain, subdomain = prompt_domain_selection
-                if domain
-                  app_config["domain"] = domain
-                  app_config["subdomain"] = subdomain unless subdomain.to_s.empty?
-                end
-              end
-
-              pre_run = @prompt.ask("Pre-run command (e.g. migrations):")
-              app_config["pre_run_command"] = pre_run unless pre_run.to_s.empty?
-
-              @data["application"]["app"][name] = app_config
-
-              break unless @prompt.yes?("Add another app?")
+            case @prompt.select("What would you like to do?", SUMMARY_ACTIONS)
+            when :save
+              save_config
+              return
+            when :cancel
+              return if @prompt.yes?("Discard all changes?")
+            when :app_name
+              @data[:name] = Steps::AppName.new(@prompt, test_mode: @test_mode)
+                .call(existing: @data[:name])
+            when :compute
+              @data[:compute] = Steps::Compute.new(@prompt, test_mode: @test_mode).call
+            when :domain
+              @domain_step = Steps::Domain.new(@prompt, test_mode: @test_mode)
+              @data[:domain] = @domain_step.call
+            when :apps
+              edit_apps
+            when :database
+              collect_database
+            when :env
+              collect_env
+            when :restart
+              restart_wizard
             end
           end
-
-          def prompt_domain_selection
-            domain_choices = @cloudflare_zones.map { |z| { name: z[:name], value: z } }
-            domain_choices << { name: "Skip (no domain)", value: nil }
-
-            selected = @prompt.select("Domain:", domain_choices)
-            return [nil, nil] unless selected
-
-            zone_id = selected[:id]
-            domain = selected[:name]
-
-            # Prompt for subdomain with validation
-            subdomain = prompt_subdomain(zone_id, domain)
-
-            [domain, subdomain]
-          end
-
-          def prompt_subdomain(zone_id, domain)
-            loop do
-              subdomain = @prompt.ask("Subdomain (leave blank for #{domain} + *.#{domain}):")
-              subdomain = subdomain.to_s.strip.downcase
-
-              # Validate subdomain format if provided
-              if !subdomain.empty? && !subdomain.match?(/\A[a-z0-9]([a-z0-9-]*[a-z0-9])?\z/)
-                error("Invalid subdomain format. Use lowercase letters, numbers, and hyphens.")
-                next
-              end
-
-              # Check availability for all hostnames that will be created
-              hostnames = Utils::Namer.build_hostnames(subdomain.empty? ? nil : subdomain, domain)
-              all_available = true
-
-              hostnames.each do |hostname|
-                available = with_spinner("Checking #{hostname}...") do
-                  check_subdomain = hostname == domain ? "" : hostname.sub(".#{domain}", "")
-                  @cloudflare_client.subdomain_available?(zone_id, check_subdomain, domain)
-                end
-
-                unless available
-                  error("#{hostname} already has a DNS record. Choose a different subdomain.")
-                  all_available = false
-                  break
-                end
-              end
-
-              return subdomain if all_available
-            end
-          end
-
-          # ─────────────────────────────────────────────────────────────────
-          # Step 5: Database
-          # ─────────────────────────────────────────────────────────────────
-
-          def step_database
-            puts
-            puts section("Database")
-
-            adapter = @prompt.select("Database:") do |menu|
-              menu.choice "PostgreSQL", "postgres"
-              menu.choice "MySQL", "mysql"
-              menu.choice "SQLite", "sqlite3"
-              menu.choice "None (skip)", nil
-            end
-
-            return unless adapter
-
-            db_config = {
-              "servers" => ["main"],
-              "adapter" => adapter
-            }
-
-            case adapter
-            when "postgres"
-              db_name = @prompt.ask("Database name:", default: "#{@data["application"]["name"]}_production")
-              user = @prompt.ask("Database user:", default: @data["application"]["name"])
-              password = @prompt.mask("Database password:") { |q| q.required true }
-
-              db_config["secrets"] = {
-                "POSTGRES_DB" => db_name,
-                "POSTGRES_USER" => user,
-                "POSTGRES_PASSWORD" => password
-              }
-
-              # Auto-add volume
-              @data["application"]["servers"]["main"]["volumes"] = {
-                "postgres_data" => { "size" => 10 }
-              }
-
-            when "mysql"
-              db_name = @prompt.ask("Database name:", default: "#{@data["application"]["name"]}_production")
-              user = @prompt.ask("Database user:", default: @data["application"]["name"])
-              password = @prompt.mask("Database password:") { |q| q.required true }
-
-              db_config["secrets"] = {
-                "MYSQL_DATABASE" => db_name,
-                "MYSQL_USER" => user,
-                "MYSQL_PASSWORD" => password
-              }
-
-              # Auto-add volume
-              @data["application"]["servers"]["main"]["volumes"] = {
-                "mysql_data" => { "size" => 10 }
-              }
-
-            when "sqlite3"
-              path = @prompt.ask("Database path:", default: "/app/data/production.sqlite3")
-              db_config["path"] = path
-              db_config["mount"] = { "data" => "/app/data" }
-
-              # Auto-add volume
-              @data["application"]["servers"]["main"]["volumes"] = {
-                "sqlite_data" => { "size" => 10 }
-              }
-            end
-
-            @data["application"]["database"] = db_config
-          end
-
-          # ─────────────────────────────────────────────────────────────────
-          # Step 6: Environment Variables
-          # ─────────────────────────────────────────────────────────────────
-
-          def step_env
-            puts
-            puts section("Environment Variables")
-
-            @data["application"]["env"] ||= {}
-            @data["application"]["secrets"] ||= {}
-
-            # Add default
-            @data["application"]["env"]["RAILS_ENV"] = "production"
-
-            loop do
-              show_env_table
-
-              choice = @prompt.select("Action:") do |menu|
-                menu.choice "Add variable", :add
-                menu.choice "Add secret (masked)", :secret
-                menu.choice "Done", :done
-              end
-
-              case choice
-              when :add
-                key = @prompt.ask("Variable name:") { |q| q.required true }
-                value = @prompt.ask("Value:") { |q| q.required true }
-                @data["application"]["env"][key] = value
-
-              when :secret
-                key = @prompt.ask("Secret name:") { |q| q.required true }
-                value = @prompt.mask("Value:") { |q| q.required true }
-                @data["application"]["secrets"][key] = value
-
-              when :done
-                break
-              end
-            end
-          end
-
-          def show_env_table
-            return if @data["application"]["env"].empty? && @data["application"]["secrets"].empty?
-
-            rows = []
-            @data["application"]["env"].each { |k, v| rows << [k, v] }
-            @data["application"]["secrets"].each { |k, _| rows << [k, "********"] }
-
-            table = TTY::Table.new(header: %w[Key Value], rows:)
-            puts table.render(:unicode, padding: [0, 1])
-            puts
-          end
-
-          # ─────────────────────────────────────────────────────────────────
-          # Summary & Save
-          # ─────────────────────────────────────────────────────────────────
-
-          def show_summary
-            puts
-            puts section("Summary")
-
-            provider_name = @data["application"]["compute_provider"]&.keys&.first || "none"
-            provider_info = case provider_name
-            when "hetzner"
-              cfg = @data["application"]["compute_provider"]["hetzner"]
-              "#{cfg["server_type"]} @ #{cfg["server_location"]}"
-            when "aws"
-              cfg = @data["application"]["compute_provider"]["aws"]
-              "#{cfg["instance_type"]} @ #{cfg["region"]}"
-            when "scaleway"
-              cfg = @data["application"]["compute_provider"]["scaleway"]
-              "#{cfg["server_type"]} @ #{cfg["zone"]}"
-            else
-              "not configured"
-            end
-
-            domain_ok = @data["application"]["domain_provider"]&.any? ? "configured" : "not configured"
-
-            # Build app list with domains
-            app_list = @data["application"]["app"]&.map do |name, cfg|
-              if cfg["domain"]
-                fqdn = cfg["subdomain"] ? "#{cfg["subdomain"]}.#{cfg["domain"]}" : cfg["domain"]
-                "#{name} (#{fqdn})"
-              else
-                name
-              end
-            end&.join(", ") || "none"
-            db = @data["application"]["database"]&.dig("adapter") || "none"
-            env_count = (@data["application"]["env"]&.size || 0) + (@data["application"]["secrets"]&.size || 0)
-
-            rows = [
-              ["Application", @data["application"]["name"]],
-              ["Provider", "#{provider_name} (#{provider_info})"],
-              ["Domain", "Cloudflare #{domain_ok}"],
-              ["Apps", app_list],
-              ["Database", db],
-              ["Env/Secrets", "#{env_count} variables"]
-            ]
-
-            table = TTY::Table.new(rows:)
-            puts table.render(:unicode, padding: [0, 1])
-            puts
-          end
-
-          def summary_loop
-            loop do
-              show_summary
-
-              action = @prompt.select("What would you like to do?") do |menu|
-                menu.choice "Save configuration", :save
-                menu.choice "Edit application name", :app_name
-                menu.choice "Edit compute provider", :compute
-                menu.choice "Edit domain provider", :domain
-                menu.choice "Edit apps", :apps
-                menu.choice "Edit database", :database
-                menu.choice "Edit environment variables", :env
-                menu.choice "Start over", :restart
-                menu.choice "Cancel (discard)", :cancel
-              end
-
-              case action
-              when :save
-                save_config
-                return
-              when :cancel
-                return if @prompt.yes?("Discard all changes?")
-              when :app_name
-                step_app_name
-              when :compute
-                step_compute_provider
-              when :domain
-                step_domain_provider
-              when :apps
-                edit_apps
-              when :database
-                step_database
-              when :env
-                step_env
-              when :restart
-                if @prompt.yes?("This will clear all data. Continue?")
-                  @data = { "application" => {} }
-                  @cloudflare_client = nil
-                  @cloudflare_zones = nil
-                  step_app_name
-                  step_compute_provider
-                  step_domain_provider
-                  step_apps
-                  step_database
-                  step_env
-                end
-              end
-            end
-          end
-
-          def edit_apps
-            loop do
-              app_names = @data["application"]["app"]&.keys || []
-
-              choices = app_names.map { |name| { name:, value: name } }
-              choices << { name: "Add new app", value: :add }
-              choices << { name: "Done", value: :done }
-
-              selected = @prompt.select("Apps:", choices)
-
-              case selected
-              when :add
-                add_single_app
-              when :done
-                return
-              else
-                # Selected an app name - show actions
-                app_action = @prompt.select("#{selected}:") do |menu|
-                  menu.choice "Edit", :edit
-                  menu.choice "Delete", :delete
-                  menu.choice "Back", :back
-                end
-
-                case app_action
-                when :edit
-                  edit_single_app(selected)
-                when :delete
-                  @data["application"]["app"].delete(selected) if @prompt.yes?("Delete #{selected}?")
-                end
-              end
-            end
-          end
-
-          def edit_single_app(name)
-            app = @data["application"]["app"][name]
-
-            new_name = @prompt.ask("App name:", default: name) { |q| q.required true }
-            existing_cmd = app["command"]
-            command = if existing_cmd
-              @prompt.ask("Run command (optional):", default: existing_cmd)
-            else
-              @prompt.ask("Run command (optional, leave blank for Docker entrypoint):")
-            end
-            existing_port = app["port"]
-            port = if existing_port
-              @prompt.ask("Port (optional):", default: existing_port.to_s)
-            else
-              @prompt.ask("Port (optional, leave blank for background workers):")
-            end
-            port = port.to_i if port && !port.to_s.empty?
-
-            new_config = { "servers" => app["servers"] || ["main"] }
-            new_config["command"] = command unless command.to_s.empty?
-            new_config["port"] = port if port && port > 0
-
-            # Domain selection only if port is set (web-facing)
-            if port && port > 0 && @cloudflare_zones&.any?
-              domain, subdomain = prompt_domain_selection
-              if domain
-                new_config["domain"] = domain
-                new_config["subdomain"] = subdomain unless subdomain.to_s.empty?
-              end
-            end
-
-            existing_pre_run = app["pre_run_command"]
-            pre_run = if existing_pre_run
-              @prompt.ask("Pre-run command (optional):", default: existing_pre_run)
-            else
-              @prompt.ask("Pre-run command (optional):")
-            end
-            new_config["pre_run_command"] = pre_run unless pre_run.to_s.empty?
-
-            # Handle rename
-            @data["application"]["app"].delete(name) if new_name != name
-            @data["application"]["app"][new_name] = new_config
-          end
-
-          def add_single_app
-            name = @prompt.ask("App name:") { |q| q.required true }
-            command = @prompt.ask("Run command (optional, leave blank for Docker entrypoint):")
-            port = @prompt.ask("Port (optional, leave blank for background workers):")
-            port = port.to_i if port && !port.to_s.empty?
-
-            app_config = { "servers" => ["main"] }
-            app_config["command"] = command unless command.to_s.empty?
-            app_config["port"] = port if port && port > 0
-
-            # Domain selection only if port is set (web-facing)
-            if port && port > 0 && @cloudflare_zones&.any?
-              domain, subdomain = prompt_domain_selection
-              if domain
-                app_config["domain"] = domain
-                app_config["subdomain"] = subdomain unless subdomain.to_s.empty?
-              end
-            end
-
-            pre_run = @prompt.ask("Pre-run command (e.g. migrations):")
-            app_config["pre_run_command"] = pre_run unless pre_run.to_s.empty?
-
-            @data["application"]["app"][name] = app_config
-          end
-
-          def save_config
-            with_spinner("Generating SSH keys...") do
-              # Use ConfigApi.init to generate keys and encrypt
-              result = ConfigApi.init(
-                name: @data["application"]["name"],
-                environment: "production"
+        end
+
+        def edit_apps
+          loop do
+            choices = @data[:apps].keys.map { |name| { name:, value: name } }
+            choices << { name: "Add new app", value: :add }
+            choices << { name: "Done", value: :done }
+
+            selected = @prompt.select("Apps:", choices)
+
+            case selected
+            when :add
+              name, config = Steps::App.new(@prompt, test_mode: @test_mode).call(
+                zones: @domain_step&.zones || [],
+                cloudflare_client: @domain_step&.client
               )
-
-              if result.failure?
-                raise Errors::ConfigError, "Failed to initialize: #{result.error_message}"
-              end
-
-              # Now we need to apply all our config on top
-              # Decrypt the init result, merge our data, re-encrypt
-              yaml = Utils::Crypto.decrypt(result.config, result.master_key)
-              init_data = YAML.safe_load(yaml, permitted_classes: [Symbol])
-
-              # Merge our data into init_data (keep ssh_keys from init)
-              init_data["application"].merge!(@data["application"])
-              init_data["application"]["ssh_keys"] = YAML.safe_load(yaml)["application"]["ssh_keys"]
-
-              # Write files
-              config_path = File.join(".", Utils::DEFAULT_ENCRYPTED_FILE)
-              key_path = File.join(".", Utils::DEFAULT_KEY_FILE)
-
-              final_yaml = YAML.dump(init_data)
-              encrypted = Utils::Crypto.encrypt(final_yaml, result.master_key)
-
-              File.binwrite(config_path, encrypted)
-              File.write(key_path, "#{result.master_key}\n", perm: 0o600)
-
-              update_gitignore
-            end
-
-            puts
-            success("Created #{Utils::DEFAULT_ENCRYPTED_FILE}")
-            success("Created #{Utils::DEFAULT_KEY_FILE}")
-          end
-
-          def show_next_steps
-            puts
-            puts "Next: #{pastel.cyan("nvoi deploy")}"
-          end
-
-          # ─────────────────────────────────────────────────────────────────
-          # Helpers
-          # ─────────────────────────────────────────────────────────────────
-
-          def prompt_with_retry(message, mask: false, &validation)
-            retries = 0
-            loop do
-              value = mask ? @prompt.mask(message) : @prompt.ask(message) { |q| q.required true }
-
-              begin
-                yield(value) if block_given?
-                return value
-              rescue Errors::ValidationError, Errors::AuthenticationError => e
-                retries += 1
-                if retries >= MAX_RETRIES
-                  error("Failed after #{MAX_RETRIES} attempts: #{e.message}")
-                  raise
-                end
-                warn("#{e.message}. Please try again. (#{retries}/#{MAX_RETRIES})")
-              end
+              @data[:apps][name] = config
+            when :done
+              return
+            else
+              edit_single_app(selected)
             end
           end
+        end
 
-          def section(title)
-            pastel.bold("─── #{title} ───")
+        def edit_single_app(name)
+          action = @prompt.select("#{name}:") do |menu|
+            menu.choice "Edit", :edit
+            menu.choice "Delete", :delete
+            menu.choice "Back", :back
           end
 
-          def with_spinner(message)
-            if @test_mode
-              result = yield
-              return result
+          case action
+          when :edit
+            new_name, config = Steps::App.new(@prompt, test_mode: @test_mode).call(
+              existing_name: name,
+              existing: @data[:apps][name],
+              zones: @domain_step&.zones || [],
+              cloudflare_client: @domain_step&.client
+            )
+            @data[:apps].delete(name) if new_name != name
+            @data[:apps][new_name] = config
+          when :delete
+            @data[:apps].delete(name) if @prompt.yes?("Delete #{name}?")
+          end
+        end
+
+        def restart_wizard
+          return unless @prompt.yes?("This will clear all data. Continue?")
+
+          @data = default_data
+          @domain_step = nil
+          collect_all
+        end
+
+        # ─── Summary Display ───
+
+        def show_welcome
+          box "NVOI Quick Setup"
+        end
+
+        def show_summary
+          section "Summary"
+
+          rows = [
+            ["Application", @data[:name]],
+            ["Provider", format_provider],
+            ["Domain", format_domain],
+            ["Apps", format_apps],
+            ["Database", @data[:database]&.dig("adapter") || "none"],
+            ["Env/Secrets", "#{@data[:env].size + @data[:secrets].size} variables"]
+          ]
+
+          table(rows:)
+        end
+
+        def format_provider
+          return "not configured" unless @data[:compute]
+
+          provider_name = @data[:compute].keys.first
+          cfg = @data[:compute][provider_name]
+
+          info = case provider_name
+          when "hetzner"  then "#{cfg["server_type"]} @ #{cfg["server_location"]}"
+          when "aws"      then "#{cfg["instance_type"]} @ #{cfg["region"]}"
+          when "scaleway" then "#{cfg["server_type"]} @ #{cfg["zone"]}"
+          else "configured"
+          end
+
+          "#{provider_name} (#{info})"
+        end
+
+        def format_domain
+          @data[:domain] ? "Cloudflare configured" : "Cloudflare not configured"
+        end
+
+        def format_apps
+          return "none" if @data[:apps].empty?
+
+          @data[:apps].map do |name, cfg|
+            if cfg["domain"]
+              fqdn = cfg["subdomain"] ? "#{cfg["subdomain"]}.#{cfg["domain"]}" : cfg["domain"]
+              "#{name} (#{fqdn})"
+            else
+              name
+            end
+          end.join(", ")
+        end
+
+        # ─── Save ───
+
+        def save_config
+          with_spinner("Generating SSH keys...") do
+            result = ConfigApi.init(name: @data[:name], environment: "production")
+
+            if result.failure?
+              raise Errors::ConfigError, "Failed to initialize: #{result.error_message}"
             end
 
-            spinner = TTY::Spinner.new("[:spinner] #{message}", format: :dots)
-            spinner.auto_spin
-            begin
-              result = yield
-              spinner.success("done")
-              result
-            rescue StandardError => e
-              spinner.error("failed")
-              raise e
-            end
+            yaml = Utils::Crypto.decrypt(result.config, result.master_key)
+            init_data = YAML.safe_load(yaml, permitted_classes: [Symbol])
+
+            final_data = build_final_config(init_data)
+            write_config_files(final_data, result.master_key)
           end
 
-          def success(msg)
-            puts "#{pastel.green("✓")} #{msg}"
+          puts
+          success "Created #{Utils::DEFAULT_ENCRYPTED_FILE}"
+          success "Created #{Utils::DEFAULT_KEY_FILE}"
+        end
+
+        def build_final_config(init_data)
+          app_data = {
+            "name" => @data[:name],
+            "ssh_keys" => init_data["application"]["ssh_keys"],
+            "servers" => { "main" => { "master" => true, "count" => 1 } },
+            "app" => @data[:apps],
+            "env" => @data[:env],
+            "secrets" => @data[:secrets]
+          }
+
+          app_data["compute_provider"] = @data[:compute] if @data[:compute]
+          app_data["domain_provider"] = @data[:domain] if @data[:domain]
+          app_data["database"] = @data[:database] if @data[:database]
+
+          if @data[:volumes]
+            app_data["servers"]["main"]["volumes"] = @data[:volumes]
           end
 
-          def error(msg)
-            warn "#{pastel.red("✗")} #{msg}"
+          { "application" => app_data }
+        end
+
+        def write_config_files(data, master_key)
+          config_path = File.join(".", Utils::DEFAULT_ENCRYPTED_FILE)
+          key_path = File.join(".", Utils::DEFAULT_KEY_FILE)
+
+          final_yaml = YAML.dump(data)
+          encrypted = Utils::Crypto.encrypt(final_yaml, master_key)
+
+          File.binwrite(config_path, encrypted)
+          File.write(key_path, "#{master_key}\n", perm: 0o600)
+
+          update_gitignore
+        end
+
+        def update_gitignore
+          gitignore_path = ".gitignore"
+          entries = ["deploy.key", ".env", ".env.*", "!.env.example"]
+
+          existing = File.exist?(gitignore_path) ? File.read(gitignore_path) : ""
+          additions = entries.reject { |e| existing.include?(e) }
+
+          return if additions.empty?
+
+          File.open(gitignore_path, "a") do |f|
+            f.puts "" unless existing.end_with?("\n") || existing.empty?
+            f.puts "# NVOI"
+            additions.each { |e| f.puts e }
           end
+        end
 
-          def pastel
-            @pastel ||= Pastel.new
-          end
-
-          def update_gitignore
-            gitignore_path = ".gitignore"
-            entries = ["deploy.key", ".env", ".env.*", "!.env.example"]
-
-            existing = File.exist?(gitignore_path) ? File.read(gitignore_path) : ""
-            additions = entries.reject { |e| existing.include?(e) }
-
-            return if additions.empty?
-
-            File.open(gitignore_path, "a") do |f|
-              f.puts "" unless existing.end_with?("\n") || existing.empty?
-              f.puts "# NVOI"
-              additions.each { |e| f.puts e }
-            end
-          end
+        def show_next_steps
+          puts
+          puts "Next: #{pastel.cyan("nvoi deploy")}"
+        end
       end
     end
   end
