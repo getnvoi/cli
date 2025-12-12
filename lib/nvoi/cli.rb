@@ -48,6 +48,14 @@ module Nvoi
       Cli::Unlock::Command.new(options).run
     end
 
+    desc "logs APP_NAME", "Stream logs from an app"
+    option :follow, aliases: "-f", type: :boolean, default: false, desc: "Follow log output"
+    option :tail, aliases: "-n", type: :numeric, default: 100, desc: "Number of lines to show"
+    def logs(app_name)
+      require_relative "cli/logs/command"
+      Cli::Logs::Command.new(options).run(app_name)
+    end
+
     desc "exec [COMMAND...]", "Execute command on remote server or open interactive shell"
     option :server, default: "main", desc: "Server to execute on (main, worker-1, worker-2, etc.)"
     option :all, type: :boolean, default: false, desc: "Execute on all servers"
