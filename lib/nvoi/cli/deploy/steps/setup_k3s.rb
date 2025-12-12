@@ -467,7 +467,16 @@ module Nvoi
                 ssh.execute(patch_deployment)
 
                 @log.info "Waiting for ingress controller to restart..."
-                ssh.execute("kubectl rollout status deployment/ingress-nginx-controller -n ingress-nginx --timeout=120s")
+                ready = Utils::Retry.poll(max_attempts: 60, interval: 2) do
+                  begin
+                    ready_replicas = ssh.execute("kubectl get deployment ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.readyReplicas}'").strip
+                    desired_replicas = ssh.execute("kubectl get deployment ingress-nginx-controller -n ingress-nginx -o jsonpath='{.spec.replicas}'").strip
+                    !ready_replicas.empty? && !desired_replicas.empty? && ready_replicas == desired_replicas
+                  rescue Errors::SshCommandError
+                    false
+                  end
+                end
+                raise Errors::K8sError, "Ingress controller failed to restart" unless ready
               else
                 @log.info "Custom error backend already configured"
               end
