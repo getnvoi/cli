@@ -99,10 +99,10 @@ class ConfigOverrideTest < Minitest::Test
 
   private
 
-  def build_config(app_name, services)
-    servers = { "master" => MockServerConfig.new(master: true) }
-    app = MockApplication.new(name: app_name, app: services, servers: servers)
-    deploy = MockDeploy.new(application: app)
-    MockConfig.new(deploy: deploy)
-  end
+    def build_config(app_name, services)
+      servers = { "master" => MockServerConfig.new(master: true) }
+      app = MockApplication.new(name: app_name, app: services, servers:)
+      deploy = MockDeploy.new(application: app)
+      MockConfig.new(deploy:)
+    end
 end

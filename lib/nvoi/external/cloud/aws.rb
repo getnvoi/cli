@@ -229,7 +229,7 @@ module Nvoi
         end
 
         def wait_for_server(server_id, max_attempts)
-          server = Utils::Retry.poll(max_attempts: max_attempts, interval: 5) do
+          server = Utils::Retry.poll(max_attempts:, interval: 5) do
             resp = @client.describe_instances(instance_ids: [server_id])
 
             if resp.reservations.any? && resp.reservations[0].instances.any?

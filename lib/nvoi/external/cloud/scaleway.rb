@@ -170,7 +170,7 @@ module Nvoi
         end
 
         def wait_for_server(server_id, max_attempts)
-          server = Utils::Retry.poll(max_attempts: max_attempts, interval: Utils::Constants::SERVER_READY_INTERVAL) do
+          server = Utils::Retry.poll(max_attempts:, interval: Utils::Constants::SERVER_READY_INTERVAL) do
             s = get_server_api(server_id)
             to_server(s) if s["state"] == "running" && s.dig("public_ip", "address")
           end
@@ -314,7 +314,7 @@ module Nvoi
         def list_server_types
           list_server_types_api.map do |name, info|
             {
-              name: name,
+              name:,
               cores: info.dig("ncpus"),
               ram: info.dig("ram"),
               hourly_price: info.dig("hourly_price")
@@ -332,7 +332,7 @@ module Nvoi
             when "pl-waw" then "Warsaw"
             else parts[0..1].join("-")
             end
-            { name: z, city: city }
+            { name: z, city: }
           end
         end
 
@@ -476,7 +476,7 @@ module Nvoi
           end
 
           def wait_for_server_state(server_id, target_state, max_attempts)
-            Utils::Retry.poll(max_attempts: max_attempts, interval: 2) do
+            Utils::Retry.poll(max_attempts:, interval: 2) do
               server = get_server_api(server_id)
               server if server["state"] == target_state
             end

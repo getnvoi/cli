@@ -38,7 +38,7 @@ module Nvoi
 
           InitResult.new(
             config: encrypted_config,
-            master_key: master_key,
+            master_key:,
             ssh_public_key: public_key
           )
         rescue ArgumentError => e

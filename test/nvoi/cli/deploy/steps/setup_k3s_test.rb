@@ -114,22 +114,22 @@ class SetupK3sStepTest < Minitest::Test
 
   private
 
-  MockNamer = Struct.new(:app_name) do
-    def server_name(group, index)
-      "#{app_name}-#{group}-#{index}"
+    MockNamer = Struct.new(:app_name) do
+      def server_name(group, index)
+        "#{app_name}-#{group}-#{index}"
+      end
     end
-  end
 
-  MockServerConfig = Struct.new(:type, :location, :count, :master, keyword_init: true)
-  MockApplication = Struct.new(:servers, keyword_init: true)
-  MockDeploy = Struct.new(:application, keyword_init: true)
-  MockConfig = Struct.new(:deploy, :namer, :ssh_key_path, :provider_name, keyword_init: true)
+    MockServerConfig = Struct.new(:type, :location, :count, :master, keyword_init: true)
+    MockApplication = Struct.new(:servers, keyword_init: true)
+    MockDeploy = Struct.new(:application, keyword_init: true)
+    MockConfig = Struct.new(:deploy, :namer, :ssh_key_path, :provider_name, keyword_init: true)
 
-  def mock_config_for_test
-    servers = { "master" => MockServerConfig.new(type: "DEV1-S", location: "fr-par-1", count: 1, master: true) }
-    app = MockApplication.new(servers: servers)
-    deploy = MockDeploy.new(application: app)
-    namer = MockNamer.new("testapp")
-    MockConfig.new(deploy: deploy, namer: namer, ssh_key_path: "/tmp/key", provider_name: "scaleway")
-  end
+    def mock_config_for_test
+      servers = { "master" => MockServerConfig.new(type: "DEV1-S", location: "fr-par-1", count: 1, master: true) }
+      app = MockApplication.new(servers:)
+      deploy = MockDeploy.new(application: app)
+      namer = MockNamer.new("testapp")
+      MockConfig.new(deploy:, namer:, ssh_key_path: "/tmp/key", provider_name: "scaleway")
+    end
 end

@@ -77,7 +77,7 @@ module Nvoi
 
       # Poll with error on timeout
       def self.poll!(max_attempts: 30, interval: 2, error_message: "operation timed out")
-        result = poll(max_attempts: max_attempts, interval: interval) { yield }
+        result = poll(max_attempts:, interval:) { yield }
         raise Errors::TimeoutError, error_message unless result
 
         result

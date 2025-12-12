@@ -21,18 +21,18 @@ module Nvoi
 
       protected
 
-      def mutate(_data, **_args)
-        raise NotImplementedError
-      end
+        def mutate(_data, **_args)
+          raise NotImplementedError
+        end
 
-      def validate(_data)
-        # Subclasses can override to add validation
-        # Default: no validation (lightweight actions like set_env don't need full config validation)
-      end
+        def validate(_data)
+          # Subclasses can override to add validation
+          # Default: no validation (lightweight actions like set_env don't need full config validation)
+        end
 
-      def app(data)
-        data["application"] ||= {}
-      end
+        def app(data)
+          data["application"] ||= {}
+        end
     end
   end
 end

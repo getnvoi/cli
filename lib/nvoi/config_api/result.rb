@@ -6,7 +6,7 @@ module Nvoi
       attr_reader :data, :error_type, :error_message
 
       def self.success(data)
-        new(data: data)
+        new(data:)
       end
 
       def self.failure(type, message)

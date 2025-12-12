@@ -28,7 +28,7 @@ module Nvoi
         alias_method :poll_original, :poll
 
         def poll(max_attempts: 30, interval: 2, &block)
-          poll_original(max_attempts: max_attempts, interval: 0, &block)
+          poll_original(max_attempts:, interval: 0, &block)
         end
       end
     end

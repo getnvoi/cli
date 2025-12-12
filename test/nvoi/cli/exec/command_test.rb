@@ -112,12 +112,12 @@ class ExecCommandTest < Minitest::Test
   def test_branch_override_applied_to_namer
     servers = { "master" => MockServerConfig.new(count: 1, master: true) }
     services = { "web" => MockAppService.new(subdomain: "www") }
-    app = MockApplication.new(name: "myapp", servers: servers, app: services)
+    app = MockApplication.new(name: "myapp", servers:, app: services)
     deploy = MockDeploy.new(application: app)
     namer = MockNamer.new("myapp")
     config = MockConfig.new(
-      deploy: deploy,
-      namer: namer,
+      deploy:,
+      namer:,
       ssh_key_path: "/tmp/key",
       server_name: "myapp-master-1"
     )
@@ -140,26 +140,26 @@ class ExecCommandTest < Minitest::Test
 
   private
 
-  def build_config(app_name, server_name)
-    servers = { "master" => MockServerConfig.new(count: 1) }
-    app = MockApplication.new(name: app_name, servers: servers)
-    deploy = MockDeploy.new(application: app)
-    namer = MockNamer.new(app_name)
-    MockConfig.new(deploy: deploy, namer: namer, ssh_key_path: "/tmp/key", server_name: server_name)
-  end
-
-  def build_config_with_servers(app_name, servers)
-    app = MockApplication.new(name: app_name, servers: servers)
-    deploy = MockDeploy.new(application: app)
-    namer = MockNamer.new(app_name)
-    MockConfig.new(deploy: deploy, namer: namer, ssh_key_path: "/tmp/key", server_name: "#{app_name}-master-1")
-  end
-
-  def build_command(options, config)
-    Nvoi.stub(:logger, @mock_log) do
-      command = Nvoi::Cli::Exec::Command.new(options)
-      command.instance_variable_set(:@config, config)
-      command
+    def build_config(app_name, server_name)
+      servers = { "master" => MockServerConfig.new(count: 1) }
+      app = MockApplication.new(name: app_name, servers:)
+      deploy = MockDeploy.new(application: app)
+      namer = MockNamer.new(app_name)
+      MockConfig.new(deploy:, namer:, ssh_key_path: "/tmp/key", server_name:)
     end
-  end
+
+    def build_config_with_servers(app_name, servers)
+      app = MockApplication.new(name: app_name, servers:)
+      deploy = MockDeploy.new(application: app)
+      namer = MockNamer.new(app_name)
+      MockConfig.new(deploy:, namer:, ssh_key_path: "/tmp/key", server_name: "#{app_name}-master-1")
+    end
+
+    def build_command(options, config)
+      Nvoi.stub(:logger, @mock_log) do
+        command = Nvoi::Cli::Exec::Command.new(options)
+        command.instance_variable_set(:@config, config)
+        command
+      end
+    end
 end

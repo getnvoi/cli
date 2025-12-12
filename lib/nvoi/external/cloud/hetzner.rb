@@ -136,7 +136,7 @@ module Nvoi
         end
 
         def wait_for_server(server_id, max_attempts)
-          server = Utils::Retry.poll(max_attempts: max_attempts, interval: Utils::Constants::SERVER_READY_INTERVAL) do
+          server = Utils::Retry.poll(max_attempts:, interval: Utils::Constants::SERVER_READY_INTERVAL) do
             s = get("/servers/#{server_id.to_i}")["server"]
             to_server(s) if s["status"] == "running"
           end
