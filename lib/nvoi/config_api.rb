@@ -3,67 +3,90 @@
 module Nvoi
   module ConfigApi
     class << self
-      # Compute Provider
-      def set_compute_provider(config, key, **args)
-        Actions::SetComputeProvider.new(config, key).call(**args)
+      # Init (creates new config - special case, handles crypto)
+      def init(**args)
+        Actions::Init.new.call(**args)
       end
 
-      def delete_compute_provider(config, key)
-        Actions::DeleteComputeProvider.new(config, key).call
+      # Domain Provider
+      def set_domain_provider(data, **args)
+        Actions::SetDomainProvider.new(data).call(**args)
+      end
+
+      def delete_domain_provider(data)
+        Actions::DeleteDomainProvider.new(data).call
+      end
+
+      # Compute Provider
+      def set_compute_provider(data, **args)
+        Actions::SetComputeProvider.new(data).call(**args)
+      end
+
+      def delete_compute_provider(data)
+        Actions::DeleteComputeProvider.new(data).call
       end
 
       # Server
-      def set_server(config, key, **args)
-        Actions::SetServer.new(config, key).call(**args)
+      def set_server(data, **args)
+        Actions::SetServer.new(data).call(**args)
       end
 
-      def delete_server(config, key, **args)
-        Actions::DeleteServer.new(config, key).call(**args)
+      def delete_server(data, **args)
+        Actions::DeleteServer.new(data).call(**args)
       end
 
       # Volume
-      def set_volume(config, key, **args)
-        Actions::SetVolume.new(config, key).call(**args)
+      def set_volume(data, **args)
+        Actions::SetVolume.new(data).call(**args)
       end
 
-      def delete_volume(config, key, **args)
-        Actions::DeleteVolume.new(config, key).call(**args)
+      def delete_volume(data, **args)
+        Actions::DeleteVolume.new(data).call(**args)
       end
 
       # App
-      def set_app(config, key, **args)
-        Actions::SetApp.new(config, key).call(**args)
+      def set_app(data, **args)
+        Actions::SetApp.new(data).call(**args)
       end
 
-      def delete_app(config, key, **args)
-        Actions::DeleteApp.new(config, key).call(**args)
+      def delete_app(data, **args)
+        Actions::DeleteApp.new(data).call(**args)
       end
 
       # Database
-      def set_database(config, key, **args)
-        Actions::SetDatabase.new(config, key).call(**args)
+      def set_database(data, **args)
+        Actions::SetDatabase.new(data).call(**args)
       end
 
-      def delete_database(config, key)
-        Actions::DeleteDatabase.new(config, key).call
+      def delete_database(data)
+        Actions::DeleteDatabase.new(data).call
       end
 
       # Secret
-      def set_secret(config, key, **args)
-        Actions::SetSecret.new(config, key).call(**args)
+      def set_secret(data, **args)
+        Actions::SetSecret.new(data).call(**args)
       end
 
-      def delete_secret(config, key, **args)
-        Actions::DeleteSecret.new(config, key).call(**args)
+      def delete_secret(data, **args)
+        Actions::DeleteSecret.new(data).call(**args)
       end
 
       # Env
-      def set_env(config, key, **args)
-        Actions::SetEnv.new(config, key).call(**args)
+      def set_env(data, **args)
+        Actions::SetEnv.new(data).call(**args)
       end
 
-      def delete_env(config, key, **args)
-        Actions::DeleteEnv.new(config, key).call(**args)
+      def delete_env(data, **args)
+        Actions::DeleteEnv.new(data).call(**args)
+      end
+
+      # Service
+      def set_service(data, **args)
+        Actions::SetService.new(data).call(**args)
+      end
+
+      def delete_service(data, **args)
+        Actions::DeleteService.new(data).call(**args)
       end
     end
   end

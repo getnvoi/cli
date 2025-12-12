@@ -75,6 +75,243 @@ module Nvoi
       end
     }
 
+    desc "config SUBCOMMAND", "Manage deployment configuration"
+    subcommand "config", Class.new(Thor) {
+      def self.exit_on_failure?
+        true
+      end
+
+      class_option :credentials, desc: "Path to encrypted config file"
+      class_option :master_key, desc: "Path to master key file"
+      class_option :dir, aliases: "-d", default: ".", desc: "Working directory"
+
+      desc "init", "Initialize new config"
+      option :name, required: true, desc: "Application name"
+      option :environment, default: "production", desc: "Environment"
+      def init
+        require_relative "cli/config/command"
+        Nvoi::Cli::Config::Command.new(options).init(options[:name], options[:environment])
+      end
+
+      desc "provider SUBCOMMAND", "Manage compute provider"
+      subcommand "provider", Class.new(Thor) {
+        def self.exit_on_failure? = true
+        class_option :credentials, desc: "Path to encrypted config file"
+        class_option :master_key, desc: "Path to master key file"
+        class_option :dir, aliases: "-d", default: ".", desc: "Working directory"
+
+        desc "set PROVIDER", "Set compute provider (hetzner, aws, scaleway)"
+        option :api_token, desc: "API token (hetzner)"
+        option :server_type, desc: "Server type (cx22, etc)"
+        option :server_location, desc: "Location (fsn1, etc)"
+        option :access_key_id, desc: "AWS access key ID"
+        option :secret_access_key, desc: "AWS secret access key"
+        option :region, desc: "AWS region"
+        option :instance_type, desc: "AWS instance type"
+        option :secret_key, desc: "Scaleway secret key"
+        option :project_id, desc: "Scaleway project ID"
+        option :zone, desc: "Scaleway zone"
+        def set(provider)
+          require_relative "cli/config/command"
+          Nvoi::Cli::Config::Command.new(options).provider_set(provider, **options.slice(
+            :api_token, :server_type, :server_location,
+            :access_key_id, :secret_access_key, :region, :instance_type,
+            :secret_key, :project_id, :zone
+          ).transform_keys(&:to_sym).compact)
+        end
+
+        desc "rm", "Remove compute provider"
+        def rm
+          require_relative "cli/config/command"
+          Nvoi::Cli::Config::Command.new(options).provider_rm
+        end
+      }
+
+      desc "domain SUBCOMMAND", "Manage domain provider"
+      subcommand "domain", Class.new(Thor) {
+        def self.exit_on_failure? = true
+        class_option :credentials, desc: "Path to encrypted config file"
+        class_option :master_key, desc: "Path to master key file"
+        class_option :dir, aliases: "-d", default: ".", desc: "Working directory"
+
+        desc "set PROVIDER", "Set domain provider (cloudflare)"
+        option :api_token, required: true, desc: "API token"
+        option :account_id, required: true, desc: "Account ID"
+        def set(provider)
+          require_relative "cli/config/command"
+          Nvoi::Cli::Config::Command.new(options).domain_set(provider, api_token: options[:api_token], account_id: options[:account_id])
+        end
+
+        desc "rm", "Remove domain provider"
+        def rm
+          require_relative "cli/config/command"
+          Nvoi::Cli::Config::Command.new(options).domain_rm
+        end
+      }
+
+      desc "server SUBCOMMAND", "Manage servers"
+      subcommand "server", Class.new(Thor) {
+        def self.exit_on_failure? = true
+        class_option :credentials, desc: "Path to encrypted config file"
+        class_option :master_key, desc: "Path to master key file"
+        class_option :dir, aliases: "-d", default: ".", desc: "Working directory"
+
+        desc "set NAME", "Add or update server"
+        option :master, type: :boolean, default: false, desc: "Set as master server"
+        option :type, desc: "Server type override"
+        option :location, desc: "Location override"
+        option :count, type: :numeric, default: 1, desc: "Number of servers"
+        def set(name)
+          require_relative "cli/config/command"
+          Nvoi::Cli::Config::Command.new(options).server_set(name, master: options[:master], type: options[:type], location: options[:location], count: options[:count])
+        end
+
+        desc "rm NAME", "Remove server"
+        def rm(name)
+          require_relative "cli/config/command"
+          Nvoi::Cli::Config::Command.new(options).server_rm(name)
+        end
+      }
+
+      desc "volume SUBCOMMAND", "Manage volumes"
+      subcommand "volume", Class.new(Thor) {
+        def self.exit_on_failure? = true
+        class_option :credentials, desc: "Path to encrypted config file"
+        class_option :master_key, desc: "Path to master key file"
+        class_option :dir, aliases: "-d", default: ".", desc: "Working directory"
+
+        desc "set SERVER NAME", "Add or update volume"
+        option :size, type: :numeric, default: 10, desc: "Volume size in GB"
+        def set(server, name)
+          require_relative "cli/config/command"
+          Nvoi::Cli::Config::Command.new(options).volume_set(server, name, size: options[:size])
+        end
+
+        desc "rm SERVER NAME", "Remove volume"
+        def rm(server, name)
+          require_relative "cli/config/command"
+          Nvoi::Cli::Config::Command.new(options).volume_rm(server, name)
+        end
+      }
+
+      desc "app SUBCOMMAND", "Manage applications"
+      subcommand "app", Class.new(Thor) {
+        def self.exit_on_failure? = true
+        class_option :credentials, desc: "Path to encrypted config file"
+        class_option :master_key, desc: "Path to master key file"
+        class_option :dir, aliases: "-d", default: ".", desc: "Working directory"
+
+        desc "set NAME", "Add or update app"
+        option :servers, type: :array, required: true, desc: "Server names to run on"
+        option :domain, desc: "Domain"
+        option :subdomain, desc: "Subdomain"
+        option :port, type: :numeric, desc: "Port"
+        option :command, desc: "Run command"
+        option :pre_run_command, desc: "Pre-run command (migrations, etc)"
+        def set(name)
+          require_relative "cli/config/command"
+          Nvoi::Cli::Config::Command.new(options).app_set(name, **options.slice(:servers, :domain, :subdomain, :port, :command, :pre_run_command).transform_keys(&:to_sym).compact)
+        end
+
+        desc "rm NAME", "Remove app"
+        def rm(name)
+          require_relative "cli/config/command"
+          Nvoi::Cli::Config::Command.new(options).app_rm(name)
+        end
+      }
+
+      desc "database SUBCOMMAND", "Manage database"
+      subcommand "database", Class.new(Thor) {
+        def self.exit_on_failure? = true
+        class_option :credentials, desc: "Path to encrypted config file"
+        class_option :master_key, desc: "Path to master key file"
+        class_option :dir, aliases: "-d", default: ".", desc: "Working directory"
+
+        desc "set", "Set database configuration"
+        option :servers, type: :array, required: true, desc: "Server names"
+        option :adapter, required: true, desc: "Database adapter (postgres, mysql, sqlite3)"
+        option :user, desc: "Database user"
+        option :password, desc: "Database password"
+        option :database, desc: "Database name"
+        option :url, desc: "Database URL (alternative to user/pass/db)"
+        option :image, desc: "Custom Docker image"
+        def set
+          require_relative "cli/config/command"
+          Nvoi::Cli::Config::Command.new(options).database_set(**options.slice(:servers, :adapter, :user, :password, :database, :url, :image).transform_keys(&:to_sym).compact)
+        end
+
+        desc "rm", "Remove database"
+        def rm
+          require_relative "cli/config/command"
+          Nvoi::Cli::Config::Command.new(options).database_rm
+        end
+      }
+
+      desc "service SUBCOMMAND", "Manage services (redis, etc)"
+      subcommand "service", Class.new(Thor) {
+        def self.exit_on_failure? = true
+        class_option :credentials, desc: "Path to encrypted config file"
+        class_option :master_key, desc: "Path to master key file"
+        class_option :dir, aliases: "-d", default: ".", desc: "Working directory"
+
+        desc "set NAME", "Add or update service"
+        option :servers, type: :array, required: true, desc: "Server names"
+        option :image, required: true, desc: "Docker image"
+        option :port, type: :numeric, desc: "Port"
+        option :command, desc: "Command"
+        def set(name)
+          require_relative "cli/config/command"
+          Nvoi::Cli::Config::Command.new(options).service_set(name, **options.slice(:servers, :image, :port, :command).transform_keys(&:to_sym).compact)
+        end
+
+        desc "rm NAME", "Remove service"
+        def rm(name)
+          require_relative "cli/config/command"
+          Nvoi::Cli::Config::Command.new(options).service_rm(name)
+        end
+      }
+
+      desc "secret SUBCOMMAND", "Manage secrets"
+      subcommand "secret", Class.new(Thor) {
+        def self.exit_on_failure? = true
+        class_option :credentials, desc: "Path to encrypted config file"
+        class_option :master_key, desc: "Path to master key file"
+        class_option :dir, aliases: "-d", default: ".", desc: "Working directory"
+
+        desc "set KEY VALUE", "Set secret"
+        def set(key, value)
+          require_relative "cli/config/command"
+          Nvoi::Cli::Config::Command.new(options).secret_set(key, value)
+        end
+
+        desc "rm KEY", "Remove secret"
+        def rm(key)
+          require_relative "cli/config/command"
+          Nvoi::Cli::Config::Command.new(options).secret_rm(key)
+        end
+      }
+
+      desc "env SUBCOMMAND", "Manage environment variables"
+      subcommand "env", Class.new(Thor) {
+        def self.exit_on_failure? = true
+        class_option :credentials, desc: "Path to encrypted config file"
+        class_option :master_key, desc: "Path to master key file"
+        class_option :dir, aliases: "-d", default: ".", desc: "Working directory"
+
+        desc "set KEY VALUE", "Set environment variable"
+        def set(key, value)
+          require_relative "cli/config/command"
+          Nvoi::Cli::Config::Command.new(options).env_set(key, value)
+        end
+
+        desc "rm KEY", "Remove environment variable"
+        def rm(key)
+          require_relative "cli/config/command"
+          Nvoi::Cli::Config::Command.new(options).env_rm(key)
+        end
+      }
+    }
+
     desc "db SUBCOMMAND", "Database operations"
     subcommand "db", Class.new(Thor) {
       def self.exit_on_failure?
