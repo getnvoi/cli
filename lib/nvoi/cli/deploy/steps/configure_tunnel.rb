@@ -22,7 +22,6 @@ module Nvoi
             @config.deploy.application.app.each do |service_name, service_config|
               next unless service_config.domain && !service_config.domain.empty?
               next unless service_config.port && service_config.port.positive?
-              next if service_config.subdomain.nil?
 
               tunnel_info = configure_service_tunnel(service_name, service_config)
               tunnels << tunnel_info
