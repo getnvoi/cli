@@ -112,6 +112,66 @@ class SetupK3sStepTest < Minitest::Test
     @mock_ssh.verify
   end
 
+  def test_configure_custom_error_pages_patches_and_polls
+    mock_config = mock_config_for_test
+    step = Nvoi::Cli::Deploy::Steps::SetupK3s.new(mock_config, @mock_provider, @mock_log, "1.2.3.4")
+
+    @mock_log.expect(:info, nil, ["Configuring custom error pages for 502, 503, 504"])
+    @mock_ssh.expect(:execute, "", [String])  # configmap patch
+    @mock_ssh.expect(:execute, "[]", [String]) # get args
+    @mock_ssh.expect(:execute, "", [String])   # deployment patch
+    @mock_log.expect(:info, nil, ["Waiting for ingress controller to restart..."])
+    # Poll returns ready immediately
+    @mock_ssh.expect(:execute, "1", [String])  # readyReplicas
+    @mock_ssh.expect(:execute, "1", [String])  # spec replicas
+    @mock_log.expect(:success, nil, ["Custom error pages configured"])
+
+    step.send(:configure_custom_error_pages, @mock_ssh)
+
+    @mock_ssh.verify
+    @mock_log.verify
+  end
+
+  def test_configure_custom_error_pages_skips_when_already_configured
+    mock_config = mock_config_for_test
+    step = Nvoi::Cli::Deploy::Steps::SetupK3s.new(mock_config, @mock_provider, @mock_log, "1.2.3.4")
+
+    @mock_log.expect(:info, nil, ["Configuring custom error pages for 502, 503, 504"])
+    @mock_ssh.expect(:execute, "", [String])  # configmap patch
+    # Already has --default-backend-service in args
+    @mock_ssh.expect(:execute, "--default-backend-service=ingress-nginx/nvoi-error-backend", [String])
+    @mock_log.expect(:info, nil, ["Custom error backend already configured"])
+    @mock_log.expect(:success, nil, ["Custom error pages configured"])
+
+    step.send(:configure_custom_error_pages, @mock_ssh)
+
+    @mock_ssh.verify
+    @mock_log.verify
+  end
+
+  def test_configure_custom_error_pages_polls_until_ready
+    mock_config = mock_config_for_test
+    step = Nvoi::Cli::Deploy::Steps::SetupK3s.new(mock_config, @mock_provider, @mock_log, "1.2.3.4")
+
+    @mock_log.expect(:info, nil, ["Configuring custom error pages for 502, 503, 504"])
+    @mock_ssh.expect(:execute, "", [String])  # configmap patch
+    @mock_ssh.expect(:execute, "[]", [String]) # get args
+    @mock_ssh.expect(:execute, "", [String])   # deployment patch
+    @mock_log.expect(:info, nil, ["Waiting for ingress controller to restart..."])
+    # First poll: not ready
+    @mock_ssh.expect(:execute, "0", [String])
+    @mock_ssh.expect(:execute, "1", [String])
+    # Second poll: ready
+    @mock_ssh.expect(:execute, "1", [String])
+    @mock_ssh.expect(:execute, "1", [String])
+    @mock_log.expect(:success, nil, ["Custom error pages configured"])
+
+    step.send(:configure_custom_error_pages, @mock_ssh)
+
+    @mock_ssh.verify
+    @mock_log.verify
+  end
+
   private
 
     MockNamer = Struct.new(:app_name) do

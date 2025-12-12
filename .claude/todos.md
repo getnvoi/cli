@@ -539,3 +539,36 @@ end
 - Volume auto-creation happens in step_database based on selected server
 - Multi-select uses `multi_select` with `min: 1`
 - Single-server mode remains the default (recommended path)
+
+---
+
+## Part 4: nvoi unlock command
+
+### Problem
+Deploy lock file `/tmp/nvoi-deploy-{app}.lock` isn't cleaned up when deploys hang/crash.
+Currently requires manual removal: `rm /tmp/nvoi-deploy-*.lock`
+
+### File: `lib/nvoi/cli.rb`
+
+Add command:
+
+```ruby
+desc "unlock", "Remove deployment lock file"
+def unlock
+  config_path = options[:config] || "nvoi.yaml"
+  config = Nvoi::Objects::Configuration.load(config_path)
+  lock_file = "/tmp/nvoi-deploy-#{config.application.name}.lock"
+
+  if File.exist?(lock_file)
+    File.delete(lock_file)
+    puts "Removed lock file: #{lock_file}"
+  else
+    puts "No lock file found: #{lock_file}"
+  end
+end
+```
+
+### Implementation
+1. [ ] Add `unlock` command to cli.rb
+2. [ ] Show lock info (age, PID if stored)
+3. [ ] Add --force option for safety
