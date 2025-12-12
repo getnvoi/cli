@@ -21,6 +21,12 @@ module Nvoi
       puts "nvoi #{VERSION}"
     end
 
+    desc "onboard", "Interactive setup wizard"
+    def onboard
+      require_relative "cli/onboard/command"
+      Cli::Onboard::Command.new.run
+    end
+
     desc "deploy", "Deploy application"
     option :dockerfile_path, desc: "Path to Dockerfile (optional, defaults to ./Dockerfile)"
     option :config_dir, desc: "Directory containing SSH keys (optional, defaults to ~/.ssh)"

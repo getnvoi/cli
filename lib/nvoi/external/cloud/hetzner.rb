@@ -243,6 +243,32 @@ module Nvoi
           raise Errors::ValidationError, "hetzner credentials invalid: #{e.message}"
         end
 
+        # List available server types for onboarding
+        def list_server_types
+          get("/server_types")["server_types"].map do |t|
+            {
+              name: t["name"],
+              description: t["description"],
+              cores: t["cores"],
+              memory: t["memory"],
+              disk: t["disk"],
+              price: t.dig("prices", 0, "price_monthly", "gross")
+            }
+          end
+        end
+
+        # List available locations for onboarding
+        def list_locations
+          get("/locations")["locations"].map do |l|
+            {
+              name: l["name"],
+              city: l["city"],
+              country: l["country"],
+              description: l["description"]
+            }
+          end
+        end
+
         private
 
           def get(path)

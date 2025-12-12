@@ -344,6 +344,31 @@ module Nvoi
           raise Errors::ValidationError, "aws credentials invalid: #{e.message}"
         end
 
+        # List available instance types for onboarding
+        def list_instance_types
+          # Common instance types (full list is huge)
+          common_types = %w[t3.micro t3.small t3.medium t3.large t3.xlarge m5.large m5.xlarge c5.large c5.xlarge]
+          resp = @client.describe_instance_types(instance_types: common_types)
+          resp.instance_types.map do |t|
+            {
+              name: t.instance_type,
+              vcpus: t.v_cpu_info.default_v_cpus,
+              memory: t.memory_info.size_in_mi_b
+            }
+          end
+        rescue StandardError
+          # Fallback to static list if API fails
+          common_types.map { |t| { name: t, vcpus: nil, memory: nil } }
+        end
+
+        # List available regions for onboarding
+        def list_regions
+          resp = @client.describe_regions
+          resp.regions.map do |r|
+            { name: r.region_name, endpoint: r.endpoint }
+          end
+        end
+
         private
 
           def find_vpc_by_name(name)

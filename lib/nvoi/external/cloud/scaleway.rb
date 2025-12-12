@@ -127,7 +127,7 @@ module Nvoi
 
         def create_server(opts)
           # Validate server type
-          server_types = list_server_types
+          server_types = list_server_types_api
           unless server_types.key?(opts.type)
             raise Errors::ValidationError, "invalid server type: #{opts.type}"
           end
@@ -281,7 +281,7 @@ module Nvoi
         # Validation operations
 
         def validate_instance_type(instance_type)
-          server_types = list_server_types
+          server_types = list_server_types_api
           unless server_types.key?(instance_type)
             raise Errors::ValidationError, "invalid scaleway server type: #{instance_type}"
           end
@@ -298,7 +298,7 @@ module Nvoi
         end
 
         def validate_credentials
-          list_server_types
+          list_server_types_api
           true
         rescue Errors::AuthenticationError => e
           raise Errors::ValidationError, "scaleway credentials invalid: #{e.message}"
@@ -308,6 +308,32 @@ module Nvoi
         def server_ip(server_name)
           server = find_server(server_name)
           server&.public_ipv4
+        end
+
+        # List available server types for onboarding
+        def list_server_types
+          list_server_types_api.map do |name, info|
+            {
+              name: name,
+              cores: info.dig("ncpus"),
+              ram: info.dig("ram"),
+              hourly_price: info.dig("hourly_price")
+            }
+          end
+        end
+
+        # List available zones for onboarding
+        def list_zones
+          VALID_ZONES.map do |z|
+            parts = z.split("-")
+            city = case parts[0..1].join("-")
+            when "fr-par" then "Paris"
+            when "nl-ams" then "Amsterdam"
+            when "pl-waw" then "Warsaw"
+            else parts[0..1].join("-")
+            end
+            { name: z, city: city }
+          end
         end
 
         private
@@ -402,7 +428,7 @@ module Nvoi
             post(instance_url("/servers/#{id}/action"), { action: })
           end
 
-          def list_server_types
+          def list_server_types_api
             get(instance_url("/products/servers"))["servers"] || {}
           end
 
