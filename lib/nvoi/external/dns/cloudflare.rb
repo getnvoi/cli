@@ -122,6 +122,16 @@ module Nvoi
 
         # DNS operations
 
+        def list_zones
+          url = "zones"
+          response = get(url)
+
+          results = response["result"] || []
+          results.map do |z|
+            { id: z["id"], name: z["name"], status: z["status"] }
+          end
+        end
+
         def find_zone(domain)
           url = "zones"
           response = get(url)
@@ -133,6 +143,12 @@ module Nvoi
           return nil unless zone_data
 
           Objects::Dns::Zone.new(id: zone_data["id"], name: zone_data["name"])
+        end
+
+        def subdomain_available?(zone_id, subdomain, domain)
+          fqdn = subdomain.empty? ? domain : "#{subdomain}.#{domain}"
+          # Check for CNAME or A record
+          !find_dns_record(zone_id, fqdn, "CNAME") && !find_dns_record(zone_id, fqdn, "A")
         end
 
         def find_dns_record(zone_id, name, record_type)
