@@ -5,6 +5,7 @@ require "tty-prompt"
 require "tty-box"
 require "tty-spinner"
 require "tty-table"
+require "nvoi/utils/credential_store"
 
 module Nvoi
   class Cli
