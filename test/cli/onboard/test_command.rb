@@ -32,10 +32,8 @@ class TestOnboardCommand < Minitest::Test
     prompt.input.rewind
 
     with_hetzner_mock do
-      with_config_api_mock do
-        cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
-        cmd.run
-      end
+      cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
+      cmd.run
     end
 
     assert File.exist?("deploy.enc"), "deploy.enc should be created"
@@ -529,27 +527,6 @@ class TestOnboardCommand < Minitest::Test
 
       Nvoi::External::Dns::Cloudflare.stub :new, mock do
         yield
-      end
-    end
-
-    def with_config_api_mock
-      fake_result = OpenStruct.new(
-        failure?: false,
-        config: "encrypted_data",
-        master_key: "test_master_key_32_chars_long!!"
-      )
-
-      # Mock ConfigApi.init
-      Nvoi::ConfigApi.stub :init, fake_result do
-        # Mock Crypto.decrypt to return valid YAML
-        Nvoi::Utils::Crypto.stub :decrypt, ->(_data, _key) {
-          YAML.dump({ "application" => { "name" => "test", "ssh_keys" => { "private" => "key", "public" => "pub" } } })
-        } do
-          # Mock Crypto.encrypt
-          Nvoi::Utils::Crypto.stub :encrypt, "encrypted" do
-            yield
-          end
-        end
       end
     end
 

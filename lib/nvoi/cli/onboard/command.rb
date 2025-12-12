@@ -244,7 +244,7 @@ module Nvoi
 
         def save_config
           with_spinner("Generating SSH keys...") do
-            result = ConfigApi.init(name: @data[:name], environment: "production")
+            result = Configuration::Builder.init(name: @data[:name], environment: "production")
 
             if result.failure?
               raise Errors::ConfigError, "Failed to initialize: #{result.error_message}"

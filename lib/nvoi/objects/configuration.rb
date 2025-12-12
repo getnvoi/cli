@@ -262,6 +262,22 @@ module Nvoi
           @secrets = data["secrets"] || {}
           @ssh_keys = data["ssh_keys"] ? SshKey.new(data["ssh_keys"]) : nil
         end
+
+        def app_by_name(name)
+          @app[name.to_s]
+        end
+
+        def server_by_name(name)
+          @servers[name.to_s]
+        end
+
+        def web_apps
+          @app.select { |_, cfg| cfg.web? }
+        end
+
+        def workers
+          @app.reject { |_, cfg| cfg.web? }
+        end
       end
 
       # DomainProvider contains domain provider configuration
@@ -351,6 +367,14 @@ module Nvoi
           @count = data["count"]&.to_i || 1
           @volumes = (data["volumes"] || {}).transform_values { |v| ServerVolume.new(v || {}) }
         end
+
+        def master?
+          @master == true
+        end
+
+        def volume(name)
+          @volumes[name.to_s]
+        end
       end
 
       # AppService defines a service in the app section
@@ -368,6 +392,20 @@ module Nvoi
           @pre_run_command = data["pre_run_command"]
           @env = data["env"] || {}
           @mounts = data["mounts"] || {}
+        end
+
+        def web?
+          @port && @port.positive?
+        end
+
+        def worker?
+          !web?
+        end
+
+        def fqdn
+          return nil unless @domain && !@domain.empty?
+
+          @subdomain && !@subdomain.empty? ? "#{@subdomain}.#{@domain}" : @domain
         end
       end
 
@@ -398,6 +436,18 @@ module Nvoi
           @mount = data["mount"] || {}
           @secrets = data["secrets"] || {}
           @path = data["path"]
+        end
+
+        def postgres?
+          @adapter&.downcase&.start_with?("postgres")
+        end
+
+        def mysql?
+          @adapter&.downcase == "mysql"
+        end
+
+        def sqlite?
+          @adapter&.downcase&.start_with?("sqlite")
         end
 
         def to_service_spec(namer)

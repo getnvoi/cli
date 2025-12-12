@@ -4,7 +4,7 @@ module Nvoi
   class Cli
     module Config
       # Command helper for all config operations
-      # Uses CredentialStore for crypto, ConfigApi for transformations
+      # Uses CredentialStore for crypto, Configuration::Builder for transformations
       class Command
         def initialize(options)
           @options = options
@@ -13,7 +13,7 @@ module Nvoi
 
         # Initialize new config
         def init(name, environment)
-          result = ConfigApi.init(name:, environment:)
+          result = Configuration::Builder.init(name:, environment:)
 
           if result.failure?
             error("Failed to initialize: #{result.error_message}")
@@ -40,118 +40,118 @@ module Nvoi
 
         # Domain provider
         def domain_set(provider, api_token:, account_id:)
-          with_config do |data|
-            ConfigApi.set_domain_provider(data, provider:, api_token:, account_id:)
+          with_config do |builder|
+            builder.domain_provider(provider, api_token:, account_id:)
           end
         end
 
         def domain_rm
-          with_config do |data|
-            ConfigApi.delete_domain_provider(data)
+          with_config do |builder|
+            builder.remove_domain_provider
           end
         end
 
         # Compute provider
         def provider_set(provider, **opts)
-          with_config do |data|
-            ConfigApi.set_compute_provider(data, provider:, **opts)
+          with_config do |builder|
+            builder.compute_provider(provider, **opts)
           end
         end
 
         def provider_rm
-          with_config do |data|
-            ConfigApi.delete_compute_provider(data)
+          with_config do |builder|
+            builder.remove_compute_provider
           end
         end
 
         # Server
         def server_set(name, master: false, type: nil, location: nil, count: 1)
-          with_config do |data|
-            ConfigApi.set_server(data, name:, master:, type:, location:, count:)
+          with_config do |builder|
+            builder.server(name, master:, type:, location:, count:)
           end
         end
 
         def server_rm(name)
-          with_config do |data|
-            ConfigApi.delete_server(data, name:)
+          with_config do |builder|
+            builder.remove_server(name)
           end
         end
 
         # Volume
         def volume_set(server, name, size: 10)
-          with_config do |data|
-            ConfigApi.set_volume(data, server:, name:, size:)
+          with_config do |builder|
+            builder.volume(server, name, size:)
           end
         end
 
         def volume_rm(server, name)
-          with_config do |data|
-            ConfigApi.delete_volume(data, server:, name:)
+          with_config do |builder|
+            builder.remove_volume(server, name)
           end
         end
 
         # App
         def app_set(name, servers:, **opts)
-          with_config do |data|
-            ConfigApi.set_app(data, name:, servers:, **opts)
+          with_config do |builder|
+            builder.app_entry(name, servers:, **opts)
           end
         end
 
         def app_rm(name)
-          with_config do |data|
-            ConfigApi.delete_app(data, name:)
+          with_config do |builder|
+            builder.remove_app(name)
           end
         end
 
         # Database
         def database_set(servers:, adapter:, **opts)
-          with_config do |data|
-            ConfigApi.set_database(data, servers:, adapter:, **opts)
+          with_config do |builder|
+            builder.database(servers:, adapter:, **opts)
           end
         end
 
         def database_rm
-          with_config do |data|
-            ConfigApi.delete_database(data)
+          with_config do |builder|
+            builder.remove_database
           end
         end
 
         # Service
         def service_set(name, servers:, image:, **opts)
-          with_config do |data|
-            ConfigApi.set_service(data, name:, servers:, image:, **opts)
+          with_config do |builder|
+            builder.service(name, servers:, image:, **opts)
           end
         end
 
         def service_rm(name)
-          with_config do |data|
-            ConfigApi.delete_service(data, name:)
+          with_config do |builder|
+            builder.remove_service(name)
           end
         end
 
         # Secret
         def secret_set(key_name, value)
-          with_config do |data|
-            ConfigApi.set_secret(data, key: key_name, value:)
+          with_config do |builder|
+            builder.secret(key_name, value)
           end
         end
 
         def secret_rm(key_name)
-          with_config do |data|
-            ConfigApi.delete_secret(data, key: key_name)
+          with_config do |builder|
+            builder.remove_secret(key_name)
           end
         end
 
         # Env
         def env_set(key_name, value)
-          with_config do |data|
-            ConfigApi.set_env(data, key: key_name, value:)
+          with_config do |builder|
+            builder.env(key_name, value)
           end
         end
 
         def env_rm(key_name)
-          with_config do |data|
-            ConfigApi.delete_env(data, key: key_name)
+          with_config do |builder|
+            builder.remove_env(key_name)
           end
         end
 
@@ -174,20 +174,25 @@ module Nvoi
             yaml = store.read
             data = YAML.safe_load(yaml, permitted_classes: [Symbol])
 
-            # Transform
-            result = yield(data)
+            # Transform using Builder
+            builder = Configuration::Builder.from_hash(data)
+            result = yield(builder)
 
             if result.failure?
               error("#{result.error_type}: #{result.error_message}")
             else
               # Serialize and write
-              store.write(YAML.dump(result.data))
+              store.write(builder.to_yaml)
               success("Config updated")
             end
           rescue Errors::CredentialError => e
             error(e.message)
           rescue Errors::DecryptionError => e
             error("Decryption failed: #{e.message}")
+          rescue ArgumentError => e
+            error("invalid_args: #{e.message}")
+          rescue Errors::ConfigValidationError => e
+            error("validation_error: #{e.message}")
           end
 
           def update_gitignore
