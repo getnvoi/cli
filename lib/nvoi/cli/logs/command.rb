@@ -25,7 +25,7 @@ module Nvoi
           raise Errors::ServiceError, "server not found: #{@config.server_name}" unless server
 
           # Build deployment name from app name
-          deployment_name = "#{@config.namer.app_prefix}-#{app_name}"
+          deployment_name = @config.namer.app_deployment_name(app_name)
 
           # Build kubectl logs command
           follow_flag = @options[:follow] ? "-f" : ""
