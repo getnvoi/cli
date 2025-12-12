@@ -37,6 +37,7 @@ module Nvoi
             raise Errors::SshError, "rsync failed"
           end
 
+          Nvoi.logger.info "Importing image into containerd..."
           @ssh.execute("sudo ctr -n k8s.io images import #{remote_tar_path}")
 
           full_image_ref = "docker.io/library/#{tag}"
