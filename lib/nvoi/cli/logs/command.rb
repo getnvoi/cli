@@ -28,10 +28,11 @@ module Nvoi
           deployment_name = @config.namer.app_deployment_name(app_name)
 
           # Build kubectl logs command
+          # --prefix shows pod name, --all-containers handles multi-container pods
           follow_flag = @options[:follow] ? "-f" : ""
           tail_flag = "--tail=#{@options[:tail]}"
 
-          kubectl_cmd = "kubectl logs -l app=#{deployment_name} #{follow_flag} #{tail_flag}".strip.squeeze(" ")
+          kubectl_cmd = "kubectl logs -l app=#{deployment_name} --prefix --all-containers #{follow_flag} #{tail_flag}".strip.squeeze(" ")
 
           @log.info "Streaming logs for %s", deployment_name
 
