@@ -289,12 +289,13 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "\e[B\e[B\r"        # done with env
     # Now at summary menu
     prompt.input << "\e[B\e[B\e[B\e[B\r" # Edit apps (5th option)
-    prompt.input << "\r"                # Edit web (first option)
+    prompt.input << "\r"                # Select "web" app
+    prompt.input << "\r"                # Select "Edit" action
     prompt.input << "webserver\n"       # rename to webserver
     prompt.input << "rails s\n"         # new command
     prompt.input << "8080\n"            # new port
     prompt.input << "\n"                # no pre-run
-    prompt.input << "\e[B\e[B\e[B\r"    # Done (4th: Edit, Delete, Add, Done)
+    prompt.input << "\e[B\e[B\r"        # Done (3rd: webserver, Add new, Done)
     prompt.input << "\e[B\e[B\e[B\e[B\e[B\e[B\e[B\e[B\r"  # Cancel
     prompt.input << "y\n"               # confirm discard
     prompt.input.rewind
@@ -332,9 +333,10 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "\e[B\e[B\r"        # done with env
     # Summary menu - delete web app
     prompt.input << "\e[B\e[B\e[B\e[B\r" # Edit apps (5th option)
-    prompt.input << "\e[B\e[B\r"        # Delete web (3rd option: Edit web, Edit worker, Delete web)
+    prompt.input << "\r"                # Select "web" app
+    prompt.input << "\e[B\r"            # Select "Delete" action
     prompt.input << "y\n"               # confirm delete
-    prompt.input << "\e[B\e[B\e[B\r"    # Done (4th: Edit worker, Delete worker, Add, Done)
+    prompt.input << "\e[B\e[B\r"        # Done (3rd: worker, Add new, Done)
     prompt.input << "\e[B\e[B\e[B\e[B\e[B\e[B\e[B\e[B\r"  # Cancel
     prompt.input << "y\n"               # confirm discard
     prompt.input.rewind

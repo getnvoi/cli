@@ -534,24 +534,31 @@ module Nvoi
             loop do
               app_names = @data["application"]["app"]&.keys || []
 
-              choices = app_names.map { |name| { name: "Edit #{name}", value: [:edit, name] } }
-              choices += app_names.map { |name| { name: "Delete #{name}", value: [:delete, name] } }
-              choices << { name: "Add new app", value: [:add, nil] }
-              choices << { name: "Done", value: [:done, nil] }
+              choices = app_names.map { |name| { name:, value: name } }
+              choices << { name: "Add new app", value: :add }
+              choices << { name: "Done", value: :done }
 
-              action, name = @prompt.select("Apps:", choices)
+              selected = @prompt.select("Apps:", choices)
 
-              case action
-              when :edit
-                edit_single_app(name)
-              when :delete
-                if @prompt.yes?("Delete #{name}?")
-                  @data["application"]["app"].delete(name)
-                end
+              case selected
               when :add
                 add_single_app
               when :done
                 return
+              else
+                # Selected an app name - show actions
+                app_action = @prompt.select("#{selected}:") do |menu|
+                  menu.choice "Edit", :edit
+                  menu.choice "Delete", :delete
+                  menu.choice "Back", :back
+                end
+
+                case app_action
+                when :edit
+                  edit_single_app(selected)
+                when :delete
+                  @data["application"]["app"].delete(selected) if @prompt.yes?("Delete #{selected}?")
+                end
               end
             end
           end
@@ -577,7 +584,12 @@ module Nvoi
               end
             end
 
-            pre_run = @prompt.ask("Pre-run command:", default: app["pre_run_command"])
+            existing_pre_run = app["pre_run_command"]
+            pre_run = if existing_pre_run
+              @prompt.ask("Pre-run command (optional):", default: existing_pre_run)
+            else
+              @prompt.ask("Pre-run command (optional):")
+            end
             new_config["pre_run_command"] = pre_run unless pre_run.to_s.empty?
 
             # Handle rename
