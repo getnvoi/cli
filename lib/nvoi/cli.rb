@@ -42,6 +42,12 @@ module Nvoi
       Cli::Delete::Command.new(options).run
     end
 
+    desc "unlock", "Remove deployment lock (use when deploy hangs)"
+    def unlock
+      require_relative "cli/unlock/command"
+      Cli::Unlock::Command.new(options).run
+    end
+
     desc "exec [COMMAND...]", "Execute command on remote server or open interactive shell"
     option :server, default: "main", desc: "Server to execute on (main, worker-1, worker-2, etc.)"
     option :all, type: :boolean, default: false, desc: "Execute on all servers"
