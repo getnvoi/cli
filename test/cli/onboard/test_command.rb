@@ -5,6 +5,12 @@ require "tty/prompt/test"
 require "nvoi/cli/onboard/command"
 
 class TestOnboardCommand < Minitest::Test
+  def test_file_loads_without_test_helper
+    # Verify the file can be required in isolation (catches missing requires)
+    output = `ruby -e "require './lib/nvoi/cli/onboard/command'" 2>&1`
+    assert $?.success?, "File failed to load in isolation: #{output}"
+  end
+
   def setup
     # Clean up any test files
     FileUtils.rm_f("deploy.enc")
