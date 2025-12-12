@@ -185,6 +185,15 @@ module Nvoi
         end
       end
 
+      # Returns array of hostnames - apex returns [domain, *.domain], subdomain returns [sub.domain]
+      def self.build_hostnames(subdomain, domain)
+        if subdomain.nil? || subdomain.empty? || subdomain == "@"
+          [domain, "*.#{domain}"]
+        else
+          ["#{subdomain}.#{domain}"]
+        end
+      end
+
       private
 
         def hash_string(str)

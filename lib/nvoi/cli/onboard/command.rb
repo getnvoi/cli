@@ -285,7 +285,7 @@ module Nvoi
 
           def prompt_subdomain(zone_id, domain)
             loop do
-              subdomain = @prompt.ask("Subdomain (leave blank for root #{domain}):")
+              subdomain = @prompt.ask("Subdomain (leave blank for #{domain} + *.#{domain}):")
               subdomain = subdomain.to_s.strip.downcase
 
               # Validate subdomain format if provided
@@ -294,18 +294,24 @@ module Nvoi
                 next
               end
 
-              # Check availability
-              fqdn = subdomain.empty? ? domain : "#{subdomain}.#{domain}"
+              # Check availability for all hostnames that will be created
+              hostnames = Utils::Namer.build_hostnames(subdomain.empty? ? nil : subdomain, domain)
+              all_available = true
 
-              available = with_spinner("Checking #{fqdn}...") do
-                @cloudflare_client.subdomain_available?(zone_id, subdomain, domain)
+              hostnames.each do |hostname|
+                available = with_spinner("Checking #{hostname}...") do
+                  check_subdomain = hostname == domain ? "" : hostname.sub(".#{domain}", "")
+                  @cloudflare_client.subdomain_available?(zone_id, check_subdomain, domain)
+                end
+
+                unless available
+                  error("#{hostname} already has a DNS record. Choose a different subdomain.")
+                  all_available = false
+                  break
+                end
               end
 
-              if available
-                return subdomain
-              else
-                error("#{fqdn} already has a DNS record. Choose a different subdomain.")
-              end
+              return subdomain if all_available
             end
           end
 

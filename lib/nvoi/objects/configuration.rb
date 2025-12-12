@@ -28,6 +28,7 @@ module Nvoi
           validate_database_secrets(app.database) if app.database
           inject_database_env_vars
           validate_service_server_bindings
+          validate_domain_uniqueness
         end
 
         def provider_name
@@ -209,6 +210,25 @@ module Nvoi
                 database: db.secrets["MYSQL_DATABASE"],
                 port: provider.default_port
               )
+            end
+          end
+
+          def validate_domain_uniqueness
+            app = @deploy.application
+            return unless app.app
+
+            seen = {}
+            app.app.each do |name, cfg|
+              next unless cfg.domain && !cfg.domain.empty?
+
+              hostnames = Utils::Namer.build_hostnames(cfg.subdomain, cfg.domain)
+              hostnames.each do |hostname|
+                if seen[hostname]
+                  raise Errors::ConfigValidationError,
+                    "domain '#{hostname}' used by both '#{seen[hostname]}' and '#{name}'"
+                end
+                seen[hostname] = name
+              end
             end
           end
       end

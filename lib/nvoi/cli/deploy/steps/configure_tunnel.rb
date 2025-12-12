@@ -35,23 +35,24 @@ module Nvoi
 
             def configure_service_tunnel(service_name, service_config)
               tunnel_name = @config.namer.tunnel_name(service_name)
-              hostname = Utils::Namer.build_hostname(service_config.subdomain, service_config.domain)
+              hostnames = Utils::Namer.build_hostnames(service_config.subdomain, service_config.domain)
+              primary_hostname = hostnames.first
 
               # Service URL points to the NGINX Ingress Controller
               service_url = "http://ingress-nginx-controller.ingress-nginx.svc.cluster.local:80"
 
-              tunnel = setup_tunnel(tunnel_name, hostname, service_url, service_config.domain)
+              tunnel = setup_tunnel(tunnel_name, hostnames, service_url, service_config.domain)
 
               Objects::Tunnel::Info.new(
                 service_name:,
-                hostname:,
+                hostname: primary_hostname,
                 tunnel_id: tunnel.tunnel_id,
                 tunnel_token: tunnel.tunnel_token
               )
             end
 
-            def setup_tunnel(tunnel_name, hostname, service_url, domain)
-              @log.info "Setting up tunnel: %s -> %s", tunnel_name, hostname
+            def setup_tunnel(tunnel_name, hostnames, service_url, domain)
+              @log.info "Setting up tunnel: %s -> %s", tunnel_name, hostnames.join(", ")
 
               # Find or create tunnel
               tunnel = @cf_client.find_tunnel(tunnel_name)
@@ -69,21 +70,23 @@ module Nvoi
                 token = @cf_client.get_tunnel_token(tunnel.id)
               end
 
-              # Configure tunnel ingress
-              @log.info "Configuring tunnel ingress: %s -> %s", hostname, service_url
-              @cf_client.update_tunnel_configuration(tunnel.id, hostname, service_url)
+              # Configure tunnel ingress for all hostnames
+              @log.info "Configuring tunnel ingress: %s -> %s", hostnames.join(", "), service_url
+              @cf_client.update_tunnel_configuration(tunnel.id, hostnames, service_url)
 
               # Verify configuration propagated
               @log.info "Verifying tunnel configuration..."
-              @cf_client.verify_tunnel_configuration(tunnel.id, hostname, service_url, Utils::Constants::TUNNEL_CONFIG_VERIFY_ATTEMPTS)
+              @cf_client.verify_tunnel_configuration(tunnel.id, hostnames, service_url, Utils::Constants::TUNNEL_CONFIG_VERIFY_ATTEMPTS)
 
-              # Create DNS record
-              @log.info "Creating DNS CNAME record: %s", hostname
+              # Create DNS records for all hostnames
               zone = @cf_client.find_zone(domain)
               raise Errors::CloudflareError, "zone not found: #{domain}" unless zone
 
               tunnel_cname = "#{tunnel.id}.cfargotunnel.com"
-              @cf_client.create_or_update_dns_record(zone.id, hostname, "CNAME", tunnel_cname, proxied: true)
+              hostnames.each do |hostname|
+                @log.info "Creating DNS CNAME record: %s", hostname
+                @cf_client.create_or_update_dns_record(zone.id, hostname, "CNAME", tunnel_cname, proxied: true)
+              end
 
               @log.success "Tunnel configured: %s", tunnel_name
 

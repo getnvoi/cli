@@ -228,6 +228,77 @@ class ConfigurationTest < Minitest::Test
     end
     assert_match(/references undefined server/, error.message)
   end
+
+  def test_validates_domain_uniqueness_error_on_clash
+    data = minimal_hetzner_config_data
+    data["application"]["app"] = {
+      "web" => {
+        "servers" => ["master"],
+        "domain" => "example.com",
+        "port" => 3000
+      },
+      "api" => {
+        "servers" => ["master"],
+        "domain" => "example.com",
+        "port" => 4000
+      }
+    }
+
+    deploy = Nvoi::Objects::Configuration::Deploy.new(data)
+    config = Nvoi::Objects::Configuration::Root.new(deploy)
+
+    error = assert_raises(Nvoi::Errors::ConfigValidationError) do
+      config.validate_config
+    end
+    assert_match(/domain.*used by both/, error.message)
+  end
+
+  def test_validates_domain_uniqueness_allows_different_domains
+    data = minimal_hetzner_config_data
+    data["application"]["app"] = {
+      "web" => {
+        "servers" => ["master"],
+        "domain" => "example.com",
+        "port" => 3000
+      },
+      "api" => {
+        "servers" => ["master"],
+        "domain" => "api.example.com",
+        "subdomain" => "v1",
+        "port" => 4000
+      }
+    }
+
+    deploy = Nvoi::Objects::Configuration::Deploy.new(data)
+    config = Nvoi::Objects::Configuration::Root.new(deploy)
+
+    # Should not raise
+    config.validate_config
+  end
+
+  def test_validates_domain_uniqueness_allows_different_subdomains
+    data = minimal_hetzner_config_data
+    data["application"]["app"] = {
+      "web" => {
+        "servers" => ["master"],
+        "domain" => "example.com",
+        "subdomain" => "www",
+        "port" => 3000
+      },
+      "api" => {
+        "servers" => ["master"],
+        "domain" => "example.com",
+        "subdomain" => "api",
+        "port" => 4000
+      }
+    }
+
+    deploy = Nvoi::Objects::Configuration::Deploy.new(data)
+    config = Nvoi::Objects::Configuration::Root.new(deploy)
+
+    # Should not raise
+    config.validate_config
+  end
 end
 
 class DeployConfigTest < Minitest::Test

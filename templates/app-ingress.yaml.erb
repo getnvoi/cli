@@ -8,6 +8,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
+<% domains.each do |domain| -%>
   - host: <%= domain %>
     http:
       paths:
@@ -18,3 +19,4 @@ spec:
             name: <%= name %>
             port:
               number: <%= port %>
+<% end -%>

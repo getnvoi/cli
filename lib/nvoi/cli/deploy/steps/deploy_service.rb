@@ -247,11 +247,11 @@ module Nvoi
 
               # Deploy ingress if domain is specified
               if service_config.domain && !service_config.domain.empty?
-                hostname = Utils::Namer.build_hostname(service_config.subdomain, service_config.domain)
+                hostnames = Utils::Namer.build_hostnames(service_config.subdomain, service_config.domain)
 
                 Utils::Templates.apply_manifest(@ssh, "app-ingress.yaml", {
                   name: deployment_name,
-                  domain: hostname,
+                  domains: hostnames,
                   port: service_config.port
                 })
               end

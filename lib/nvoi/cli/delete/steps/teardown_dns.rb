@@ -15,18 +15,15 @@ module Nvoi
           def run
             @config.deploy.application.app.each do |_service_name, service|
               next unless service&.domain && !service.domain.empty?
-              next if service.subdomain.nil?
 
-              delete_dns_record(service.domain, service.subdomain)
+              delete_dns_records(service.domain, service.subdomain)
             end
           end
 
           private
 
-            def delete_dns_record(domain, subdomain)
-              hostname = Utils::Namer.build_hostname(subdomain, domain)
-
-              @log.info "Deleting DNS record: %s", hostname
+            def delete_dns_records(domain, subdomain)
+              hostnames = Utils::Namer.build_hostnames(subdomain, domain)
 
               zone = @cf_client.find_zone(domain)
               unless zone
@@ -34,13 +31,17 @@ module Nvoi
                 return
               end
 
-              record = @cf_client.find_dns_record(zone.id, hostname, "CNAME")
-              if record
-                @cf_client.delete_dns_record(zone.id, record.id)
-                @log.success "DNS record deleted: %s", hostname
+              hostnames.each do |hostname|
+                @log.info "Deleting DNS record: %s", hostname
+
+                record = @cf_client.find_dns_record(zone.id, hostname, "CNAME")
+                if record
+                  @cf_client.delete_dns_record(zone.id, record.id)
+                  @log.success "DNS record deleted: %s", hostname
+                end
               end
             rescue StandardError => e
-              @log.warning "Failed to delete DNS record: %s", e.message
+              @log.warning "Failed to delete DNS records: %s", e.message
             end
         end
       end

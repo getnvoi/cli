@@ -64,24 +64,25 @@ module Nvoi
           response["result"]
         end
 
-        def update_tunnel_configuration(tunnel_id, hostname, service_url)
+        def update_tunnel_configuration(tunnel_id, hostnames, service_url)
+          hostnames = Array(hostnames)
           url = "accounts/#{@account_id}/cfd_tunnel/#{tunnel_id}/configurations"
 
-          config = {
-            ingress: [
-              {
-                hostname:,
-                service: service_url,
-                originRequest: { httpHostHeader: hostname }
-              },
-              { service: "http_status:404" }
-            ]
-          }
+          ingress_rules = hostnames.map do |hostname|
+            {
+              hostname:,
+              service: service_url,
+              originRequest: { httpHostHeader: hostname.sub(/^\*\./, "") } # Use apex for wildcard
+            }
+          end
+          ingress_rules << { service: "http_status:404" }
 
+          config = { ingress: ingress_rules }
           put(url, { config: })
         end
 
-        def verify_tunnel_configuration(tunnel_id, expected_hostname, expected_service, max_attempts)
+        def verify_tunnel_configuration(tunnel_id, expected_hostnames, expected_service, max_attempts)
+          expected_hostnames = Array(expected_hostnames)
           url = "accounts/#{@account_id}/cfd_tunnel/#{tunnel_id}/configurations"
 
           max_attempts.times do
@@ -90,10 +91,11 @@ module Nvoi
 
               if response["success"]
                 config = response.dig("result", "config")
-                config&.dig("ingress")&.each do |rule|
-                  if rule["hostname"] == expected_hostname && rule["service"] == expected_service
-                    return true
-                  end
+                ingress = config&.dig("ingress") || []
+                configured_hostnames = ingress.map { |r| r["hostname"] }.compact
+
+                if expected_hostnames.all? { |h| configured_hostnames.include?(h) }
+                  return true
                 end
               end
             rescue StandardError

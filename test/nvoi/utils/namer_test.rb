@@ -105,6 +105,26 @@ class NamerTest < Minitest::Test
     assert_equal "example.com", Nvoi::Utils::Namer.build_hostname("@", "example.com")
   end
 
+  def test_build_hostnames_with_nil_returns_apex_and_wildcard
+    result = Nvoi::Utils::Namer.build_hostnames(nil, "example.com")
+    assert_equal ["example.com", "*.example.com"], result
+  end
+
+  def test_build_hostnames_with_empty_returns_apex_and_wildcard
+    result = Nvoi::Utils::Namer.build_hostnames("", "example.com")
+    assert_equal ["example.com", "*.example.com"], result
+  end
+
+  def test_build_hostnames_with_at_returns_apex_and_wildcard
+    result = Nvoi::Utils::Namer.build_hostnames("@", "example.com")
+    assert_equal ["example.com", "*.example.com"], result
+  end
+
+  def test_build_hostnames_with_subdomain_returns_single
+    result = Nvoi::Utils::Namer.build_hostnames("app", "example.com")
+    assert_equal ["app.example.com"], result
+  end
+
   def test_registry_names
     assert_equal "nvoi-registry", @namer.registry_deployment_name
     assert_equal "nvoi-registry", @namer.registry_service_name
