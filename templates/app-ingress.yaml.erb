@@ -9,7 +9,7 @@ spec:
   ingressClassName: nginx
   rules:
 <% domains.each do |domain| -%>
-  - host: <%= domain %>
+  - host: "<%= domain %>"
     http:
       paths:
       - path: /
