@@ -241,14 +241,14 @@ module Nvoi
 
             loop do
               name = @prompt.ask("App name:") { |q| q.required true }
-              command = @prompt.ask("Run command:", default: "bundle exec puma -C config/puma.rb")
+              command = @prompt.ask("Run command (optional, leave blank for Docker entrypoint):")
               port = @prompt.ask("Port:", default: "3000", convert: :int)
 
               app_config = {
                 "servers" => ["main"],
-                "command" => command,
                 "port" => port
               }
+              app_config["command"] = command unless command.to_s.empty?
 
               # Domain selection from Cloudflare if configured
               if @cloudflare_zones&.any?
@@ -569,14 +569,19 @@ module Nvoi
             app = @data["application"]["app"][name]
 
             new_name = @prompt.ask("App name:", default: name) { |q| q.required true }
-            command = @prompt.ask("Run command:", default: app["command"])
+            existing_cmd = app["command"]
+            command = if existing_cmd
+              @prompt.ask("Run command (optional):", default: existing_cmd)
+            else
+              @prompt.ask("Run command (optional, leave blank for Docker entrypoint):")
+            end
             port = @prompt.ask("Port:", default: app["port"]&.to_s, convert: :int)
 
             new_config = {
               "servers" => app["servers"] || ["main"],
-              "command" => command,
               "port" => port
             }
+            new_config["command"] = command unless command.to_s.empty?
 
             if @cloudflare_zones&.any?
               domain, subdomain = prompt_domain_selection
@@ -601,14 +606,14 @@ module Nvoi
 
           def add_single_app
             name = @prompt.ask("App name:") { |q| q.required true }
-            command = @prompt.ask("Run command:", default: "bundle exec puma -C config/puma.rb")
+            command = @prompt.ask("Run command (optional, leave blank for Docker entrypoint):")
             port = @prompt.ask("Port:", default: "3000", convert: :int)
 
             app_config = {
               "servers" => ["main"],
-              "command" => command,
               "port" => port
             }
+            app_config["command"] = command unless command.to_s.empty?
 
             if @cloudflare_zones&.any?
               domain, subdomain = prompt_domain_selection

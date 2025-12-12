@@ -22,7 +22,7 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "\r"                # location
     prompt.input << "n\n"               # no cloudflare
     prompt.input << "web\n"             # app name
-    prompt.input << "puma\n"
+    prompt.input << "\n"                # no command (Docker entrypoint)
     prompt.input << "3000\n"
     prompt.input << "\n"
     prompt.input << "n\n"               # no more apps
@@ -318,7 +318,7 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "\r"                # location
     prompt.input << "n\n"               # no cloudflare
     prompt.input << "web\n"             # app name
-    prompt.input << "puma\n"
+    prompt.input << "\n"                # no command (Docker entrypoint)
     prompt.input << "3000\n"
     prompt.input << "\n"
     prompt.input << "n\n"               # no more apps
