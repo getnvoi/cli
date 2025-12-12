@@ -323,6 +323,9 @@ module Nvoi
                   result = check_public_url(public_url)
 
                   if result[:success]
+                    if consecutive_success == 0
+                      @log.info "[%d/%d] App responding, verifying stability...", attempt + 1, max_attempts
+                    end
                     consecutive_success += 1
                     @log.success "[%d/%d] Public URL responding: %s", consecutive_success, required_consecutive, result[:http_code]
 
