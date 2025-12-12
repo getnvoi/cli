@@ -242,16 +242,15 @@ module Nvoi
             loop do
               name = @prompt.ask("App name:") { |q| q.required true }
               command = @prompt.ask("Run command (optional, leave blank for Docker entrypoint):")
-              port = @prompt.ask("Port:", default: "3000", convert: :int)
+              port = @prompt.ask("Port (optional, leave blank for background workers):")
+              port = port.to_i if port && !port.to_s.empty?
 
-              app_config = {
-                "servers" => ["main"],
-                "port" => port
-              }
+              app_config = { "servers" => ["main"] }
               app_config["command"] = command unless command.to_s.empty?
+              app_config["port"] = port if port && port > 0
 
-              # Domain selection from Cloudflare if configured
-              if @cloudflare_zones&.any?
+              # Domain selection only if port is set (web-facing) and Cloudflare configured
+              if port && port > 0 && @cloudflare_zones&.any?
                 domain, subdomain = prompt_domain_selection
                 if domain
                   app_config["domain"] = domain
@@ -575,15 +574,20 @@ module Nvoi
             else
               @prompt.ask("Run command (optional, leave blank for Docker entrypoint):")
             end
-            port = @prompt.ask("Port:", default: app["port"]&.to_s, convert: :int)
+            existing_port = app["port"]
+            port = if existing_port
+              @prompt.ask("Port (optional):", default: existing_port.to_s)
+            else
+              @prompt.ask("Port (optional, leave blank for background workers):")
+            end
+            port = port.to_i if port && !port.to_s.empty?
 
-            new_config = {
-              "servers" => app["servers"] || ["main"],
-              "port" => port
-            }
+            new_config = { "servers" => app["servers"] || ["main"] }
             new_config["command"] = command unless command.to_s.empty?
+            new_config["port"] = port if port && port > 0
 
-            if @cloudflare_zones&.any?
+            # Domain selection only if port is set (web-facing)
+            if port && port > 0 && @cloudflare_zones&.any?
               domain, subdomain = prompt_domain_selection
               if domain
                 new_config["domain"] = domain
@@ -607,15 +611,15 @@ module Nvoi
           def add_single_app
             name = @prompt.ask("App name:") { |q| q.required true }
             command = @prompt.ask("Run command (optional, leave blank for Docker entrypoint):")
-            port = @prompt.ask("Port:", default: "3000", convert: :int)
+            port = @prompt.ask("Port (optional, leave blank for background workers):")
+            port = port.to_i if port && !port.to_s.empty?
 
-            app_config = {
-              "servers" => ["main"],
-              "port" => port
-            }
+            app_config = { "servers" => ["main"] }
             app_config["command"] = command unless command.to_s.empty?
+            app_config["port"] = port if port && port > 0
 
-            if @cloudflare_zones&.any?
+            # Domain selection only if port is set (web-facing)
+            if port && port > 0 && @cloudflare_zones&.any?
               domain, subdomain = prompt_domain_selection
               if domain
                 app_config["domain"] = domain

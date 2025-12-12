@@ -272,7 +272,9 @@ class TestOnboardCommand < Minitest::Test
     assert_match(/staging/, output)
   end
 
-  def test_cloudflare_skip_domain
+  def test_worker_no_port_skips_domain_selection
+    # When cloudflare is configured but app has no port (background worker),
+    # domain selection should be skipped entirely
     prompt = TTY::Prompt::Test.new
 
     prompt.input << "myapp\n"
@@ -283,9 +285,46 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "y\n"               # yes cloudflare
     prompt.input << "cf_token\n"        # cloudflare token
     prompt.input << "acc_123\n"         # cloudflare account id
-    prompt.input << "worker\n"          # app name
-    prompt.input << "sidekiq\n"         # command
-    prompt.input << "\n"                # no port
+    prompt.input << "solid_worker\n"    # app name (background worker)
+    prompt.input << "bin/solid_queue\n" # command
+    prompt.input << "\n"                # NO port (worker doesn't need one)
+    # Domain selection should be SKIPPED - no input needed for domain
+    prompt.input << "\n"                # no pre-run
+    prompt.input << "n\n"               # no more apps
+    prompt.input << "\e[B\e[B\e[B\r"    # no database
+    prompt.input << "\e[B\e[B\r"        # done with env
+    prompt.input << "\e[B\e[B\e[B\e[B\e[B\e[B\e[B\e[B\r"  # Cancel (9th option)
+    prompt.input << "y\n"               # confirm discard
+    prompt.input.rewind
+
+    with_hetzner_mock do
+      with_cloudflare_mock do
+        cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
+        cmd.run
+      end
+    end
+
+    output = prompt.output.string
+    assert_match(/solid_worker/, output)
+    # Should NOT have domain in output since no port was provided
+    refute_match(/example\.com.*solid_worker/, output)
+  end
+
+  def test_cloudflare_skip_domain
+    # Test that user can choose "Skip (no domain)" when domain selection appears
+    prompt = TTY::Prompt::Test.new
+
+    prompt.input << "myapp\n"
+    prompt.input << "\r"                # hetzner
+    prompt.input << "token\n"
+    prompt.input << "\r"                # server type
+    prompt.input << "\r"                # location
+    prompt.input << "y\n"               # yes cloudflare
+    prompt.input << "cf_token\n"        # cloudflare token
+    prompt.input << "acc_123\n"         # cloudflare account id
+    prompt.input << "api\n"             # app name (web app)
+    prompt.input << "\n"                # no command
+    prompt.input << "3000\n"            # HAS port - so domain selection appears
     prompt.input << "\e[B\e[B\r"        # Skip domain (3rd option)
     prompt.input << "\n"                # no pre-run
     prompt.input << "n\n"               # no more apps
