@@ -6,7 +6,7 @@ module Nvoi
       module Steps
         # Collects domain provider (Cloudflare) configuration
         class Domain
-          include UI
+          include Onboard::Ui
 
           attr_reader :client, :zones
 

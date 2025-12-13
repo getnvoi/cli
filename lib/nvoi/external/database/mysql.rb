@@ -48,7 +48,7 @@ module Nvoi
         end
 
         def restore(ssh, data, opts)
-          create_database(ssh, Database::CreateOptions.new(
+          create_database(ssh, Types::CreateOptions.new(
             pod_name: opts.pod_name,
             database: opts.database,
             user: opts.user,

@@ -36,7 +36,7 @@ module Nvoi
           })
 
           result = response["result"]
-          Dns::Tunnel::Record.new(
+          Types::Tunnel::Record.new(
             id: result["id"],
             name: result["name"],
             token: result["token"]
@@ -51,7 +51,7 @@ module Nvoi
           return nil if results.nil? || results.empty?
 
           result = results[0]
-          Dns::Tunnel::Record.new(
+          Types::Tunnel::Record.new(
             id: result["id"],
             name: result["name"],
             token: result["token"]
@@ -144,7 +144,7 @@ module Nvoi
           zone_data = results.find { |z| z["name"] == domain }
           return nil unless zone_data
 
-          Dns::Zone.new(id: zone_data["id"], name: zone_data["name"])
+          Types::Zone.new(id: zone_data["id"], name: zone_data["name"])
         end
 
         def subdomain_available?(zone_id, subdomain, domain)
@@ -163,7 +163,7 @@ module Nvoi
           record_data = results.find { |r| r["name"] == name && r["type"] == record_type }
           return nil unless record_data
 
-          Dns::Record.new(
+          Types::Record.new(
             id: record_data["id"],
             type: record_data["type"],
             name: record_data["name"],
@@ -185,7 +185,7 @@ module Nvoi
           })
 
           result = response["result"]
-          Dns::Record.new(
+          Types::Record.new(
             id: result["id"],
             type: result["type"],
             name: result["name"],
@@ -207,7 +207,7 @@ module Nvoi
           })
 
           result = response["result"]
-          Dns::Record.new(
+          Types::Record.new(
             id: result["id"],
             type: result["type"],
             name: result["name"],

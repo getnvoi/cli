@@ -412,7 +412,7 @@ class ScalewayCloudTest < Minitest::Test
         }
       }.to_json, headers: { "Content-Type" => "application/json" })
 
-    opts = Nvoi::External::Server::CreateOptions.new(
+    opts = Nvoi::External::Cloud::Types::Server::CreateOptions.new(
       name: "new-server",
       type: "DEV1-S",
       image: "Ubuntu 22.04",
@@ -446,7 +446,7 @@ class ScalewayCloudTest < Minitest::Test
         status: "creating"
       }.to_json, headers: { "Content-Type" => "application/json" })
 
-    opts = Nvoi::External::Volume::CreateOptions.new(
+    opts = Nvoi::External::Cloud::Types::Volume::CreateOptions.new(
       name: "new-volume",
       size: 50,
       server_id: "srv-123"

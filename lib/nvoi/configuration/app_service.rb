@@ -32,20 +32,20 @@ module Nvoi
 
         @subdomain && !@subdomain.empty? ? "#{@subdomain}.#{@domain}" : @domain
       end
-    end
 
-    # HealthCheck defines health check configuration
-    class HealthCheck
-      attr_accessor :type, :path, :port, :command, :interval, :timeout, :retries
+      # HealthCheck defines health check configuration
+      class HealthCheck
+        attr_accessor :type, :path, :port, :command, :interval, :timeout, :retries
 
-      def initialize(data = {})
-        @type = data["type"]
-        @path = data["path"]
-        @port = data["port"]&.to_i
-        @command = data["command"]
-        @interval = data["interval"]
-        @timeout = data["timeout"]
-        @retries = data["retries"]&.to_i
+        def initialize(data = {})
+          @type = data["type"]
+          @path = data["path"]
+          @port = data["port"]&.to_i
+          @command = data["command"]
+          @interval = data["interval"]
+          @timeout = data["timeout"]
+          @retries = data["retries"]&.to_i
+        end
       end
     end
   end

@@ -15,7 +15,7 @@ module Nvoi
 
         def parse_url(url)
           path = url.sub(%r{^sqlite3?:///?}, "")
-          Database::Credentials.new(
+          Types::Credentials.new(
             path:,
             database: File.basename(path)
           )

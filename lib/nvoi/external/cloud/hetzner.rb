@@ -358,7 +358,7 @@ module Nvoi
           end
 
           def to_network(data)
-            Network::Record.new(
+            Types::Network::Record.new(
               id: data["id"].to_s,
               name: data["name"],
               ip_range: data["ip_range"]
@@ -366,7 +366,7 @@ module Nvoi
           end
 
           def to_firewall(data)
-            Firewall::Record.new(
+            Types::Firewall::Record.new(
               id: data["id"].to_s,
               name: data["name"]
             )
@@ -376,7 +376,7 @@ module Nvoi
             # Get private IP from private_net array
             private_ip = data["private_net"]&.first&.dig("ip")
 
-            Server::Record.new(
+            Types::Server::Record.new(
               id: data["id"].to_s,
               name: data["name"],
               status: data["status"],
@@ -386,7 +386,7 @@ module Nvoi
           end
 
           def to_volume(data)
-            Volume::Record.new(
+            Types::Volume::Record.new(
               id: data["id"].to_s,
               name: data["name"],
               size: data["size"],

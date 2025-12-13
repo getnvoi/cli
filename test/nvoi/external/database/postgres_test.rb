@@ -32,7 +32,7 @@ class ExternalDatabasePostgresTest < Minitest::Test
   end
 
   def test_build_url
-    creds = Nvoi::External::Database::Credentials.new(
+    creds = Nvoi::External::Database::Types::Credentials.new(
       user: "user",
       password: "pass",
       host: "localhost",
@@ -45,7 +45,7 @@ class ExternalDatabasePostgresTest < Minitest::Test
   end
 
   def test_build_url_with_host_override
-    creds = Nvoi::External::Database::Credentials.new(
+    creds = Nvoi::External::Database::Types::Credentials.new(
       user: "user",
       password: "pass",
       host: "localhost",
@@ -58,7 +58,7 @@ class ExternalDatabasePostgresTest < Minitest::Test
   end
 
   def test_container_env
-    creds = Nvoi::External::Database::Credentials.new(
+    creds = Nvoi::External::Database::Types::Credentials.new(
       user: "user",
       password: "pass",
       database: "mydb"
@@ -72,7 +72,7 @@ class ExternalDatabasePostgresTest < Minitest::Test
   end
 
   def test_app_env
-    creds = Nvoi::External::Database::Credentials.new(
+    creds = Nvoi::External::Database::Types::Credentials.new(
       user: "user",
       password: "pass",
       port: "5432",

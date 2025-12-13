@@ -49,7 +49,7 @@ module Nvoi
 
           def parse_standard_url(url, default_port)
             uri = URI.parse(url)
-            Database::Credentials.new(
+            Types::Credentials.new(
               user: uri.user,
               password: uri.password,
               host: uri.host,

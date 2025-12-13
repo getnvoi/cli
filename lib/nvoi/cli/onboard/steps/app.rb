@@ -6,7 +6,7 @@ module Nvoi
       module Steps
         # Single app form - used for add and edit
         class App
-          include UI
+          include Onboard::Ui
 
           def initialize(prompt, test_mode: false)
             @prompt = prompt
@@ -49,58 +49,58 @@ module Nvoi
 
           private
 
-          def prompt_optional(label, default, placeholder: nil)
-            hint = placeholder ? " (#{placeholder})" : ""
-            if default
-              @prompt.ask("#{label}#{hint}:", default:)
-            else
-              @prompt.ask("#{label}#{hint}:")
-            end
-          end
-
-          def prompt_domain_selection
-            domain_choices = @zones.map { |z| { name: z[:name], value: z } }
-            domain_choices << { name: "Skip (no domain)", value: nil }
-
-            selected = @prompt.select("Domain:", domain_choices)
-            return [nil, nil] unless selected
-
-            zone_id = selected[:id]
-            domain = selected[:name]
-            subdomain = prompt_subdomain(zone_id, domain)
-
-            [domain, subdomain]
-          end
-
-          def prompt_subdomain(zone_id, domain)
-            loop do
-              subdomain = @prompt.ask("Subdomain (leave blank for #{domain} + *.#{domain}):")
-              subdomain = subdomain.to_s.strip.downcase
-
-              if !subdomain.empty? && !subdomain.match?(/\A[a-z0-9]([a-z0-9-]*[a-z0-9])?\z/)
-                error("Invalid subdomain format. Use lowercase letters, numbers, and hyphens.")
-                next
+            def prompt_optional(label, default, placeholder: nil)
+              hint = placeholder ? " (#{placeholder})" : ""
+              if default
+                @prompt.ask("#{label}#{hint}:", default:)
+              else
+                @prompt.ask("#{label}#{hint}:")
               end
+            end
 
-              hostnames = Utils::Namer.build_hostnames(subdomain.empty? ? nil : subdomain, domain)
-              all_available = true
+            def prompt_domain_selection
+              domain_choices = @zones.map { |z| { name: z[:name], value: z } }
+              domain_choices << { name: "Skip (no domain)", value: nil }
 
-              hostnames.each do |hostname|
-                available = with_spinner("Checking #{hostname}...") do
-                  check_subdomain = hostname == domain ? "" : hostname.sub(".#{domain}", "")
-                  @cloudflare_client.subdomain_available?(zone_id, check_subdomain, domain)
+              selected = @prompt.select("Domain:", domain_choices)
+              return [nil, nil] unless selected
+
+              zone_id = selected[:id]
+              domain = selected[:name]
+              subdomain = prompt_subdomain(zone_id, domain)
+
+              [domain, subdomain]
+            end
+
+            def prompt_subdomain(zone_id, domain)
+              loop do
+                subdomain = @prompt.ask("Subdomain (leave blank for #{domain} + *.#{domain}):")
+                subdomain = subdomain.to_s.strip.downcase
+
+                if !subdomain.empty? && !subdomain.match?(/\A[a-z0-9]([a-z0-9-]*[a-z0-9])?\z/)
+                  error("Invalid subdomain format. Use lowercase letters, numbers, and hyphens.")
+                  next
                 end
 
-                unless available
-                  error("#{hostname} already has a DNS record. Choose a different subdomain.")
-                  all_available = false
-                  break
-                end
-              end
+                hostnames = Utils::Namer.build_hostnames(subdomain.empty? ? nil : subdomain, domain)
+                all_available = true
 
-              return subdomain if all_available
+                hostnames.each do |hostname|
+                  available = with_spinner("Checking #{hostname}...") do
+                    check_subdomain = hostname == domain ? "" : hostname.sub(".#{domain}", "")
+                    @cloudflare_client.subdomain_available?(zone_id, check_subdomain, domain)
+                  end
+
+                  unless available
+                    error("#{hostname} already has a DNS record. Choose a different subdomain.")
+                    all_available = false
+                    break
+                  end
+                end
+
+                return subdomain if all_available
+              end
             end
-          end
         end
       end
     end

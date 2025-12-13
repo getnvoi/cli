@@ -9,13 +9,13 @@ class ConfigLoaderTest < Minitest::Test
   end
 
   def test_get_database_credentials_returns_nil_for_missing_adapter
-    db_config = Nvoi::Configuration::DatabaseCfg.new({})
+    db_config = Nvoi::Configuration::Database.new({})
     result = Nvoi::Utils::ConfigLoader.get_database_credentials(db_config)
     assert_nil result
   end
 
   def test_get_database_credentials_parses_postgres_from_secrets
-    db_config = Nvoi::Configuration::DatabaseCfg.new({
+    db_config = Nvoi::Configuration::Database.new({
       "adapter" => "postgres",
       "secrets" => {
         "POSTGRES_USER" => "admin",
@@ -33,7 +33,7 @@ class ConfigLoaderTest < Minitest::Test
   end
 
   def test_get_database_credentials_parses_mysql_from_secrets
-    db_config = Nvoi::Configuration::DatabaseCfg.new({
+    db_config = Nvoi::Configuration::Database.new({
       "adapter" => "mysql",
       "secrets" => {
         "MYSQL_USER" => "admin",
@@ -51,7 +51,7 @@ class ConfigLoaderTest < Minitest::Test
   end
 
   def test_get_database_credentials_handles_sqlite
-    db_config = Nvoi::Configuration::DatabaseCfg.new({
+    db_config = Nvoi::Configuration::Database.new({
       "adapter" => "sqlite3"
     })
 
@@ -61,7 +61,7 @@ class ConfigLoaderTest < Minitest::Test
   end
 
   def test_get_database_credentials_raises_for_unsupported_adapter
-    db_config = Nvoi::Configuration::DatabaseCfg.new({
+    db_config = Nvoi::Configuration::Database.new({
       "adapter" => "oracle"
     })
 
@@ -72,7 +72,7 @@ class ConfigLoaderTest < Minitest::Test
   end
 
   def test_get_database_credentials_parses_url_for_postgres
-    db_config = Nvoi::Configuration::DatabaseCfg.new({
+    db_config = Nvoi::Configuration::Database.new({
       "adapter" => "postgres",
       "url" => "postgres://user:pass@localhost:5432/testdb"
     })

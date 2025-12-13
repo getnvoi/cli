@@ -11,12 +11,12 @@ module Nvoi
       def initialize(data = {})
         @name = data["name"]
         @environment = data["environment"] || "production"
-        @domain_provider = DomainProvider.new(data["domain_provider"] || {})
-        @compute_provider = ComputeProvider.new(data["compute_provider"] || {})
+        @domain_provider = Providers::DomainProvider.new(data["domain_provider"] || {})
+        @compute_provider = Providers::ComputeProvider.new(data["compute_provider"] || {})
         @keep_count = data["keep_count"]&.to_i
         @servers = (data["servers"] || {}).transform_values { |v| Server.new(v || {}) }
         @app = (data["app"] || {}).transform_values { |v| AppService.new(v || {}) }
-        @database = data["database"] ? DatabaseCfg.new(data["database"]) : nil
+        @database = data["database"] ? Database.new(data["database"]) : nil
         @services = (data["services"] || {}).transform_values { |v| Service.new(v || {}) }
         @env = data["env"] || {}
         @secrets = data["secrets"] || {}

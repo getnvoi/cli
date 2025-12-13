@@ -195,14 +195,14 @@ module Nvoi
           adapter = db.adapter&.downcase
           case adapter
           when "postgres", "postgresql"
-            External::Database::Credentials.new(
+            External::Database::Types::Credentials.new(
               user: db.secrets["POSTGRES_USER"],
               password: db.secrets["POSTGRES_PASSWORD"],
               database: db.secrets["POSTGRES_DB"],
               port: provider.default_port
             )
           when "mysql"
-            External::Database::Credentials.new(
+            External::Database::Types::Credentials.new(
               user: db.secrets["MYSQL_USER"],
               password: db.secrets["MYSQL_PASSWORD"],
               database: db.secrets["MYSQL_DATABASE"],

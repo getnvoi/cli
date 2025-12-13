@@ -9,7 +9,7 @@ module Nvoi
   class Cli
     module Onboard
       # Shared UI helpers for onboard steps
-      module UI
+      module Ui
         MAX_RETRIES = 3
 
         def section(title)
@@ -71,9 +71,9 @@ module Nvoi
 
         private
 
-        def pastel
-          @pastel ||= Pastel.new
-        end
+          def pastel
+            @pastel ||= Pastel.new
+          end
       end
     end
   end

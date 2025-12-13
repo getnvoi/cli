@@ -22,22 +22,22 @@ module Nvoi
       def self.failure(type, message)
         new(error_type: type, error_message: message)
       end
-    end
 
-    # Result for init operations (includes encryption artifacts)
-    class InitResult
-      attr_reader :config, :master_key, :ssh_public_key, :error_type, :error_message
+      # Result for init operations (includes encryption artifacts)
+      class Init
+        attr_reader :config, :master_key, :ssh_public_key, :error_type, :error_message
 
-      def initialize(config: nil, master_key: nil, ssh_public_key: nil, error_type: nil, error_message: nil)
-        @config = config
-        @master_key = master_key
-        @ssh_public_key = ssh_public_key
-        @error_type = error_type
-        @error_message = error_message
+        def initialize(config: nil, master_key: nil, ssh_public_key: nil, error_type: nil, error_message: nil)
+          @config = config
+          @master_key = master_key
+          @ssh_public_key = ssh_public_key
+          @error_type = error_type
+          @error_message = error_message
+        end
+
+        def success? = @error_type.nil?
+        def failure? = !success?
       end
-
-      def success? = @error_type.nil?
-      def failure? = !success?
     end
   end
 end

@@ -66,7 +66,7 @@ module Nvoi
               raise Errors::VolumeError, "server not found: #{vol_config[:server_name]}" unless server
 
               # Create volume
-              opts = External::Volume::CreateOptions.new(
+              opts = External::Cloud::Types::Volume::CreateOptions.new(
                 name: vol_config[:name],
                 size: vol_config[:size],
                 server_id: server.id

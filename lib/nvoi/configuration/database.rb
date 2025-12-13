@@ -2,8 +2,8 @@
 
 module Nvoi
   module Configuration
-    # DatabaseCfg defines database configuration
-    class DatabaseCfg
+    # Database defines database configuration
+    class Database
       attr_accessor :servers, :adapter, :url, :image, :mount, :secrets, :path
 
       def initialize(data = {})

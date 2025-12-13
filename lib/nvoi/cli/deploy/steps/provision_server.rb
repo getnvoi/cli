@@ -71,7 +71,7 @@ module Nvoi
               # Create cloud-init user data
               user_data = generate_user_data
 
-              opts = External::Server::CreateOptions.new(
+              opts = External::Cloud::Types::Server::CreateOptions.new(
                 name:,
                 type: server_type,
                 image:,

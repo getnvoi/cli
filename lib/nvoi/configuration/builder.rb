@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require_relative "result"
 
 module Nvoi
   module Configuration
@@ -37,15 +36,15 @@ module Nvoi
         yaml = YAML.dump(builder.to_h)
         encrypted_config = Utils::Crypto.encrypt(yaml, master_key)
 
-        InitResult.new(
+        Result::Init.new(
           config: encrypted_config,
           master_key:,
           ssh_public_key: public_key
         )
       rescue ArgumentError => e
-        InitResult.new(error_type: :invalid_args, error_message: e.message)
+        Result::Init.new(error_type: :invalid_args, error_message: e.message)
       rescue Errors::ConfigError => e
-        InitResult.new(error_type: :config_error, error_message: e.message)
+        Result::Init.new(error_type: :config_error, error_message: e.message)
       end
 
       # ─── Basic Setters ───
@@ -277,142 +276,142 @@ module Nvoi
 
       private
 
-      def app
-        @data["application"] ||= {}
-      end
-
-      def servers
-        app["servers"] ||= {}
-      end
-
-      def apps
-        app["app"] ||= {}
-      end
-
-      def services
-        app["services"] ||= {}
-      end
-
-      def secrets
-        app["secrets"] ||= {}
-      end
-
-      def env_vars
-        app["env"] ||= {}
-      end
-
-      # ─── Validation Helpers ───
-
-      def validate_presence!(value, field)
-        raise ArgumentError, "#{field} is required" if value.nil? || value.to_s.empty?
-      end
-
-      def validate_inclusion!(value, list, field)
-        raise ArgumentError, "#{field} must be one of: #{list.join(', ')}" unless list.include?(value)
-      end
-
-      def validate_positive!(value, field)
-        raise ArgumentError, "#{field} must be positive" if value && value < 1
-      end
-
-      def validate_exists!(hash, key, type)
-        raise Errors::ConfigValidationError, "#{type} '#{key}' not found" unless hash.key?(key)
-      end
-
-      def validate_servers_array!(server_refs)
-        raise ArgumentError, "servers is required" if server_refs.nil? || server_refs.empty?
-        raise ArgumentError, "servers must be an array" unless server_refs.is_a?(Array)
-      end
-
-      def validate_server_refs!(server_refs)
-        defined = servers.keys
-        server_refs.each do |ref|
-          raise Errors::ConfigValidationError, "server '#{ref}' not found" unless defined.include?(ref.to_s)
+        def app
+          @data["application"] ||= {}
         end
-      end
 
-      def check_server_references(server_name)
-        apps.each do |app_name, cfg|
-          if (cfg["servers"] || []).include?(server_name)
-            raise Errors::ConfigValidationError, "app.#{app_name} references server '#{server_name}'"
+        def servers
+          app["servers"] ||= {}
+        end
+
+        def apps
+          app["app"] ||= {}
+        end
+
+        def services
+          app["services"] ||= {}
+        end
+
+        def secrets
+          app["secrets"] ||= {}
+        end
+
+        def env_vars
+          app["env"] ||= {}
+        end
+
+        # ─── Validation Helpers ───
+
+        def validate_presence!(value, field)
+          raise ArgumentError, "#{field} is required" if value.nil? || value.to_s.empty?
+        end
+
+        def validate_inclusion!(value, list, field)
+          raise ArgumentError, "#{field} must be one of: #{list.join(', ')}" unless list.include?(value)
+        end
+
+        def validate_positive!(value, field)
+          raise ArgumentError, "#{field} must be positive" if value && value < 1
+        end
+
+        def validate_exists!(hash, key, type)
+          raise Errors::ConfigValidationError, "#{type} '#{key}' not found" unless hash.key?(key)
+        end
+
+        def validate_servers_array!(server_refs)
+          raise ArgumentError, "servers is required" if server_refs.nil? || server_refs.empty?
+          raise ArgumentError, "servers must be an array" unless server_refs.is_a?(Array)
+        end
+
+        def validate_server_refs!(server_refs)
+          defined = servers.keys
+          server_refs.each do |ref|
+            raise Errors::ConfigValidationError, "server '#{ref}' not found" unless defined.include?(ref.to_s)
           end
         end
 
-        db = app["database"]
-        if db && (db["servers"] || []).include?(server_name)
-          raise Errors::ConfigValidationError, "database references server '#{server_name}'"
-        end
+        def check_server_references(server_name)
+          apps.each do |app_name, cfg|
+            if (cfg["servers"] || []).include?(server_name)
+              raise Errors::ConfigValidationError, "app.#{app_name} references server '#{server_name}'"
+            end
+          end
 
-        services.each do |svc_name, cfg|
-          if (cfg["servers"] || []).include?(server_name)
-            raise Errors::ConfigValidationError, "services.#{svc_name} references server '#{server_name}'"
+          db = app["database"]
+          if db && (db["servers"] || []).include?(server_name)
+            raise Errors::ConfigValidationError, "database references server '#{server_name}'"
+          end
+
+          services.each do |svc_name, cfg|
+            if (cfg["servers"] || []).include?(server_name)
+              raise Errors::ConfigValidationError, "services.#{svc_name} references server '#{server_name}'"
+            end
           end
         end
-      end
 
-      # ─── Config Builders ───
+        # ─── Config Builders ───
 
-      def build_compute_config(provider, opts)
-        case provider
-        when "hetzner"
-          {
-            "api_token" => opts[:api_token],
-            "server_type" => opts[:server_type],
-            "server_location" => opts[:server_location]
-          }.compact
-        when "aws"
-          {
-            "access_key_id" => opts[:access_key_id],
-            "secret_access_key" => opts[:secret_access_key],
-            "region" => opts[:region],
-            "instance_type" => opts[:instance_type]
-          }.compact
-        when "scaleway"
-          {
-            "secret_key" => opts[:secret_key],
-            "project_id" => opts[:project_id],
-            "zone" => opts[:zone],
-            "server_type" => opts[:server_type]
-          }.compact
+        def build_compute_config(provider, opts)
+          case provider
+          when "hetzner"
+            {
+              "api_token" => opts[:api_token],
+              "server_type" => opts[:server_type],
+              "server_location" => opts[:server_location]
+            }.compact
+          when "aws"
+            {
+              "access_key_id" => opts[:access_key_id],
+              "secret_access_key" => opts[:secret_access_key],
+              "region" => opts[:region],
+              "instance_type" => opts[:instance_type]
+            }.compact
+          when "scaleway"
+            {
+              "secret_key" => opts[:secret_key],
+              "project_id" => opts[:project_id],
+              "zone" => opts[:zone],
+              "server_type" => opts[:server_type]
+            }.compact
+          end
         end
-      end
 
-      def build_domain_config(provider, opts)
-        case provider
-        when "cloudflare"
-          {
-            "api_token" => opts[:api_token],
-            "account_id" => opts[:account_id]
-          }.compact
+        def build_domain_config(provider, opts)
+          case provider
+          when "cloudflare"
+            {
+              "api_token" => opts[:api_token],
+              "account_id" => opts[:account_id]
+            }.compact
+          end
         end
-      end
 
-      def build_database_secrets(adapter, user, password, database_name)
-        case adapter.to_s.downcase
-        when "postgres", "postgresql"
-          {
-            "POSTGRES_USER" => user,
-            "POSTGRES_PASSWORD" => password,
-            "POSTGRES_DB" => database_name
-          }.compact
-        when "mysql"
-          {
-            "MYSQL_USER" => user,
-            "MYSQL_PASSWORD" => password,
-            "MYSQL_DATABASE" => database_name
-          }.compact
-        else
-          {}
+        def build_database_secrets(adapter, user, password, database_name)
+          case adapter.to_s.downcase
+          when "postgres", "postgresql"
+            {
+              "POSTGRES_USER" => user,
+              "POSTGRES_PASSWORD" => password,
+              "POSTGRES_DB" => database_name
+            }.compact
+          when "mysql"
+            {
+              "MYSQL_USER" => user,
+              "MYSQL_PASSWORD" => password,
+              "MYSQL_DATABASE" => database_name
+            }.compact
+          else
+            {}
+          end
         end
-      end
 
-      def wrap_success
-        Result.success(@data)
-      end
+        def wrap_success
+          Result.success(@data)
+        end
 
-      def wrap_failure(type, message)
-        Result.failure(type, message)
-      end
+        def wrap_failure(type, message)
+          Result.failure(type, message)
+        end
     end
   end
 end

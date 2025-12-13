@@ -23,7 +23,6 @@ module Nvoi
 
     desc "onboard", "Interactive setup wizard"
     def onboard
-      require_relative "cli/onboard/command"
       Cli::Onboard::Command.new.run
     end
 
@@ -31,20 +30,17 @@ module Nvoi
     option :dockerfile_path, desc: "Path to Dockerfile (optional, defaults to ./Dockerfile)"
     option :config_dir, desc: "Directory containing SSH keys (optional, defaults to ~/.ssh)"
     def deploy
-      require_relative "cli/deploy/command"
       Cli::Deploy::Command.new(options).run
     end
 
     desc "delete", "Delete server, firewall, and network"
     option :config_dir, desc: "Directory containing SSH keys (optional, defaults to ~/.ssh)"
     def delete
-      require_relative "cli/delete/command"
       Cli::Delete::Command.new(options).run
     end
 
     desc "unlock", "Remove deployment lock (use when deploy hangs)"
     def unlock
-      require_relative "cli/unlock/command"
       Cli::Unlock::Command.new(options).run
     end
 
@@ -52,7 +48,6 @@ module Nvoi
     option :follow, aliases: "-f", type: :boolean, default: false, desc: "Follow log output"
     option :tail, aliases: "-n", type: :numeric, default: 100, desc: "Number of lines to show"
     def logs(app_name)
-      require_relative "cli/logs/command"
       Cli::Logs::Command.new(options).run(app_name)
     end
 
@@ -62,7 +57,6 @@ module Nvoi
     option :interactive, aliases: "-i", type: :boolean, default: false,
                          desc: "Open interactive SSH shell instead of executing command"
     def exec(*args)
-      require_relative "cli/exec/command"
       Cli::Exec::Command.new(options).run(args)
     end
 
@@ -78,19 +72,16 @@ module Nvoi
 
       desc "edit", "Edit encrypted credentials"
       def edit
-        require_relative "cli/credentials/edit/command"
         Nvoi::Cli::Credentials::Edit::Command.new(options).run
       end
 
       desc "show", "Show decrypted credentials"
       def show
-        require_relative "cli/credentials/show/command"
         Nvoi::Cli::Credentials::Show::Command.new(options).run
       end
 
       desc "set PATH VALUE", "Set a value at a dot-notation path"
       def set(path, value)
-        require_relative "cli/credentials/edit/command"
         Nvoi::Cli::Credentials::Edit::Command.new(options).set(path, value)
       end
     }
@@ -109,7 +100,6 @@ module Nvoi
       option :name, required: true, desc: "Application name"
       option :environment, default: "production", desc: "Environment"
       def init
-        require_relative "cli/config/command"
         Nvoi::Cli::Config::Command.new(options).init(options[:name], options[:environment])
       end
 
@@ -132,7 +122,6 @@ module Nvoi
         option :project_id, desc: "Scaleway project ID"
         option :zone, desc: "Scaleway zone"
         def set(provider)
-          require_relative "cli/config/command"
           Nvoi::Cli::Config::Command.new(options).provider_set(provider, **options.slice(
             :api_token, :server_type, :server_location,
             :access_key_id, :secret_access_key, :region, :instance_type,
@@ -142,7 +131,6 @@ module Nvoi
 
         desc "rm", "Remove compute provider"
         def rm
-          require_relative "cli/config/command"
           Nvoi::Cli::Config::Command.new(options).provider_rm
         end
       }
@@ -158,13 +146,11 @@ module Nvoi
         option :api_token, required: true, desc: "API token"
         option :account_id, required: true, desc: "Account ID"
         def set(provider)
-          require_relative "cli/config/command"
           Nvoi::Cli::Config::Command.new(options).domain_set(provider, api_token: options[:api_token], account_id: options[:account_id])
         end
 
         desc "rm", "Remove domain provider"
         def rm
-          require_relative "cli/config/command"
           Nvoi::Cli::Config::Command.new(options).domain_rm
         end
       }
@@ -182,13 +168,11 @@ module Nvoi
         option :location, desc: "Location override"
         option :count, type: :numeric, default: 1, desc: "Number of servers"
         def set(name)
-          require_relative "cli/config/command"
           Nvoi::Cli::Config::Command.new(options).server_set(name, master: options[:master], type: options[:type], location: options[:location], count: options[:count])
         end
 
         desc "rm NAME", "Remove server"
         def rm(name)
-          require_relative "cli/config/command"
           Nvoi::Cli::Config::Command.new(options).server_rm(name)
         end
       }
@@ -203,13 +187,11 @@ module Nvoi
         desc "set SERVER NAME", "Add or update volume"
         option :size, type: :numeric, default: 10, desc: "Volume size in GB"
         def set(server, name)
-          require_relative "cli/config/command"
           Nvoi::Cli::Config::Command.new(options).volume_set(server, name, size: options[:size])
         end
 
         desc "rm SERVER NAME", "Remove volume"
         def rm(server, name)
-          require_relative "cli/config/command"
           Nvoi::Cli::Config::Command.new(options).volume_rm(server, name)
         end
       }
@@ -229,13 +211,11 @@ module Nvoi
         option :command, desc: "Run command"
         option :pre_run_command, desc: "Pre-run command (migrations, etc)"
         def set(name)
-          require_relative "cli/config/command"
           Nvoi::Cli::Config::Command.new(options).app_set(name, **options.slice(:servers, :domain, :subdomain, :port, :command, :pre_run_command).transform_keys(&:to_sym).compact)
         end
 
         desc "rm NAME", "Remove app"
         def rm(name)
-          require_relative "cli/config/command"
           Nvoi::Cli::Config::Command.new(options).app_rm(name)
         end
       }
@@ -256,13 +236,11 @@ module Nvoi
         option :url, desc: "Database URL (alternative to user/pass/db)"
         option :image, desc: "Custom Docker image"
         def set
-          require_relative "cli/config/command"
           Nvoi::Cli::Config::Command.new(options).database_set(**options.slice(:servers, :adapter, :user, :password, :database, :url, :image).transform_keys(&:to_sym).compact)
         end
 
         desc "rm", "Remove database"
         def rm
-          require_relative "cli/config/command"
           Nvoi::Cli::Config::Command.new(options).database_rm
         end
       }
@@ -280,13 +258,11 @@ module Nvoi
         option :port, type: :numeric, desc: "Port"
         option :command, desc: "Command"
         def set(name)
-          require_relative "cli/config/command"
           Nvoi::Cli::Config::Command.new(options).service_set(name, **options.slice(:servers, :image, :port, :command).transform_keys(&:to_sym).compact)
         end
 
         desc "rm NAME", "Remove service"
         def rm(name)
-          require_relative "cli/config/command"
           Nvoi::Cli::Config::Command.new(options).service_rm(name)
         end
       }
@@ -300,13 +276,11 @@ module Nvoi
 
         desc "set KEY VALUE", "Set secret"
         def set(key, value)
-          require_relative "cli/config/command"
           Nvoi::Cli::Config::Command.new(options).secret_set(key, value)
         end
 
         desc "rm KEY", "Remove secret"
         def rm(key)
-          require_relative "cli/config/command"
           Nvoi::Cli::Config::Command.new(options).secret_rm(key)
         end
       }
@@ -320,13 +294,11 @@ module Nvoi
 
         desc "set KEY VALUE", "Set environment variable"
         def set(key, value)
-          require_relative "cli/config/command"
           Nvoi::Cli::Config::Command.new(options).env_set(key, value)
         end
 
         desc "rm KEY", "Remove environment variable"
         def rm(key)
-          require_relative "cli/config/command"
           Nvoi::Cli::Config::Command.new(options).env_rm(key)
         end
       }
@@ -360,26 +332,22 @@ module Nvoi
 
         desc "create [NAME]", "Create a new database branch (snapshot)"
         def create(name = nil)
-          require_relative "cli/db/command"
           Nvoi::Cli::Db::Command.new(options).branch_create(name)
         end
 
         desc "list", "List all database branches"
         def list
-          require_relative "cli/db/command"
           Nvoi::Cli::Db::Command.new(options).branch_list
         end
 
         desc "restore ID [NEW_DB_NAME]", "Restore a database branch to a new database"
         def restore(branch_id, new_db_name = nil)
-          require_relative "cli/db/command"
           Nvoi::Cli::Db::Command.new(options).branch_restore(branch_id, new_db_name)
         end
 
         desc "download ID", "Download a database branch dump"
         option :path, aliases: "-p", desc: "Output file path (default: {branch_id}.sql)"
         def download(branch_id)
-          require_relative "cli/db/command"
           Nvoi::Cli::Db::Command.new(options).branch_download(branch_id)
         end
       }

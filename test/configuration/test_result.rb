@@ -24,7 +24,7 @@ class TestConfigurationResult < Minitest::Test
   end
 
   def test_init_result_success
-    result = Nvoi::Configuration::InitResult.new(
+    result = Nvoi::Configuration::Result::Init.new(
       config: "encrypted_data",
       master_key: "key123",
       ssh_public_key: "ssh-ed25519 AAA..."
@@ -38,7 +38,7 @@ class TestConfigurationResult < Minitest::Test
   end
 
   def test_init_result_failure
-    result = Nvoi::Configuration::InitResult.new(
+    result = Nvoi::Configuration::Result::Init.new(
       error_type: :invalid_args,
       error_message: "name is required"
     )

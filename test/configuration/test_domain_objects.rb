@@ -388,7 +388,7 @@ class ApplicationTest < Minitest::Test
 
     app = Nvoi::Configuration::Application.new(data)
 
-    assert_instance_of Nvoi::Configuration::DatabaseCfg, app.database
+    assert_instance_of Nvoi::Configuration::Database, app.database
     assert_equal "postgres", app.database.adapter
     assert_equal "admin", app.database.secrets["POSTGRES_USER"]
   end
@@ -421,7 +421,7 @@ end
 
 class DatabaseConfigTest < Minitest::Test
   def test_to_service_spec_returns_nil_for_sqlite
-    config = Nvoi::Configuration::DatabaseCfg.new({
+    config = Nvoi::Configuration::Database.new({
       "adapter" => "sqlite3"
     })
 
@@ -432,7 +432,7 @@ class DatabaseConfigTest < Minitest::Test
   end
 
   def test_to_service_spec_creates_spec_for_postgres
-    config = Nvoi::Configuration::DatabaseCfg.new({
+    config = Nvoi::Configuration::Database.new({
       "servers" => ["master"],
       "adapter" => "postgres",
       "secrets" => { "POSTGRES_USER" => "admin" }
@@ -450,7 +450,7 @@ class DatabaseConfigTest < Minitest::Test
   end
 
   def test_to_service_spec_creates_spec_for_mysql
-    config = Nvoi::Configuration::DatabaseCfg.new({
+    config = Nvoi::Configuration::Database.new({
       "servers" => ["master"],
       "adapter" => "mysql",
       "secrets" => {}
@@ -508,7 +508,7 @@ end
 
 class ScalewayConfigTest < Minitest::Test
   def test_defaults_zone_to_fr_par_1
-    config = Nvoi::Configuration::Scaleway.new({
+    config = Nvoi::Configuration::Providers::Scaleway.new({
       "secret_key" => "key",
       "project_id" => "proj"
     })
@@ -517,7 +517,7 @@ class ScalewayConfigTest < Minitest::Test
   end
 
   def test_uses_provided_zone
-    config = Nvoi::Configuration::Scaleway.new({
+    config = Nvoi::Configuration::Providers::Scaleway.new({
       "secret_key" => "key",
       "project_id" => "proj",
       "zone" => "nl-ams-1"

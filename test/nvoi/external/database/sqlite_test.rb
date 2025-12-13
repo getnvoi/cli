@@ -30,7 +30,7 @@ class ExternalDatabaseSqliteTest < Minitest::Test
   end
 
   def test_build_url
-    creds = Nvoi::External::Database::Credentials.new(
+    creds = Nvoi::External::Database::Types::Credentials.new(
       path: "data/production.sqlite3"
     )
 
@@ -39,13 +39,13 @@ class ExternalDatabaseSqliteTest < Minitest::Test
   end
 
   def test_container_env_empty
-    creds = Nvoi::External::Database::Credentials.new(path: "test.db")
+    creds = Nvoi::External::Database::Types::Credentials.new(path: "test.db")
     env = @provider.container_env(creds)
     assert_equal({}, env)
   end
 
   def test_app_env
-    creds = Nvoi::External::Database::Credentials.new(
+    creds = Nvoi::External::Database::Types::Credentials.new(
       path: "data/production.sqlite3"
     )
 

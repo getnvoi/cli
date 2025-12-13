@@ -4,7 +4,7 @@ require "test_helper"
 
 class DatabaseTypesTest < Minitest::Test
   def test_database_credentials_struct
-    creds = Nvoi::External::Database::Credentials.new(
+    creds = Nvoi::External::Database::Types::Credentials.new(
       user: "postgres",
       password: "secret",
       host: "localhost",
@@ -22,7 +22,7 @@ class DatabaseTypesTest < Minitest::Test
   end
 
   def test_dump_options_struct
-    opts = Nvoi::External::Database::DumpOptions.new(
+    opts = Nvoi::External::Database::Types::DumpOptions.new(
       pod_name: "myapp-db-0",
       database: "myapp_prod",
       user: "postgres",
@@ -38,7 +38,7 @@ class DatabaseTypesTest < Minitest::Test
   end
 
   def test_restore_options_struct
-    opts = Nvoi::External::Database::RestoreOptions.new(
+    opts = Nvoi::External::Database::Types::RestoreOptions.new(
       pod_name: "myapp-db-0",
       database: "myapp_branch",
       user: "postgres",
@@ -56,7 +56,7 @@ class DatabaseTypesTest < Minitest::Test
   end
 
   def test_database_create_options_struct
-    opts = Nvoi::External::Database::CreateOptions.new(
+    opts = Nvoi::External::Database::Types::CreateOptions.new(
       pod_name: "myapp-db-0",
       database: "myapp_branch",
       user: "postgres",
@@ -70,7 +70,7 @@ class DatabaseTypesTest < Minitest::Test
   end
 
   def test_branch_struct
-    branch = Nvoi::External::Database::Branch.new(
+    branch = Nvoi::External::Database::Types::Branch.new(
       id: "branch-123",
       created_at: "2024-01-15T10:30:00Z",
       size: 1024,
@@ -86,7 +86,7 @@ class DatabaseTypesTest < Minitest::Test
   end
 
   def test_branch_to_h
-    branch = Nvoi::External::Database::Branch.new(
+    branch = Nvoi::External::Database::Types::Branch.new(
       id: "branch-123",
       created_at: "2024-01-15T10:30:00Z",
       size: 1024,
@@ -104,10 +104,10 @@ class DatabaseTypesTest < Minitest::Test
 
   def test_branch_metadata_to_json
     branches = [
-      Nvoi::External::Database::Branch.new(id: "b1", created_at: "2024-01-15", size: 100, adapter: "postgres", database: "db1"),
-      Nvoi::External::Database::Branch.new(id: "b2", created_at: "2024-01-16", size: 200, adapter: "postgres", database: "db2")
+      Nvoi::External::Database::Types::Branch.new(id: "b1", created_at: "2024-01-15", size: 100, adapter: "postgres", database: "db1"),
+      Nvoi::External::Database::Types::Branch.new(id: "b2", created_at: "2024-01-16", size: 200, adapter: "postgres", database: "db2")
     ]
-    metadata = Nvoi::External::Database::BranchMetadata.new(branches)
+    metadata = Nvoi::External::Database::Types::BranchMetadata.new(branches)
 
     json = metadata.to_json
     parsed = JSON.parse(json)
@@ -119,7 +119,7 @@ class DatabaseTypesTest < Minitest::Test
 
   def test_branch_metadata_from_json
     json = '{"branches":[{"id":"b1","created_at":"2024-01-15","size":100,"adapter":"postgres","database":"db1"}]}'
-    metadata = Nvoi::External::Database::BranchMetadata.from_json(json)
+    metadata = Nvoi::External::Database::Types::BranchMetadata.from_json(json)
 
     assert_equal 1, metadata.branches.size
     assert_equal "b1", metadata.branches[0].id
@@ -127,7 +127,7 @@ class DatabaseTypesTest < Minitest::Test
   end
 
   def test_branch_metadata_empty
-    metadata = Nvoi::External::Database::BranchMetadata.new
+    metadata = Nvoi::External::Database::Types::BranchMetadata.new
     assert_equal [], metadata.branches
 
     json = metadata.to_json

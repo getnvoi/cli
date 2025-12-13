@@ -6,7 +6,7 @@ module Nvoi
       module Steps
         # Collects application name
         class AppName
-          include UI
+          include Onboard::Ui
 
           def initialize(prompt, test_mode: false)
             @prompt = prompt

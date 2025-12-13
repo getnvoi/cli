@@ -6,7 +6,7 @@ module Nvoi
       module Steps
         # Collects environment variables and secrets
         class Env
-          include UI
+          include Onboard::Ui
 
           ACTIONS = [
             { name: "Add variable", value: :add },
@@ -53,13 +53,13 @@ module Nvoi
 
           private
 
-          def show_table(env, secrets)
-            rows = []
-            env.each { |k, v| rows << [k, v] }
-            secrets.each { |k, _| rows << [k, "********"] }
+            def show_table(env, secrets)
+              rows = []
+              env.each { |k, v| rows << [k, v] }
+              secrets.each { |k, _| rows << [k, "********"] }
 
-            table(rows:, header: %w[Key Value])
-          end
+              table(rows:, header: %w[Key Value])
+            end
         end
       end
     end

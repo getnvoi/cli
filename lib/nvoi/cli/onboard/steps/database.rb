@@ -6,7 +6,7 @@ module Nvoi
       module Steps
         # Collects database configuration
         class Database
-          include UI
+          include Onboard::Ui
 
           ADAPTERS = [
             { name: "PostgreSQL", value: "postgres" },
@@ -36,60 +36,60 @@ module Nvoi
 
           private
 
-          def setup_postgres(app_name)
-            db_name = @prompt.ask("Database name:", default: "#{app_name}_production")
-            user = @prompt.ask("Database user:", default: app_name)
-            password = @prompt.mask("Database password:") { |q| q.required true }
+            def setup_postgres(app_name)
+              db_name = @prompt.ask("Database name:", default: "#{app_name}_production")
+              user = @prompt.ask("Database user:", default: app_name)
+              password = @prompt.mask("Database password:") { |q| q.required true }
 
-            config = {
-              "servers" => ["main"],
-              "adapter" => "postgres",
-              "secrets" => {
-                "POSTGRES_DB" => db_name,
-                "POSTGRES_USER" => user,
-                "POSTGRES_PASSWORD" => password
+              config = {
+                "servers" => ["main"],
+                "adapter" => "postgres",
+                "secrets" => {
+                  "POSTGRES_DB" => db_name,
+                  "POSTGRES_USER" => user,
+                  "POSTGRES_PASSWORD" => password
+                }
               }
-            }
 
-            volume = { "postgres_data" => { "size" => 10 } }
+              volume = { "postgres_data" => { "size" => 10 } }
 
-            [config, volume]
-          end
+              [config, volume]
+            end
 
-          def setup_mysql(app_name)
-            db_name = @prompt.ask("Database name:", default: "#{app_name}_production")
-            user = @prompt.ask("Database user:", default: app_name)
-            password = @prompt.mask("Database password:") { |q| q.required true }
+            def setup_mysql(app_name)
+              db_name = @prompt.ask("Database name:", default: "#{app_name}_production")
+              user = @prompt.ask("Database user:", default: app_name)
+              password = @prompt.mask("Database password:") { |q| q.required true }
 
-            config = {
-              "servers" => ["main"],
-              "adapter" => "mysql",
-              "secrets" => {
-                "MYSQL_DATABASE" => db_name,
-                "MYSQL_USER" => user,
-                "MYSQL_PASSWORD" => password
+              config = {
+                "servers" => ["main"],
+                "adapter" => "mysql",
+                "secrets" => {
+                  "MYSQL_DATABASE" => db_name,
+                  "MYSQL_USER" => user,
+                  "MYSQL_PASSWORD" => password
+                }
               }
-            }
 
-            volume = { "mysql_data" => { "size" => 10 } }
+              volume = { "mysql_data" => { "size" => 10 } }
 
-            [config, volume]
-          end
+              [config, volume]
+            end
 
-          def setup_sqlite
-            path = @prompt.ask("Database path:", default: "/app/data/production.sqlite3")
+            def setup_sqlite
+              path = @prompt.ask("Database path:", default: "/app/data/production.sqlite3")
 
-            config = {
-              "servers" => ["main"],
-              "adapter" => "sqlite3",
-              "path" => path,
-              "mount" => { "data" => "/app/data" }
-            }
+              config = {
+                "servers" => ["main"],
+                "adapter" => "sqlite3",
+                "path" => path,
+                "mount" => { "data" => "/app/data" }
+              }
 
-            volume = { "sqlite_data" => { "size" => 10 } }
+              volume = { "sqlite_data" => { "size" => 10 } }
 
-            [config, volume]
-          end
+              [config, volume]
+            end
         end
       end
     end

@@ -6,11 +6,9 @@ require "tty/prompt/test"
 require "nvoi/cli/onboard/command"
 
 class TestOnboardCommand < Minitest::Test
-  def test_file_loads_without_test_helper
-    # Verify the file can be required in isolation (catches missing requires)
-    output = `ruby -e "require './lib/nvoi/cli/onboard/command'" 2>&1`
-    assert $?.success?, "File failed to load in isolation: #{output}"
-  end
+  # Removed: test_file_loads_without_test_helper
+  # This test was for catching missing requires, but with Zeitwerk autoloading
+  # files aren't meant to be loaded in isolation.
 
   def test_save_config
     prompt = TTY::Prompt::Test.new

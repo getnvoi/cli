@@ -172,7 +172,7 @@ class TestConfigurationPredicates < Minitest::Test
   # ─── Database Predicates ───
 
   def test_database_postgres
-    db = Nvoi::Configuration::DatabaseCfg.new({ "adapter" => "postgres" })
+    db = Nvoi::Configuration::Database.new({ "adapter" => "postgres" })
 
     assert db.postgres?
     refute db.mysql?
@@ -180,7 +180,7 @@ class TestConfigurationPredicates < Minitest::Test
   end
 
   def test_database_postgresql
-    db = Nvoi::Configuration::DatabaseCfg.new({ "adapter" => "postgresql" })
+    db = Nvoi::Configuration::Database.new({ "adapter" => "postgresql" })
 
     assert db.postgres?
     refute db.mysql?
@@ -188,7 +188,7 @@ class TestConfigurationPredicates < Minitest::Test
   end
 
   def test_database_mysql
-    db = Nvoi::Configuration::DatabaseCfg.new({ "adapter" => "mysql" })
+    db = Nvoi::Configuration::Database.new({ "adapter" => "mysql" })
 
     refute db.postgres?
     assert db.mysql?
@@ -196,7 +196,7 @@ class TestConfigurationPredicates < Minitest::Test
   end
 
   def test_database_sqlite
-    db = Nvoi::Configuration::DatabaseCfg.new({ "adapter" => "sqlite3" })
+    db = Nvoi::Configuration::Database.new({ "adapter" => "sqlite3" })
 
     refute db.postgres?
     refute db.mysql?
@@ -204,7 +204,7 @@ class TestConfigurationPredicates < Minitest::Test
   end
 
   def test_database_sqlite_plain
-    db = Nvoi::Configuration::DatabaseCfg.new({ "adapter" => "sqlite" })
+    db = Nvoi::Configuration::Database.new({ "adapter" => "sqlite" })
 
     refute db.postgres?
     refute db.mysql?
@@ -212,7 +212,7 @@ class TestConfigurationPredicates < Minitest::Test
   end
 
   def test_database_predicates_handle_nil_adapter
-    db = Nvoi::Configuration::DatabaseCfg.new({})
+    db = Nvoi::Configuration::Database.new({})
 
     refute db.postgres?
     refute db.mysql?

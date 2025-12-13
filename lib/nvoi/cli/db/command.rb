@@ -60,7 +60,7 @@ module Nvoi
             result = ssh.execute("test -f #{metadata_file} && cat #{metadata_file} || echo '{}'")
 
             begin
-              metadata = External::Database::BranchMetadata.from_json(result)
+              metadata = External::Database::Types::BranchMetadata.from_json(result)
               branches = metadata.branches
             rescue JSON::ParserError
               branches = []
@@ -204,12 +204,12 @@ module Nvoi
 
           def build_dump_options
             if @db_provider.is_a?(External::Database::Sqlite)
-              External::Database::DumpOptions.new(
+              External::Database::Types::DumpOptions.new(
                 host_path: @creds.host_path,
                 database: @creds.database
               )
             else
-              External::Database::DumpOptions.new(
+              External::Database::Types::DumpOptions.new(
                 pod_name: @config.namer.database_pod_name,
                 database: @creds.database,
                 user: @creds.user,
@@ -222,12 +222,12 @@ module Nvoi
             sanitized_name = sanitize_db_name(new_db_name)
 
             if @db_provider.is_a?(External::Database::Sqlite)
-              External::Database::RestoreOptions.new(
+              External::Database::Types::RestoreOptions.new(
                 host_path: @creds.host_path,
                 database: sanitized_name
               )
             else
-              External::Database::RestoreOptions.new(
+              External::Database::Types::RestoreOptions.new(
                 pod_name: @config.namer.database_pod_name,
                 database: sanitized_name,
                 user: @creds.user,
@@ -255,12 +255,12 @@ module Nvoi
             result = ssh.execute("test -f #{metadata_file} && cat #{metadata_file} || echo '{}'")
 
             metadata = begin
-              External::Database::BranchMetadata.from_json(result)
+              External::Database::Types::BranchMetadata.from_json(result)
             rescue JSON::ParserError
-              External::Database::BranchMetadata.new
+              External::Database::Types::BranchMetadata.new
             end
 
-            metadata.branches << External::Database::Branch.new(
+            metadata.branches << External::Database::Types::Branch.new(
               id: branch_id,
               created_at: Time.now.iso8601,
               size:,
