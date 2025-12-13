@@ -3,10 +3,16 @@
 require "simplecov"
 SimpleCov.start do
   add_filter "/test/"
-  add_group "Objects", "lib/nvoi/objects"
-  add_group "Utils", "lib/nvoi/utils"
-  add_group "External", "lib/nvoi/external"
+
   add_group "CLI", "lib/nvoi/cli"
+  add_group "Configuration", "lib/nvoi/configuration"
+  add_group "External", "lib/nvoi/external"
+  add_group "Utils", "lib/nvoi/utils"
+
+  enable_coverage :branch
+
+  # Coverage thresholds
+  minimum_coverage line: 60, branch: 40
 end
 
 $LOAD_PATH.unshift File.expand_path("../lib", __dir__)
