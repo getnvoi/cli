@@ -32,7 +32,7 @@ module Nvoi
               @client.list_zones.select { |z| z[:status] == "active" }
             end
 
-            warn "No active domains found in Cloudflare account" if @zones.empty?
+            output.puts "No active domains found in Cloudflare account" if @zones.empty?
 
             {
               "cloudflare" => {

@@ -17,7 +17,7 @@ module Nvoi
       # key_path: explicit path to key file (optional, nil = auto-discover)
       def initialize(working_dir, encrypted_path = nil, key_path = nil)
         @working_dir = working_dir
-        @encrypted_path = encrypted_path && !encrypted_path.empty? ? encrypted_path : find_encrypted_file
+        @encrypted_path = encrypted_path.blank? ? find_encrypted_file : encrypted_path
         @key_path = nil
         @master_key = nil
 
@@ -41,7 +41,7 @@ module Nvoi
 
       # Check if the store has a master key loaded
       def has_key?
-        !@master_key.nil? && !@master_key.empty?
+        !@master_key.blank?
       end
 
       # Decrypt and return the credentials content
@@ -131,7 +131,7 @@ module Nvoi
 
         def resolve_key(explicit_key_path)
           # Priority 1: Explicit key file path
-          if explicit_key_path && !explicit_key_path.empty?
+          unless explicit_key_path.blank?
             @master_key = load_key_from_file(explicit_key_path)
             @key_path = explicit_key_path
             return
@@ -139,7 +139,7 @@ module Nvoi
 
           # Priority 2: Environment variable
           env_key = ENV[MASTER_KEY_ENV_VAR]
-          if env_key && !env_key.empty?
+          unless env_key.blank?
             Crypto.validate_key(env_key)
             @master_key = env_key
             return

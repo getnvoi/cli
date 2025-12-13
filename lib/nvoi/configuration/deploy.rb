@@ -6,8 +6,9 @@ module Nvoi
     class Deploy
       attr_accessor :application
 
-      def initialize(data = {})
-        @application = Application.new(data["application"] || {})
+      def initialize(data = nil)
+        data ||= {}
+        @application = Application.new(data["application"])
       end
     end
   end

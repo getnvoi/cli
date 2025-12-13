@@ -23,7 +23,7 @@ module Nvoi
       end
 
       def self.init(name:, environment: "production")
-        raise ArgumentError, "name is required" if name.nil? || name.to_s.empty?
+        raise ArgumentError, "name is required" if name.blank?
 
         master_key = Utils::Crypto.generate_key
         private_key, public_key = Utils::ConfigLoader.generate_keypair
@@ -303,7 +303,7 @@ module Nvoi
         # ─── Validation Helpers ───
 
         def validate_presence!(value, field)
-          raise ArgumentError, "#{field} is required" if value.nil? || value.to_s.empty?
+          raise ArgumentError, "#{field} is required" if value.blank?
         end
 
         def validate_inclusion!(value, list, field)
@@ -319,7 +319,7 @@ module Nvoi
         end
 
         def validate_servers_array!(server_refs)
-          raise ArgumentError, "servers is required" if server_refs.nil? || server_refs.empty?
+          raise ArgumentError, "servers is required" if server_refs.to_a.empty?
           raise ArgumentError, "servers must be an array" unless server_refs.is_a?(Array)
         end
 

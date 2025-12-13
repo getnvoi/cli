@@ -13,6 +13,7 @@ require "fileutils"
 require "tempfile"
 require "open3"
 require "faraday"
+require_relative "nvoi/utils/presence"
 
 loader = Zeitwerk::Loader.for_gem
 loader.setup

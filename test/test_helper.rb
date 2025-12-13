@@ -12,7 +12,13 @@ end
 $LOAD_PATH.unshift File.expand_path("../lib", __dir__)
 
 require "minitest/autorun"
+require "minitest/reporters"
+Minitest::Reporters.use!(Minitest::Reporters::SpecReporter.new)
+
 require "nvoi"
+
+# Silence logger in tests
+Nvoi.logger = Nvoi::Utils::Logger.new(output: StringIO.new)
 
 # Load CLI (ignored by Zeitwerk for lazy loading in production)
 require_relative "../lib/nvoi/cli"

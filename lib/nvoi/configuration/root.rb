@@ -109,7 +109,7 @@ module Nvoi
 
         def validate_database_secrets(db)
           adapter = db.adapter&.downcase
-          return if db.url && !db.url.empty?
+          return unless db.url.blank?
 
           case adapter
           when "postgres", "postgresql"
@@ -133,34 +133,34 @@ module Nvoi
           end
 
           cf = app.domain_provider.cloudflare
-          raise Errors::ConfigValidationError, "cloudflare api_token is required" if cf.api_token.nil? || cf.api_token.empty?
-          raise Errors::ConfigValidationError, "cloudflare account_id is required" if cf.account_id.nil? || cf.account_id.empty?
+          raise Errors::ConfigValidationError, "cloudflare api_token is required" if cf.api_token.blank?
+          raise Errors::ConfigValidationError, "cloudflare account_id is required" if cf.account_id.blank?
 
           has_provider = false
 
           if app.compute_provider.hetzner
             has_provider = true
             h = app.compute_provider.hetzner
-            raise Errors::ConfigValidationError, "hetzner api_token is required" if h.api_token.nil? || h.api_token.empty?
-            raise Errors::ConfigValidationError, "hetzner server_type is required" if h.server_type.nil? || h.server_type.empty?
-            raise Errors::ConfigValidationError, "hetzner server_location is required" if h.server_location.nil? || h.server_location.empty?
+            raise Errors::ConfigValidationError, "hetzner api_token is required" if h.api_token.blank?
+            raise Errors::ConfigValidationError, "hetzner server_type is required" if h.server_type.blank?
+            raise Errors::ConfigValidationError, "hetzner server_location is required" if h.server_location.blank?
           end
 
           if app.compute_provider.aws
             has_provider = true
             a = app.compute_provider.aws
-            raise Errors::ConfigValidationError, "aws access_key_id is required" if a.access_key_id.nil? || a.access_key_id.empty?
-            raise Errors::ConfigValidationError, "aws secret_access_key is required" if a.secret_access_key.nil? || a.secret_access_key.empty?
-            raise Errors::ConfigValidationError, "aws region is required" if a.region.nil? || a.region.empty?
-            raise Errors::ConfigValidationError, "aws instance_type is required" if a.instance_type.nil? || a.instance_type.empty?
+            raise Errors::ConfigValidationError, "aws access_key_id is required" if a.access_key_id.blank?
+            raise Errors::ConfigValidationError, "aws secret_access_key is required" if a.secret_access_key.blank?
+            raise Errors::ConfigValidationError, "aws region is required" if a.region.blank?
+            raise Errors::ConfigValidationError, "aws instance_type is required" if a.instance_type.blank?
           end
 
           if app.compute_provider.scaleway
             has_provider = true
             s = app.compute_provider.scaleway
-            raise Errors::ConfigValidationError, "scaleway secret_key is required" if s.secret_key.nil? || s.secret_key.empty?
-            raise Errors::ConfigValidationError, "scaleway project_id is required" if s.project_id.nil? || s.project_id.empty?
-            raise Errors::ConfigValidationError, "scaleway server_type is required" if s.server_type.nil? || s.server_type.empty?
+            raise Errors::ConfigValidationError, "scaleway secret_key is required" if s.secret_key.blank?
+            raise Errors::ConfigValidationError, "scaleway project_id is required" if s.project_id.blank?
+            raise Errors::ConfigValidationError, "scaleway server_type is required" if s.server_type.blank?
           end
 
           raise Errors::ConfigValidationError, "compute provider required: hetzner, aws, or scaleway must be configured" unless has_provider
@@ -190,7 +190,7 @@ module Nvoi
         end
 
         def parse_database_credentials(db, provider)
-          return provider.parse_url(db.url) if db.url && !db.url.empty?
+          return provider.parse_url(db.url) unless db.url.blank?
 
           adapter = db.adapter&.downcase
           case adapter
@@ -217,7 +217,7 @@ module Nvoi
 
           seen = {}
           app.app.each do |name, cfg|
-            next unless cfg.domain && !cfg.domain.empty?
+            next if cfg.domain.blank?
 
             hostnames = Utils::Namer.build_hostnames(cfg.subdomain, cfg.domain)
             hostnames.each do |hostname|

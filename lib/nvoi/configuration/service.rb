@@ -6,7 +6,8 @@ module Nvoi
     class Service
       attr_accessor :servers, :image, :port, :command, :env, :mount
 
-      def initialize(data = {})
+      def initialize(data = nil)
+        data ||= {}
         @servers = data["servers"] || []
         @image = data["image"]
         @port = data["port"]&.to_i
@@ -51,7 +52,8 @@ module Nvoi
     class SshKey
       attr_accessor :private_key, :public_key
 
-      def initialize(data = {})
+      def initialize(data = nil)
+        data ||= {}
         @private_key = data["private_key"]
         @public_key = data["public_key"]
       end

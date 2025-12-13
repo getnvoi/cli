@@ -25,10 +25,10 @@ module Nvoi
 
             port = prompt_optional("Port", existing&.dig("port")&.to_s,
               placeholder: "leave blank for background workers")
-            port = port.to_i if port && !port.to_s.empty?
+            port = port.to_i if port && !port.blank?
 
             config = { "servers" => existing&.dig("servers") || ["main"] }
-            config["command"] = command unless command.to_s.empty?
+            config["command"] = command unless command.blank?
             config["port"] = port if port && port.to_i > 0
 
             # Domain selection only if port is set and cloudflare configured
@@ -36,13 +36,13 @@ module Nvoi
               domain, subdomain = prompt_domain_selection
               if domain
                 config["domain"] = domain
-                config["subdomain"] = subdomain unless subdomain.to_s.empty?
+                config["subdomain"] = subdomain unless subdomain.blank?
               end
             end
 
             pre_run = prompt_optional("Pre-run command", existing&.dig("pre_run_command"),
               placeholder: "e.g. migrations")
-            config["pre_run_command"] = pre_run unless pre_run.to_s.empty?
+            config["pre_run_command"] = pre_run unless pre_run.blank?
 
             [name, config]
           end

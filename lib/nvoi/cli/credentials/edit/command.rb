@@ -151,7 +151,7 @@ module Nvoi
 
             def resolve_working_dir
               wd = @options[:dir]
-              if wd.nil? || wd.empty? || wd == "."
+              if wd.blank? || wd == "."
                 Dir.pwd
               else
                 File.expand_path(wd)
@@ -160,7 +160,7 @@ module Nvoi
 
             def resolve_enc_path(working_dir)
               enc_path = @options[:credentials]
-              return File.join(working_dir, DEFAULT_ENCRYPTED_FILE) if enc_path.nil? || enc_path.empty?
+              return File.join(working_dir, DEFAULT_ENCRYPTED_FILE) if enc_path.blank?
 
               enc_path
             end
@@ -184,18 +184,18 @@ module Nvoi
               return "application section is required" unless app.is_a?(Hash)
 
               # Application name
-              return "application.name is required" if app["name"].nil? || app["name"].to_s.empty?
+              return "application.name is required" if app["name"].blank?
 
               # Environment
-              return "application.environment is required" if app["environment"].nil? || app["environment"].to_s.empty?
+              return "application.environment is required" if app["environment"].blank?
 
               # Domain provider
               domain_provider = app["domain_provider"]
               return "application.domain_provider.cloudflare is required" unless domain_provider&.dig("cloudflare")
 
               cf = domain_provider["cloudflare"]
-              return "application.domain_provider.cloudflare.api_token is required" if cf["api_token"].nil? || cf["api_token"].to_s.empty?
-              return "application.domain_provider.cloudflare.account_id is required" if cf["account_id"].nil? || cf["account_id"].to_s.empty?
+              return "application.domain_provider.cloudflare.api_token is required" if cf["api_token"].blank?
+              return "application.domain_provider.cloudflare.account_id is required" if cf["account_id"].blank?
 
               # Compute provider
               compute_provider = app["compute_provider"]
@@ -203,22 +203,22 @@ module Nvoi
               return "compute_provider (hetzner, aws, or scaleway) is required" unless has_compute
 
               if (h = compute_provider&.dig("hetzner"))
-                return "application.compute_provider.hetzner.api_token is required" if h["api_token"].nil? || h["api_token"].to_s.empty?
-                return "application.compute_provider.hetzner.server_type is required" if h["server_type"].nil? || h["server_type"].to_s.empty?
-                return "application.compute_provider.hetzner.server_location is required" if h["server_location"].nil? || h["server_location"].to_s.empty?
+                return "application.compute_provider.hetzner.api_token is required" if h["api_token"].blank?
+                return "application.compute_provider.hetzner.server_type is required" if h["server_type"].blank?
+                return "application.compute_provider.hetzner.server_location is required" if h["server_location"].blank?
               end
 
               if (a = compute_provider&.dig("aws"))
-                return "application.compute_provider.aws.access_key_id is required" if a["access_key_id"].nil? || a["access_key_id"].to_s.empty?
-                return "application.compute_provider.aws.secret_access_key is required" if a["secret_access_key"].nil? || a["secret_access_key"].to_s.empty?
-                return "application.compute_provider.aws.region is required" if a["region"].nil? || a["region"].to_s.empty?
-                return "application.compute_provider.aws.instance_type is required" if a["instance_type"].nil? || a["instance_type"].to_s.empty?
+                return "application.compute_provider.aws.access_key_id is required" if a["access_key_id"].blank?
+                return "application.compute_provider.aws.secret_access_key is required" if a["secret_access_key"].blank?
+                return "application.compute_provider.aws.region is required" if a["region"].blank?
+                return "application.compute_provider.aws.instance_type is required" if a["instance_type"].blank?
               end
 
               if (s = compute_provider&.dig("scaleway"))
-                return "application.compute_provider.scaleway.secret_key is required" if s["secret_key"].nil? || s["secret_key"].to_s.empty?
-                return "application.compute_provider.scaleway.project_id is required" if s["project_id"].nil? || s["project_id"].to_s.empty?
-                return "application.compute_provider.scaleway.server_type is required" if s["server_type"].nil? || s["server_type"].to_s.empty?
+                return "application.compute_provider.scaleway.secret_key is required" if s["secret_key"].blank?
+                return "application.compute_provider.scaleway.project_id is required" if s["project_id"].blank?
+                return "application.compute_provider.scaleway.server_type is required" if s["server_type"].blank?
               end
 
               # Servers (if any services defined)
@@ -236,7 +236,7 @@ module Nvoi
               app_services.each do |service_name, svc|
                 next unless svc
 
-                return "app.#{service_name}.servers is required" if svc["servers"].nil? || svc["servers"].empty?
+                return "app.#{service_name}.servers is required" if svc["servers"].to_a.empty?
 
                 svc["servers"].each do |ref|
                   return "app.#{service_name} references undefined server: #{ref}" unless defined_servers.include?(ref)
@@ -245,7 +245,7 @@ module Nvoi
 
               # Validate database
               if database
-                return "database.servers is required" if database["servers"].nil? || database["servers"].empty?
+                return "database.servers is required" if database["servers"].to_a.empty?
 
                 database["servers"].each do |ref|
                   return "database references undefined server: #{ref}" unless defined_servers.include?(ref)
@@ -268,10 +268,10 @@ module Nvoi
               adapter = db["adapter"]&.downcase
               url = db["url"]
 
-              return "database.adapter is required" if adapter.nil? || adapter.empty?
+              return "database.adapter is required" if adapter.blank?
 
               # URL takes precedence - if provided, no secrets needed
-              has_url = url && !url.to_s.empty?
+              has_url = !url.blank?
 
               case adapter
               when "postgres", "postgresql"

@@ -7,7 +7,8 @@ module Nvoi
       attr_accessor :servers, :domain, :subdomain, :port, :healthcheck,
                     :command, :pre_run_command, :env, :mounts
 
-      def initialize(data = {})
+      def initialize(data = nil)
+        data ||= {}
         @servers = data["servers"] || []
         @domain = data["domain"]
         @subdomain = data["subdomain"]
@@ -28,16 +29,17 @@ module Nvoi
       end
 
       def fqdn
-        return nil unless @domain && !@domain.empty?
+        return nil if @domain.blank?
 
-        @subdomain && !@subdomain.empty? ? "#{@subdomain}.#{@domain}" : @domain
+        @subdomain.blank? ? @domain : "#{@subdomain}.#{@domain}"
       end
 
       # HealthCheck defines health check configuration
       class HealthCheck
         attr_accessor :type, :path, :port, :command, :interval, :timeout, :retries
 
-        def initialize(data = {})
+        def initialize(data = nil)
+          data ||= {}
           @type = data["type"]
           @path = data["path"]
           @port = data["port"]&.to_i

@@ -8,16 +8,17 @@ module Nvoi
                     :keep_count, :servers, :app, :database, :services, :env,
                     :secrets, :ssh_keys
 
-      def initialize(data = {})
+      def initialize(data = nil)
+        data ||= {}
         @name = data["name"]
         @environment = data["environment"] || "production"
-        @domain_provider = Providers::DomainProvider.new(data["domain_provider"] || {})
-        @compute_provider = Providers::ComputeProvider.new(data["compute_provider"] || {})
+        @domain_provider = Providers::DomainProvider.new(data["domain_provider"])
+        @compute_provider = Providers::ComputeProvider.new(data["compute_provider"])
         @keep_count = data["keep_count"]&.to_i
-        @servers = (data["servers"] || {}).transform_values { |v| Server.new(v || {}) }
-        @app = (data["app"] || {}).transform_values { |v| AppService.new(v || {}) }
+        @servers = (data["servers"] || {}).transform_values { |v| Server.new(v) }
+        @app = (data["app"] || {}).transform_values { |v| AppService.new(v) }
         @database = data["database"] ? Database.new(data["database"]) : nil
-        @services = (data["services"] || {}).transform_values { |v| Service.new(v || {}) }
+        @services = (data["services"] || {}).transform_values { |v| Service.new(v) }
         @env = data["env"] || {}
         @secrets = data["secrets"] || {}
         @ssh_keys = data["ssh_keys"] ? SshKey.new(data["ssh_keys"]) : nil

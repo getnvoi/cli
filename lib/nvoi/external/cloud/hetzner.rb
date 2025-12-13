@@ -122,12 +122,12 @@ module Nvoi
           }
 
           # Add network if provided
-          if opts.network_id && !opts.network_id.empty?
+          unless opts.network_id.blank?
             create_opts[:networks] = [opts.network_id.to_i]
           end
 
           # Add firewall if provided
-          if opts.firewall_id && !opts.firewall_id.empty?
+          unless opts.firewall_id.blank?
             create_opts[:firewalls] = [{ firewall: opts.firewall_id.to_i }]
           end
 
@@ -216,7 +216,7 @@ module Nvoi
           # Hetzner provides device_path in API response
           Utils::Retry.poll(max_attempts: 30, interval: 2) do
             volume = get("/volumes/#{volume_id.to_i}")["volume"]
-            volume["linux_device"] if volume && volume["linux_device"] && !volume["linux_device"].empty?
+            volume&.dig("linux_device").then { |d| d unless d.blank? }
           end
         end
 

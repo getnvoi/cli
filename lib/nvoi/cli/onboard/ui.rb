@@ -13,16 +13,16 @@ module Nvoi
         MAX_RETRIES = 3
 
         def section(title)
-          puts
-          puts pastel.bold("─── #{title} ───")
+          output.puts
+          output.puts pastel.bold("─── #{title} ───")
         end
 
         def success(msg)
-          puts "#{pastel.green("✓")} #{msg}"
+          output.puts "#{pastel.green("✓")} #{msg}"
         end
 
         def error(msg)
-          warn "#{pastel.red("✗")} #{msg}"
+          output.puts "#{pastel.red("✗")} #{msg}"
         end
 
         def with_spinner(message)
@@ -53,20 +53,24 @@ module Nvoi
                 error("Failed after #{max} attempts: #{e.message}")
                 raise
               end
-              warn("#{e.message}. Please try again. (#{retries}/#{max})")
+              output.puts("#{e.message}. Please try again. (#{retries}/#{max})")
             end
           end
         end
 
         def table(rows:, header: nil)
           t = TTY::Table.new(header:, rows:)
-          puts t.render(:unicode, padding: [0, 1])
-          puts
+          output.puts t.render(:unicode, padding: [0, 1])
+          output.puts
         end
 
         def box(text)
-          puts TTY::Box.frame(text, padding: [0, 2], align: :center, border: :light)
-          puts
+          output.puts TTY::Box.frame(text, padding: [0, 2], align: :center, border: :light)
+          output.puts
+        end
+
+        def output
+          @prompt.output
         end
 
         private

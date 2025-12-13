@@ -36,7 +36,7 @@ module Nvoi
           summary_loop
           show_next_steps
         rescue TTY::Reader::InputInterrupt
-          puts "\n\nSetup cancelled."
+          output.puts "\n\nSetup cancelled."
           exit 1
         end
 
@@ -250,7 +250,7 @@ module Nvoi
               write_config_files(final_data, result.master_key)
             end
 
-            puts
+            output.puts
             success "Created #{Utils::DEFAULT_ENCRYPTED_FILE}"
             success "Created #{Utils::DEFAULT_KEY_FILE}"
           end
@@ -306,8 +306,8 @@ module Nvoi
           end
 
           def show_next_steps
-            puts
-            puts "Next: #{pastel.cyan("nvoi deploy")}"
+            output.puts
+            output.puts "Next: #{pastel.cyan("nvoi deploy")}"
           end
       end
     end

@@ -185,7 +185,7 @@ module Nvoi
 
           def apply_branch_override
             branch = @options[:branch]
-            return if branch.nil? || branch.empty?
+            return if branch.blank?
 
             override = Configuration::Override.new(branch:)
             override.apply(@config)

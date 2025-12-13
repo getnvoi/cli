@@ -10,8 +10,8 @@ module Nvoi
       class << self
         # Load reads and parses the deployment configuration from encrypted file
         def load(config_path, credentials_path: nil, master_key_path: nil)
-          working_dir = config_path && !config_path.empty? ? File.dirname(config_path) : "."
-          enc_path = credentials_path.nil? || credentials_path.empty? ? config_path : credentials_path
+          working_dir = config_path.blank? ? "." : File.dirname(config_path)
+          enc_path = credentials_path.blank? ? config_path : credentials_path
 
           manager = CredentialStore.new(working_dir, enc_path, master_key_path)
           plaintext = manager.read
@@ -39,7 +39,7 @@ module Nvoi
 
           provider = External::Database.provider_for(adapter)
 
-          if db_config.url && !db_config.url.empty?
+          unless db_config.url.blank?
             creds = provider.parse_url(db_config.url)
             host_path = nil
 
@@ -93,8 +93,8 @@ module Nvoi
               raise Errors::ConfigError, "ssh_keys section is required in config. Run 'nvoi credentials edit' to generate keys."
             end
 
-            raise Errors::ConfigError, "ssh_keys.private_key is required" unless ssh_keys.private_key && !ssh_keys.private_key.empty?
-            raise Errors::ConfigError, "ssh_keys.public_key is required" unless ssh_keys.public_key && !ssh_keys.public_key.empty?
+            raise Errors::ConfigError, "ssh_keys.private_key is required" if ssh_keys.private_key.blank?
+            raise Errors::ConfigError, "ssh_keys.public_key is required" if ssh_keys.public_key.blank?
 
             temp_dir = Dir.mktmpdir("nvoi-ssh-")
 
@@ -136,7 +136,7 @@ module Nvoi
             server_name = db_config.servers.first
             mount = db_config.mount
 
-            if mount && !mount.empty?
+            unless mount.blank?
               vol_name = mount.keys.first
               base_path = namer.server_volume_host_path(server_name, vol_name)
               return "#{base_path}/#{filename}"

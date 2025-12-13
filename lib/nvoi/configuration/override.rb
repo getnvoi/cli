@@ -32,7 +32,7 @@ module Nvoi
       private
 
         def validate!(branch)
-          raise ArgumentError, "--branch value required" unless branch && !branch.empty?
+          raise ArgumentError, "--branch value required" if branch.blank?
           raise ArgumentError, "invalid branch format (lowercase alphanumeric and hyphens only)" unless branch.match?(BRANCH_PATTERN)
         end
 

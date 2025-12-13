@@ -22,7 +22,7 @@ module Nvoi
 
             def resolve_working_dir
               wd = @options[:dir]
-              if wd.nil? || wd.empty? || wd == "."
+              if wd.blank? || wd == "."
                 Dir.pwd
               else
                 File.expand_path(wd)

@@ -146,14 +146,14 @@ module Nvoi
           }
 
           # Add security group if provided
-          if opts.firewall_id && !opts.firewall_id.empty?
+          unless opts.firewall_id.blank?
             create_opts[:security_group] = opts.firewall_id
           end
 
           server = post(instance_url("/servers"), create_opts)["server"]
 
           # Set cloud-init user data if provided
-          if opts.user_data && !opts.user_data.empty?
+          unless opts.user_data.blank?
             set_user_data(server["id"], "cloud-init", opts.user_data)
           end
 
@@ -161,7 +161,7 @@ module Nvoi
           server_action(server["id"], "poweron")
 
           # Attach to private network if provided
-          if opts.network_id && !opts.network_id.empty?
+          unless opts.network_id.blank?
             wait_for_server_state(server["id"], "running", 30)
             create_private_nic(server["id"], opts.network_id)
           end

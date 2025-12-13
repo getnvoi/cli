@@ -55,7 +55,7 @@ module Nvoi
 
           def apply_branch_override
             branch = @options[:branch]
-            return if branch.nil? || branch.empty?
+            return if branch.blank?
 
             override = Configuration::Override.new(branch:)
             override.apply(@config)
@@ -132,7 +132,7 @@ module Nvoi
           end
 
           def resolve_server_name(name)
-            return @config.server_name if name.nil? || name.empty? || name == "main"
+            return @config.server_name if name.blank? || name == "main"
 
             parts = name.split("-")
             if parts.length >= 2

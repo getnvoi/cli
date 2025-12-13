@@ -210,7 +210,7 @@ module Nvoi
           }
 
           # Add network configuration if provided
-          if opts.network_id && !opts.network_id.empty?
+          unless opts.network_id.blank?
             subnets = @client.describe_subnets(
               filters: [{ name: "vpc-id", values: [opts.network_id] }]
             )
@@ -218,7 +218,7 @@ module Nvoi
           end
 
           # Add security group if provided
-          if opts.firewall_id && !opts.firewall_id.empty?
+          unless opts.firewall_id.blank?
             input[:security_group_ids] = [opts.firewall_id]
           end
 
@@ -317,7 +317,7 @@ module Nvoi
             next nil if vol.attachments.empty?
 
             device = vol.attachments[0].device
-            device if device && !device.empty?
+            device unless device.blank?
           end
         end
 

@@ -178,7 +178,7 @@ module Nvoi
 
       # Class method for building hostname without instance
       def self.build_hostname(subdomain, domain)
-        if subdomain.nil? || subdomain.empty? || subdomain == "@"
+        if subdomain.blank? || subdomain == "@"
           domain
         else
           "#{subdomain}.#{domain}"
@@ -187,7 +187,7 @@ module Nvoi
 
       # Returns array of hostnames - apex returns [domain, *.domain], subdomain returns [sub.domain]
       def self.build_hostnames(subdomain, domain)
-        if subdomain.nil? || subdomain.empty? || subdomain == "@"
+        if subdomain.blank? || subdomain == "@"
           [domain, "*.#{domain}"]
         else
           ["#{subdomain}.#{domain}"]

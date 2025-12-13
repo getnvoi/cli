@@ -6,7 +6,8 @@ module Nvoi
     class Database
       attr_accessor :servers, :adapter, :url, :image, :mount, :secrets, :path
 
-      def initialize(data = {})
+      def initialize(data = nil)
+        data ||= {}
         @servers = data["servers"] || []
         @adapter = data["adapter"]
         @url = data["url"]

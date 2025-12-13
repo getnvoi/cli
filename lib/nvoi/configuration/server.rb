@@ -6,7 +6,8 @@ module Nvoi
     class ServerVolume
       attr_accessor :size
 
-      def initialize(data = {})
+      def initialize(data = nil)
+        data ||= {}
         raise ArgumentError, "volume config must be a hash with 'size' key" unless data.is_a?(Hash)
 
         @size = data["size"]&.to_i || 10
@@ -17,12 +18,13 @@ module Nvoi
     class Server
       attr_accessor :master, :type, :location, :count, :volumes
 
-      def initialize(data = {})
+      def initialize(data = nil)
+        data ||= {}
         @master = data["master"] || false
         @type = data["type"]
         @location = data["location"]
         @count = data["count"]&.to_i || 1
-        @volumes = (data["volumes"] || {}).transform_values { |v| ServerVolume.new(v || {}) }
+        @volumes = (data["volumes"] || {}).transform_values { |v| ServerVolume.new(v) }
       end
 
       def master?
