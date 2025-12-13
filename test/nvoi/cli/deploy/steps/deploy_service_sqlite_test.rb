@@ -64,8 +64,8 @@ class DeployServiceSqliteMountTest < Minitest::Test
           "compute_provider" => { "scaleway" => { "secret_key" => "x", "project_id" => "y", "server_type" => "DEV1-S" } }
         }
       }
-      deploy = Nvoi::Objects::Configuration::Deploy.new(data)
-      Nvoi::Objects::Configuration::Root.new(deploy)
+      deploy = Nvoi::Configuration::Deploy.new(data)
+      Nvoi::Configuration::Root.new(deploy)
     end
 
     def build_config_with_postgres
@@ -79,8 +79,8 @@ class DeployServiceSqliteMountTest < Minitest::Test
           "compute_provider" => { "scaleway" => { "secret_key" => "x", "project_id" => "y", "server_type" => "DEV1-S" } }
         }
       }
-      deploy = Nvoi::Objects::Configuration::Deploy.new(data)
-      Nvoi::Objects::Configuration::Root.new(deploy)
+      deploy = Nvoi::Configuration::Deploy.new(data)
+      Nvoi::Configuration::Root.new(deploy)
     end
 
     def build_config_with_sqlite_and_explicit_mount
@@ -94,8 +94,8 @@ class DeployServiceSqliteMountTest < Minitest::Test
           "compute_provider" => { "scaleway" => { "secret_key" => "x", "project_id" => "y", "server_type" => "DEV1-S" } }
         }
       }
-      deploy = Nvoi::Objects::Configuration::Deploy.new(data)
-      Nvoi::Objects::Configuration::Root.new(deploy)
+      deploy = Nvoi::Configuration::Deploy.new(data)
+      Nvoi::Configuration::Root.new(deploy)
     end
 
     def build_config_with_sqlite_and_conflicting_mount
@@ -109,7 +109,7 @@ class DeployServiceSqliteMountTest < Minitest::Test
           "compute_provider" => { "scaleway" => { "secret_key" => "x", "project_id" => "y", "server_type" => "DEV1-S" } }
         }
       }
-      deploy = Nvoi::Objects::Configuration::Deploy.new(data)
-      Nvoi::Objects::Configuration::Root.new(deploy)
+      deploy = Nvoi::Configuration::Deploy.new(data)
+      Nvoi::Configuration::Root.new(deploy)
     end
 end

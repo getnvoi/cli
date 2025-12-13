@@ -29,8 +29,8 @@ class ConfigurationTest < Minitest::Test
   end
 
   def test_provider_name_returns_hetzner
-    deploy = Nvoi::Objects::Configuration::Deploy.new(minimal_hetzner_config_data)
-    config = Nvoi::Objects::Configuration::Root.new(deploy)
+    deploy = Nvoi::Configuration::Deploy.new(minimal_hetzner_config_data)
+    config = Nvoi::Configuration::Root.new(deploy)
 
     assert_equal "hetzner", config.provider_name
   end
@@ -60,8 +60,8 @@ class ConfigurationTest < Minitest::Test
       }
     }
 
-    deploy = Nvoi::Objects::Configuration::Deploy.new(data)
-    config = Nvoi::Objects::Configuration::Root.new(deploy)
+    deploy = Nvoi::Configuration::Deploy.new(data)
+    config = Nvoi::Configuration::Root.new(deploy)
 
     assert_equal "aws", config.provider_name
   end
@@ -90,15 +90,15 @@ class ConfigurationTest < Minitest::Test
       }
     }
 
-    deploy = Nvoi::Objects::Configuration::Deploy.new(data)
-    config = Nvoi::Objects::Configuration::Root.new(deploy)
+    deploy = Nvoi::Configuration::Deploy.new(data)
+    config = Nvoi::Configuration::Root.new(deploy)
 
     assert_equal "scaleway", config.provider_name
   end
 
   def test_keep_count_value_returns_default_when_nil
-    deploy = Nvoi::Objects::Configuration::Deploy.new(minimal_hetzner_config_data)
-    config = Nvoi::Objects::Configuration::Root.new(deploy)
+    deploy = Nvoi::Configuration::Deploy.new(minimal_hetzner_config_data)
+    config = Nvoi::Configuration::Root.new(deploy)
 
     assert_equal 2, config.keep_count_value
   end
@@ -107,31 +107,31 @@ class ConfigurationTest < Minitest::Test
     data = minimal_hetzner_config_data
     data["application"]["keep_count"] = 5
 
-    deploy = Nvoi::Objects::Configuration::Deploy.new(data)
-    config = Nvoi::Objects::Configuration::Root.new(deploy)
+    deploy = Nvoi::Configuration::Deploy.new(data)
+    config = Nvoi::Configuration::Root.new(deploy)
 
     assert_equal 5, config.keep_count_value
   end
 
   def test_hetzner_accessor
-    deploy = Nvoi::Objects::Configuration::Deploy.new(minimal_hetzner_config_data)
-    config = Nvoi::Objects::Configuration::Root.new(deploy)
+    deploy = Nvoi::Configuration::Deploy.new(minimal_hetzner_config_data)
+    config = Nvoi::Configuration::Root.new(deploy)
 
     assert_equal "hz-token", config.hetzner.api_token
     assert_equal "cpx11", config.hetzner.server_type
   end
 
   def test_cloudflare_accessor
-    deploy = Nvoi::Objects::Configuration::Deploy.new(minimal_hetzner_config_data)
-    config = Nvoi::Objects::Configuration::Root.new(deploy)
+    deploy = Nvoi::Configuration::Deploy.new(minimal_hetzner_config_data)
+    config = Nvoi::Configuration::Root.new(deploy)
 
     assert_equal "cf-token", config.cloudflare.api_token
     assert_equal "cf-account-id", config.cloudflare.account_id
   end
 
   def test_namer_is_lazily_created
-    deploy = Nvoi::Objects::Configuration::Deploy.new(minimal_hetzner_config_data)
-    config = Nvoi::Objects::Configuration::Root.new(deploy)
+    deploy = Nvoi::Configuration::Deploy.new(minimal_hetzner_config_data)
+    config = Nvoi::Configuration::Root.new(deploy)
 
     namer = config.namer
     assert_instance_of Nvoi::Utils::Namer, namer
@@ -155,8 +155,8 @@ class ConfigurationTest < Minitest::Test
       }
     }
 
-    deploy = Nvoi::Objects::Configuration::Deploy.new(data)
-    config = Nvoi::Objects::Configuration::Root.new(deploy)
+    deploy = Nvoi::Configuration::Deploy.new(data)
+    config = Nvoi::Configuration::Root.new(deploy)
 
     assert_raises(Nvoi::Errors::ConfigValidationError) do
       config.validate_config
@@ -179,8 +179,8 @@ class ConfigurationTest < Minitest::Test
       }
     }
 
-    deploy = Nvoi::Objects::Configuration::Deploy.new(data)
-    config = Nvoi::Objects::Configuration::Root.new(deploy)
+    deploy = Nvoi::Configuration::Deploy.new(data)
+    config = Nvoi::Configuration::Root.new(deploy)
 
     assert_raises(Nvoi::Errors::ConfigValidationError) do
       config.validate_config
@@ -188,8 +188,8 @@ class ConfigurationTest < Minitest::Test
   end
 
   def test_validate_config_passes_with_valid_config
-    deploy = Nvoi::Objects::Configuration::Deploy.new(minimal_hetzner_config_data)
-    config = Nvoi::Objects::Configuration::Root.new(deploy)
+    deploy = Nvoi::Configuration::Deploy.new(minimal_hetzner_config_data)
+    config = Nvoi::Configuration::Root.new(deploy)
 
     # Should not raise
     config.validate_config
@@ -203,8 +203,8 @@ class ConfigurationTest < Minitest::Test
     }
     data["application"]["app"] = {}
 
-    deploy = Nvoi::Objects::Configuration::Deploy.new(data)
-    config = Nvoi::Objects::Configuration::Root.new(deploy)
+    deploy = Nvoi::Configuration::Deploy.new(data)
+    config = Nvoi::Configuration::Root.new(deploy)
 
     error = assert_raises(Nvoi::Errors::ConfigValidationError) do
       config.validate_config
@@ -220,8 +220,8 @@ class ConfigurationTest < Minitest::Test
       }
     }
 
-    deploy = Nvoi::Objects::Configuration::Deploy.new(data)
-    config = Nvoi::Objects::Configuration::Root.new(deploy)
+    deploy = Nvoi::Configuration::Deploy.new(data)
+    config = Nvoi::Configuration::Root.new(deploy)
 
     error = assert_raises(Nvoi::Errors::ConfigValidationError) do
       config.validate_config
@@ -244,8 +244,8 @@ class ConfigurationTest < Minitest::Test
       }
     }
 
-    deploy = Nvoi::Objects::Configuration::Deploy.new(data)
-    config = Nvoi::Objects::Configuration::Root.new(deploy)
+    deploy = Nvoi::Configuration::Deploy.new(data)
+    config = Nvoi::Configuration::Root.new(deploy)
 
     error = assert_raises(Nvoi::Errors::ConfigValidationError) do
       config.validate_config
@@ -269,8 +269,8 @@ class ConfigurationTest < Minitest::Test
       }
     }
 
-    deploy = Nvoi::Objects::Configuration::Deploy.new(data)
-    config = Nvoi::Objects::Configuration::Root.new(deploy)
+    deploy = Nvoi::Configuration::Deploy.new(data)
+    config = Nvoi::Configuration::Root.new(deploy)
 
     # Should not raise
     config.validate_config
@@ -293,8 +293,8 @@ class ConfigurationTest < Minitest::Test
       }
     }
 
-    deploy = Nvoi::Objects::Configuration::Deploy.new(data)
-    config = Nvoi::Objects::Configuration::Root.new(deploy)
+    deploy = Nvoi::Configuration::Deploy.new(data)
+    config = Nvoi::Configuration::Root.new(deploy)
 
     # Should not raise
     config.validate_config
@@ -303,9 +303,9 @@ end
 
 class DeployConfigTest < Minitest::Test
   def test_initializes_with_empty_data
-    config = Nvoi::Objects::Configuration::Deploy.new({})
+    config = Nvoi::Configuration::Deploy.new({})
 
-    assert_instance_of Nvoi::Objects::Configuration::Application, config.application
+    assert_instance_of Nvoi::Configuration::Application, config.application
     assert_nil config.application.name
   end
 
@@ -317,7 +317,7 @@ class DeployConfigTest < Minitest::Test
       }
     }
 
-    config = Nvoi::Objects::Configuration::Deploy.new(data)
+    config = Nvoi::Configuration::Deploy.new(data)
 
     assert_equal "test-app", config.application.name
     assert_equal "staging", config.application.environment
@@ -326,7 +326,7 @@ end
 
 class ApplicationTest < Minitest::Test
   def test_defaults
-    app = Nvoi::Objects::Configuration::Application.new({})
+    app = Nvoi::Configuration::Application.new({})
 
     assert_nil app.name
     assert_equal "production", app.environment
@@ -346,7 +346,7 @@ class ApplicationTest < Minitest::Test
       }
     }
 
-    app = Nvoi::Objects::Configuration::Application.new(data)
+    app = Nvoi::Configuration::Application.new(data)
 
     assert_equal 2, app.servers.size
     assert_equal true, app.servers["master"].master
@@ -365,7 +365,7 @@ class ApplicationTest < Minitest::Test
       }
     }
 
-    app = Nvoi::Objects::Configuration::Application.new(data)
+    app = Nvoi::Configuration::Application.new(data)
 
     assert_equal 1, app.app.size
     assert_equal ["master"], app.app["web"].servers
@@ -386,9 +386,9 @@ class ApplicationTest < Minitest::Test
       }
     }
 
-    app = Nvoi::Objects::Configuration::Application.new(data)
+    app = Nvoi::Configuration::Application.new(data)
 
-    assert_instance_of Nvoi::Objects::Configuration::DatabaseCfg, app.database
+    assert_instance_of Nvoi::Configuration::DatabaseCfg, app.database
     assert_equal "postgres", app.database.adapter
     assert_equal "admin", app.database.secrets["POSTGRES_USER"]
   end
@@ -396,7 +396,7 @@ end
 
 class ServerConfigTest < Minitest::Test
   def test_defaults
-    config = Nvoi::Objects::Configuration::Server.new({})
+    config = Nvoi::Configuration::Server.new({})
 
     assert_equal false, config.master
     assert_nil config.type
@@ -412,7 +412,7 @@ class ServerConfigTest < Minitest::Test
       }
     }
 
-    config = Nvoi::Objects::Configuration::Server.new(data)
+    config = Nvoi::Configuration::Server.new(data)
 
     assert_equal 1, config.volumes.size
     assert_equal 50, config.volumes["data"].size
@@ -421,7 +421,7 @@ end
 
 class DatabaseConfigTest < Minitest::Test
   def test_to_service_spec_returns_nil_for_sqlite
-    config = Nvoi::Objects::Configuration::DatabaseCfg.new({
+    config = Nvoi::Configuration::DatabaseCfg.new({
       "adapter" => "sqlite3"
     })
 
@@ -432,7 +432,7 @@ class DatabaseConfigTest < Minitest::Test
   end
 
   def test_to_service_spec_creates_spec_for_postgres
-    config = Nvoi::Objects::Configuration::DatabaseCfg.new({
+    config = Nvoi::Configuration::DatabaseCfg.new({
       "servers" => ["master"],
       "adapter" => "postgres",
       "secrets" => { "POSTGRES_USER" => "admin" }
@@ -450,7 +450,7 @@ class DatabaseConfigTest < Minitest::Test
   end
 
   def test_to_service_spec_creates_spec_for_mysql
-    config = Nvoi::Objects::Configuration::DatabaseCfg.new({
+    config = Nvoi::Configuration::DatabaseCfg.new({
       "servers" => ["master"],
       "adapter" => "mysql",
       "secrets" => {}
@@ -469,7 +469,7 @@ end
 
 class ServiceConfigTest < Minitest::Test
   def test_to_service_spec
-    config = Nvoi::Objects::Configuration::Service.new({
+    config = Nvoi::Configuration::Service.new({
       "servers" => ["master"],
       "image" => "redis:7",
       "port" => 6379
@@ -484,7 +484,7 @@ class ServiceConfigTest < Minitest::Test
   end
 
   def test_infers_port_from_redis_image
-    config = Nvoi::Objects::Configuration::Service.new({
+    config = Nvoi::Configuration::Service.new({
       "servers" => ["master"],
       "image" => "redis:latest"
     })
@@ -495,7 +495,7 @@ class ServiceConfigTest < Minitest::Test
   end
 
   def test_infers_port_from_postgres_image
-    config = Nvoi::Objects::Configuration::Service.new({
+    config = Nvoi::Configuration::Service.new({
       "servers" => ["master"],
       "image" => "postgres:15"
     })
@@ -508,7 +508,7 @@ end
 
 class ScalewayConfigTest < Minitest::Test
   def test_defaults_zone_to_fr_par_1
-    config = Nvoi::Objects::Configuration::Scaleway.new({
+    config = Nvoi::Configuration::Scaleway.new({
       "secret_key" => "key",
       "project_id" => "proj"
     })
@@ -517,7 +517,7 @@ class ScalewayConfigTest < Minitest::Test
   end
 
   def test_uses_provided_zone
-    config = Nvoi::Objects::Configuration::Scaleway.new({
+    config = Nvoi::Configuration::Scaleway.new({
       "secret_key" => "key",
       "project_id" => "proj",
       "zone" => "nl-ams-1"

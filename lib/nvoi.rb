@@ -19,8 +19,16 @@ loader.ignore("#{__dir__}/nvoi/cli")  # CLI commands are lazy-loaded
 loader.ignore("#{__dir__}/nvoi/configuration")  # Configuration uses manual loading
 loader.setup
 
-# Load Configuration::Builder manually
+# Load Configuration module manually (order matters for dependencies)
 require_relative "nvoi/configuration/result"
+require_relative "nvoi/configuration/providers"
+require_relative "nvoi/configuration/server"
+require_relative "nvoi/configuration/app_service"
+require_relative "nvoi/configuration/database"
+require_relative "nvoi/configuration/service"
+require_relative "nvoi/configuration/application"
+require_relative "nvoi/configuration/deploy"
+require_relative "nvoi/configuration/root"
 require_relative "nvoi/configuration/builder"
 
 module Nvoi

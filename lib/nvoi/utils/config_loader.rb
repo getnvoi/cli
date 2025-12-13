@@ -20,8 +20,8 @@ module Nvoi
           data = YAML.safe_load(plaintext, permitted_classes: [Symbol])
           raise Errors::ConfigError, "Invalid config format" unless data.is_a?(Hash)
 
-          deploy_config = Objects::Configuration::Deploy.new(data)
-          cfg = Objects::Configuration::Root.new(deploy_config)
+          deploy_config = Configuration::Deploy.new(data)
+          cfg = Configuration::Root.new(deploy_config)
 
           load_ssh_keys(cfg)
           cfg.validate_config
