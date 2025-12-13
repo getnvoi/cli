@@ -21,7 +21,7 @@ module Nvoi
         def find_or_create_network(name)
           vpc = find_vpc_by_name(name)
           if vpc
-            return Objects::Network::Record.new(
+            return Network::Record.new(
               id: vpc.vpc_id,
               name:,
               ip_range: vpc.cidr_block
@@ -89,7 +89,7 @@ module Nvoi
             subnet_id: subnet_resp.subnet.subnet_id
           )
 
-          Objects::Network::Record.new(
+          Network::Record.new(
             id: vpc_id,
             name:,
             ip_range: create_resp.vpc.cidr_block
@@ -100,7 +100,7 @@ module Nvoi
           vpc = find_vpc_by_name(name)
           raise Errors::NetworkError, "network not found: #{name}" unless vpc
 
-          Objects::Network::Record.new(
+          Network::Record.new(
             id: vpc.vpc_id,
             name:,
             ip_range: vpc.cidr_block
@@ -116,7 +116,7 @@ module Nvoi
         def find_or_create_firewall(name)
           sg = find_security_group_by_name(name)
           if sg
-            return Objects::Firewall::Record.new(id: sg.group_id, name:)
+            return Firewall::Record.new(id: sg.group_id, name:)
           end
 
           # Get default VPC
@@ -145,14 +145,14 @@ module Nvoi
             }]
           )
 
-          Objects::Firewall::Record.new(id: create_resp.group_id, name:)
+          Firewall::Record.new(id: create_resp.group_id, name:)
         end
 
         def get_firewall_by_name(name)
           sg = find_security_group_by_name(name)
           raise Errors::FirewallError, "firewall not found: #{name}" unless sg
 
-          Objects::Firewall::Record.new(id: sg.group_id, name:)
+          Firewall::Record.new(id: sg.group_id, name:)
         end
 
         def delete_firewall(id)
@@ -266,7 +266,7 @@ module Nvoi
             }]
           )
 
-          Objects::Volume::Record.new(
+          Volume::Record.new(
             id: create_resp.volume_id,
             name: opts.name,
             size: create_resp.size,
@@ -417,7 +417,7 @@ module Nvoi
           def instance_to_server(instance)
             name = instance.tags&.find { |t| t.key == "Name" }&.value || ""
 
-            Objects::Server::Record.new(
+            Server::Record.new(
               id: instance.instance_id,
               name:,
               status: instance.state.name,
@@ -429,7 +429,7 @@ module Nvoi
           def volume_to_object(vol)
             name = vol.tags&.find { |t| t.key == "Name" }&.value || ""
 
-            v = Objects::Volume::Record.new(
+            v = Volume::Record.new(
               id: vol.volume_id,
               name:,
               size: vol.size,

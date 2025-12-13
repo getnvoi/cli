@@ -43,7 +43,7 @@ module Nvoi
 
               tunnel = setup_tunnel(tunnel_name, hostnames, service_url, service_config.domain)
 
-              Objects::Tunnel::Info.new(
+              External::Dns::Tunnel::Info.new(
                 service_name:,
                 hostname: primary_hostname,
                 tunnel_id: tunnel.tunnel_id,
@@ -90,7 +90,7 @@ module Nvoi
 
               @log.success "Tunnel configured: %s", tunnel_name
 
-              Objects::Tunnel::Info.new(
+              External::Dns::Tunnel::Info.new(
                 tunnel_id: tunnel.id,
                 tunnel_token: token
               )

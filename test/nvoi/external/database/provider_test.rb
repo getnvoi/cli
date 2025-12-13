@@ -65,7 +65,7 @@ class PostgresProviderTest < Minitest::Test
   end
 
   def test_build_url
-    creds = Nvoi::Objects::Database::Credentials.new(
+    creds = Nvoi::External::Database::Credentials.new(
       user: "admin",
       password: "secret",
       host: "db.example.com",
@@ -79,7 +79,7 @@ class PostgresProviderTest < Minitest::Test
   end
 
   def test_container_env
-    creds = Nvoi::Objects::Database::Credentials.new(
+    creds = Nvoi::External::Database::Credentials.new(
       user: "admin",
       password: "secret",
       database: "mydb"
@@ -93,7 +93,7 @@ class PostgresProviderTest < Minitest::Test
   end
 
   def test_app_env
-    creds = Nvoi::Objects::Database::Credentials.new(
+    creds = Nvoi::External::Database::Credentials.new(
       user: "admin",
       password: "secret",
       port: "5432",
@@ -132,7 +132,7 @@ class MysqlProviderTest < Minitest::Test
   end
 
   def test_container_env
-    creds = Nvoi::Objects::Database::Credentials.new(
+    creds = Nvoi::External::Database::Credentials.new(
       user: "admin",
       password: "secret",
       database: "mydb"
@@ -175,7 +175,7 @@ class SqliteProviderTest < Minitest::Test
   end
 
   def test_container_env
-    creds = Nvoi::Objects::Database::Credentials.new(
+    creds = Nvoi::External::Database::Credentials.new(
       path: "/data/app.db"
     )
 
@@ -185,7 +185,7 @@ class SqliteProviderTest < Minitest::Test
   end
 
   def test_app_env
-    creds = Nvoi::Objects::Database::Credentials.new(
+    creds = Nvoi::External::Database::Credentials.new(
       path: "/data/app.db",
       host_path: "/mnt/data/app.db"
     )

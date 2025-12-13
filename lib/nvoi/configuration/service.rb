@@ -19,7 +19,7 @@ module Nvoi
         cmd = @command ? @command.split : []
         port = @port && @port.positive? ? @port : infer_port_from_image
 
-        Objects::ServiceSpec.new(
+        Configuration::Deployment.new(
           name: "#{app_name}-#{service_name}",
           image: @image,
           port:,

@@ -19,7 +19,14 @@ loader.ignore("#{__dir__}/nvoi/cli")  # CLI commands are lazy-loaded
 loader.ignore("#{__dir__}/nvoi/configuration")  # Configuration uses manual loading
 loader.setup
 
+# Load type definitions (not autoloaded - multiple types per file)
+require_relative "nvoi/external/types"
+require_relative "nvoi/external/dns/types"
+require_relative "nvoi/external/database/types"
+
 # Load Configuration module manually (order matters for dependencies)
+require_relative "nvoi/configuration/override"
+require_relative "nvoi/configuration/deployment"
 require_relative "nvoi/configuration/result"
 require_relative "nvoi/configuration/providers"
 require_relative "nvoi/configuration/server"

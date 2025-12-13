@@ -26,7 +26,7 @@ class ExternalDatabaseMysqlTest < Minitest::Test
   end
 
   def test_build_url
-    creds = Nvoi::Objects::Database::Credentials.new(
+    creds = Nvoi::External::Database::Credentials.new(
       user: "user",
       password: "pass",
       host: "localhost",
@@ -39,7 +39,7 @@ class ExternalDatabaseMysqlTest < Minitest::Test
   end
 
   def test_container_env
-    creds = Nvoi::Objects::Database::Credentials.new(
+    creds = Nvoi::External::Database::Credentials.new(
       user: "user",
       password: "pass",
       database: "mydb"
@@ -54,7 +54,7 @@ class ExternalDatabaseMysqlTest < Minitest::Test
   end
 
   def test_app_env
-    creds = Nvoi::Objects::Database::Credentials.new(
+    creds = Nvoi::External::Database::Credentials.new(
       user: "user",
       password: "pass",
       port: "3306",

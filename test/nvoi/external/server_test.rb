@@ -4,7 +4,7 @@ require "test_helper"
 
 class ServerTest < Minitest::Test
   def test_server_struct
-    server = Nvoi::Objects::Server::Record.new(
+    server = Nvoi::External::Server::Record.new(
       id: "srv-123",
       name: "web-1",
       status: "running",
@@ -18,7 +18,7 @@ class ServerTest < Minitest::Test
   end
 
   def test_server_create_options_struct
-    opts = Nvoi::Objects::Server::CreateOptions.new(
+    opts = Nvoi::External::Server::CreateOptions.new(
       name: "web-1",
       type: "cpx11",
       image: "ubuntu-22.04",

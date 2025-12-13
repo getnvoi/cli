@@ -511,7 +511,7 @@ module Nvoi
           end
 
           def to_network(data)
-            Objects::Network::Record.new(
+            Network::Record.new(
               id: data["id"],
               name: data["name"],
               ip_range: data.dig("subnets", 0, "subnet") || data["subnets"]&.first
@@ -519,7 +519,7 @@ module Nvoi
           end
 
           def to_firewall(data)
-            Objects::Firewall::Record.new(
+            Firewall::Record.new(
               id: data["id"],
               name: data["name"]
             )
@@ -529,7 +529,7 @@ module Nvoi
             # Scaleway doesn't include private_ips in the NIC response directly
             # We'd need to call IPAM API which adds complexity
             # Instead, private IP discovery happens via SSH in setup_k3s
-            Objects::Server::Record.new(
+            Server::Record.new(
               id: data["id"],
               name: data["name"],
               status: data["state"],
@@ -543,7 +543,7 @@ module Nvoi
               r["product_resource_type"] == "instance_server"
             }&.dig("product_resource_id")
 
-            Objects::Volume::Record.new(
+            Volume::Record.new(
               id: data["id"],
               name: data["name"],
               size: (data["size"] || 0) / 1_000_000_000,

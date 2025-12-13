@@ -315,7 +315,7 @@ class AWSCloudTest < Minitest::Test
       }]
     })
 
-    opts = Nvoi::Objects::Server::CreateOptions.new(
+    opts = Nvoi::External::Server::CreateOptions.new(
       name: "new-server",
       type: "t3.micro",
       location: "us-east-1"
@@ -343,7 +343,7 @@ class AWSCloudTest < Minitest::Test
       }]
     })
 
-    opts = Nvoi::Objects::Server::CreateOptions.new(
+    opts = Nvoi::External::Server::CreateOptions.new(
       name: "new-server2",
       type: "t3.micro",
       location: "us-east-1",
@@ -373,7 +373,7 @@ class AWSCloudTest < Minitest::Test
       state: "creating"
     })
 
-    opts = Nvoi::Objects::Volume::CreateOptions.new(
+    opts = Nvoi::External::Volume::CreateOptions.new(
       name: "new-volume",
       size: 50,
       server_id: "i-123"
@@ -388,7 +388,7 @@ class AWSCloudTest < Minitest::Test
   def test_create_volume_raises_when_instance_not_found
     @client.stub_responses(:describe_instances, { reservations: [] })
 
-    opts = Nvoi::Objects::Volume::CreateOptions.new(
+    opts = Nvoi::External::Volume::CreateOptions.new(
       name: "vol",
       size: 10,
       server_id: "i-nonexistent"
@@ -405,7 +405,7 @@ class AWSCloudTest < Minitest::Test
     })
     @client.stub_responses(:run_instances, { instances: [] })
 
-    opts = Nvoi::Objects::Server::CreateOptions.new(
+    opts = Nvoi::External::Server::CreateOptions.new(
       name: "test",
       type: "t3.micro",
       location: "us-east-1"
@@ -419,7 +419,7 @@ class AWSCloudTest < Minitest::Test
   def test_get_ubuntu_ami_raises_when_no_ami_found
     @client.stub_responses(:describe_images, { images: [] })
 
-    opts = Nvoi::Objects::Server::CreateOptions.new(
+    opts = Nvoi::External::Server::CreateOptions.new(
       name: "test",
       type: "t3.micro",
       location: "us-east-1"

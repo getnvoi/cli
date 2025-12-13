@@ -4,7 +4,7 @@ require "test_helper"
 
 class TunnelTest < Minitest::Test
   def test_tunnel_struct
-    tunnel = Nvoi::Objects::Tunnel::Record.new(
+    tunnel = Nvoi::External::Dns::Tunnel::Record.new(
       id: "tun-123",
       name: "myapp-tunnel",
       token: "secret-token"
@@ -16,7 +16,7 @@ class TunnelTest < Minitest::Test
   end
 
   def test_tunnel_info_struct
-    info = Nvoi::Objects::Tunnel::Info.new(
+    info = Nvoi::External::Dns::Tunnel::Info.new(
       service_name: "myapp-web",
       hostname: "app.example.com",
       tunnel_id: "tun-123",

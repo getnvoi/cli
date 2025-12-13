@@ -127,7 +127,7 @@ class ExecCommandTest < Minitest::Test
       command.instance_variable_set(:@config, config)
 
       # Apply branch override manually (normally done in run)
-      override = Nvoi::Objects::ConfigOverride.new(branch: "rel")
+      override = Nvoi::Configuration::Override.new(branch: "rel")
       override.apply(config)
 
       # After override, app name should be myapp-rel

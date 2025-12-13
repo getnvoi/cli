@@ -1,9 +1,10 @@
 # frozen_string_literal: true
 
 module Nvoi
-  module Objects
-    # ServiceSpec is the CORE primitive - pure K8s deployment specification
-    class ServiceSpec
+  module Configuration
+    # Deployment is the normalized service definition ready for deployment
+    # Created by Configuration::DatabaseCfg and Configuration::Service
+    class Deployment
       attr_accessor :name, :image, :port, :command, :env, :mounts, :replicas,
                     :healthcheck, :stateful_set, :secrets, :servers
 

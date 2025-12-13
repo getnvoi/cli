@@ -66,7 +66,7 @@ module Nvoi
             branch = @options[:branch]
             return if branch.nil? || branch.empty?
 
-            override = Objects::ConfigOverride.new(branch:)
+            override = Configuration::Override.new(branch:)
             override.apply(@config)
           end
       end

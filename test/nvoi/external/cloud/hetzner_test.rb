@@ -368,7 +368,7 @@ class HetznerCloudTest < Minitest::Test
         }
       }.to_json, headers: { "Content-Type" => "application/json" })
 
-    opts = Nvoi::Objects::Server::CreateOptions.new(
+    opts = Nvoi::External::Server::CreateOptions.new(
       name: "new-server",
       type: "cpx11",
       image: "ubuntu-22.04",
@@ -404,7 +404,7 @@ class HetznerCloudTest < Minitest::Test
         }
       }.to_json, headers: { "Content-Type" => "application/json" })
 
-    opts = Nvoi::Objects::Volume::CreateOptions.new(
+    opts = Nvoi::External::Volume::CreateOptions.new(
       name: "new-vol",
       size: 50,
       server_id: "123"

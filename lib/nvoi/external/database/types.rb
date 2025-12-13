@@ -3,8 +3,7 @@
 require "json"
 
 module Nvoi
-  module Objects
-    # Database-related structs and classes
+  module External
     module Database
       # Parsed credentials from database URL
       Credentials = Struct.new(:user, :password, :host, :port, :database, :path, :host_path, keyword_init: true)

@@ -47,7 +47,7 @@ module Nvoi
               host_path = resolve_sqlite_host_path(db_config, namer, creds.database || "app.db")
             end
 
-            return Objects::Database::Credentials.new(
+            return External::Database::Credentials.new(
               user: creds.user,
               password: creds.password,
               host: creds.host,
@@ -61,21 +61,21 @@ module Nvoi
           # Fall back to secrets-based credentials
           case adapter
           when "postgres", "postgresql"
-            Objects::Database::Credentials.new(
+            External::Database::Credentials.new(
               port: provider.default_port,
               user: db_config.secrets["POSTGRES_USER"],
               password: db_config.secrets["POSTGRES_PASSWORD"],
               database: db_config.secrets["POSTGRES_DB"]
             )
           when "mysql", "mysql2"
-            Objects::Database::Credentials.new(
+            External::Database::Credentials.new(
               port: provider.default_port,
               user: db_config.secrets["MYSQL_USER"],
               password: db_config.secrets["MYSQL_PASSWORD"],
               database: db_config.secrets["MYSQL_DATABASE"]
             )
           when "sqlite", "sqlite3"
-            Objects::Database::Credentials.new(
+            External::Database::Credentials.new(
               database: "app.db",
               host_path: resolve_sqlite_host_path(db_config, namer, "app.db")
             )

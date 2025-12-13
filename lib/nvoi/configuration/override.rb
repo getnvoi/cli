@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 module Nvoi
-  module Objects
-    # ConfigOverride allows CLI to override app name and subdomain for branch deployments
-    class ConfigOverride
+  module Configuration
+    # Override allows CLI to override app name and subdomain for branch deployments
+    class Override
       BRANCH_PATTERN = /\A[a-z0-9-]+\z/
 
       attr_reader :branch

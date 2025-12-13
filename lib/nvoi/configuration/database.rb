@@ -38,7 +38,7 @@ module Nvoi
 
         image = @image || Utils::Constants::DATABASE_IMAGES[@adapter&.downcase]
 
-        Objects::ServiceSpec.new(
+        Configuration::Deployment.new(
           name: namer.database_service_name,
           image:,
           port:,

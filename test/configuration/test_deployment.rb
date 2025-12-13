@@ -2,9 +2,9 @@
 
 require "test_helper"
 
-class ServiceSpecTest < Minitest::Test
-  def test_service_spec_minimal
-    spec = Nvoi::Objects::ServiceSpec.new(
+class DeploymentTest < Minitest::Test
+  def test_deployment_minimal
+    spec = Nvoi::Configuration::Deployment.new(
       name: "myapp-web",
       image: "myapp:latest"
     )
@@ -22,8 +22,8 @@ class ServiceSpecTest < Minitest::Test
     assert_equal [], spec.servers
   end
 
-  def test_service_spec_full
-    spec = Nvoi::Objects::ServiceSpec.new(
+  def test_deployment_full
+    spec = Nvoi::Configuration::Deployment.new(
       name: "myapp-web",
       image: "myapp:latest",
       port: 3000,
@@ -50,8 +50,8 @@ class ServiceSpecTest < Minitest::Test
     assert_equal ["master", "workers"], spec.servers
   end
 
-  def test_service_spec_nil_defaults
-    spec = Nvoi::Objects::ServiceSpec.new(
+  def test_deployment_nil_defaults
+    spec = Nvoi::Configuration::Deployment.new(
       name: "myapp-web",
       image: "myapp:latest",
       command: nil,
