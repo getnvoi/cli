@@ -345,18 +345,21 @@ module Nvoi
             end
 
             def check_public_url(url)
-              curl_cmd = "curl -si -m 10 '#{url}' 2>/dev/null"
+              # -L follows redirects, -s silent, -i include headers, -m timeout
+              curl_cmd = "curl -Lsi -m 10 '#{url}' 2>/dev/null"
               output = @ssh.execute(curl_cmd).strip
 
-              http_code = output.lines.first&.match(/HTTP\/[\d.]+ (\d+)/)&.captures&.first || "000"
+              # With -L, last HTTP line is the final response after redirects
+              http_lines = output.lines.select { |l| l.match?(/^HTTP\/[\d.]+\s+\d+/) }
+              http_code = http_lines.last&.match(/HTTP\/[\d.]+ (\d+)/)&.captures&.first || "000"
               has_error_header = output.lines.any? { |line| line.downcase.start_with?("x-nvoi-error:") }
 
-              if http_code == "200" && !has_error_header
+              if http_code.start_with?("2") && !has_error_header
                 { success: true, http_code:, message: "OK" }
               elsif has_error_header
                 { success: false, http_code:, message: "Error backend responding (X-Nvoi-Error header present) - app is down" }
               else
-                { success: false, http_code:, message: "HTTP #{http_code} (expected: 200)" }
+                { success: false, http_code:, message: "HTTP #{http_code} (expected: 2xx)" }
               end
             end
 

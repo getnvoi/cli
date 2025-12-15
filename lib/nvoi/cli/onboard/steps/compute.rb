@@ -40,22 +40,24 @@ module Nvoi
                 @client = client
               end
 
-              types, locations = with_spinner("Fetching options...") do
-                [@client.list_server_types, @client.list_locations]
+              locations = with_spinner("Fetching datacenters...") do
+                @client.list_locations
               end
 
-              # Step 1: Pick location first
+              # Step 1: Pick datacenter first
               location_choices = locations.map do |l|
                 { name: "#{l[:name]} (#{l[:city]}, #{l[:country]})", value: l[:name] }
               end
 
-              location = @prompt.select("Location:", location_choices)
+              location = @prompt.select("Datacenter:", location_choices)
 
-              # Step 2: Filter server types available at selected location
-              available_types = types.select { |t| t[:locations].include?(location) }
+              # Step 2: Fetch server types available at selected datacenter
+              available_types = with_spinner("Fetching available server types...") do
+                @client.list_server_types(location: location)
+              end
 
               type_choices = available_types.sort_by { |t| t[:name] }.map do |t|
-                price = price_for_location(t[:prices], location)
+                price = price_for_datacenter(t[:prices], location)
                 price_str = price ? " - €#{price}/mo" : ""
                 memory_gb = t[:memory].to_f.round(1)
                 cpu_info = cpu_label(t[:cpu_type], t[:architecture])
@@ -78,9 +80,11 @@ module Nvoi
               }
             end
 
-            def price_for_location(prices, location)
+            def price_for_datacenter(prices, datacenter)
               return nil unless prices
 
+              # Datacenter name is like "fsn1-dc14", location in prices is "fsn1"
+              location = datacenter.split("-").first
               price_entry = prices.find { |p| p["location"] == location }
               return nil unless price_entry
 

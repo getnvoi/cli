@@ -109,14 +109,11 @@ module Nvoi
           image = find_image(opts.image)
           raise Errors::ValidationError, "invalid image: #{opts.image}" unless image
 
-          location = find_location(opts.location)
-          raise Errors::ValidationError, "invalid location: #{opts.location}" unless location
-
           create_opts = {
             name: opts.name,
             server_type: server_type["name"],
             image: image["name"],
-            location: location["name"],
+            datacenter: opts.location,
             user_data: opts.user_data,
             start_after_create: true
           }
@@ -230,8 +227,8 @@ module Nvoi
         end
 
         def validate_region(region)
-          location = find_location(region)
-          raise Errors::ValidationError, "invalid hetzner location: #{region}" unless location
+          datacenter = find_datacenter(region)
+          raise Errors::ValidationError, "invalid hetzner datacenter: #{region}" unless datacenter
 
           true
         end
@@ -244,9 +241,14 @@ module Nvoi
         end
 
         # List available server types for onboarding
-        def list_server_types
-          get("/server_types")["server_types"].map do |t|
-            {
+        # When location (datacenter) is provided, filters to only actually available types
+        def list_server_types(location: nil)
+          all_types = get("/server_types")["server_types"]
+
+          # If no location specified, return all with basic info
+          types_hash = all_types.each_with_object({}) do |t, h|
+            h[t["id"]] = {
+              id: t["id"],
               name: t["name"],
               description: t["description"],
               cores: t["cores"],
@@ -254,20 +256,30 @@ module Nvoi
               disk: t["disk"],
               cpu_type: t["cpu_type"],
               architecture: t["architecture"],
-              prices: t["prices"],
-              locations: t["locations"]&.map { |l| l["name"] } || []
+              prices: t["prices"]
             }
+          end
+
+          if location
+            # Filter by datacenter's actually available server types
+            datacenter = get("/datacenters")["datacenters"].find { |d| d["name"] == location }
+            return [] unless datacenter
+
+            available_ids = datacenter.dig("server_types", "available") || []
+            types_hash.values_at(*available_ids).compact
+          else
+            types_hash.values
           end
         end
 
-        # List available locations for onboarding
+        # List available datacenters for onboarding (returns datacenter-level granularity)
         def list_locations
-          get("/locations")["locations"].map do |l|
+          get("/datacenters")["datacenters"].map do |d|
             {
-              name: l["name"],
-              city: l["city"],
-              country: l["country"],
-              description: l["description"]
+              name: d["name"],
+              city: d.dig("location", "city"),
+              country: d.dig("location", "country"),
+              description: d["description"]
             }
           end
         end
@@ -334,8 +346,8 @@ module Nvoi
             response["images"]&.first
           end
 
-          def find_location(name)
-            get("/locations")["locations"].find { |l| l["name"] == name }
+          def find_datacenter(name)
+            get("/datacenters")["datacenters"].find { |d| d["name"] == name }
           end
 
           def create_network_api(payload)

@@ -3,12 +3,21 @@
 require "test_helper"
 require "ostruct"
 require "tty/prompt/test"
+require "webmock/minitest"
 require "nvoi/cli/onboard/command"
 
 class TestOnboardCommand < Minitest::Test
-  # Removed: test_file_loads_without_test_helper
-  # This test was for catching missing requires, but with Zeitwerk autoloading
-  # files aren't meant to be loaded in isolation.
+  def setup
+    WebMock.disable_net_connect!
+    FileUtils.rm_f("deploy.enc")
+    FileUtils.rm_f("deploy.key")
+  end
+
+  def teardown
+    WebMock.reset!
+    FileUtils.rm_f("deploy.enc")
+    FileUtils.rm_f("deploy.key")
+  end
 
   def test_save_config
     prompt = TTY::Prompt::Test.new
@@ -29,30 +38,18 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "\r"                # Save configuration (1st option)
     prompt.input.rewind
 
-    with_hetzner_mock do
-      cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
-      cmd.run
-    end
+    stub_hetzner_api
+
+    cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
+    cmd.run
 
     assert File.exist?("deploy.enc"), "deploy.enc should be created"
     assert File.exist?("deploy.key"), "deploy.key should be created"
   end
 
-  def setup
-    # Clean up any test files
-    FileUtils.rm_f("deploy.enc")
-    FileUtils.rm_f("deploy.key")
-  end
-
-  def teardown
-    FileUtils.rm_f("deploy.enc")
-    FileUtils.rm_f("deploy.key")
-  end
-
   def test_full_hetzner_flow
     prompt = TTY::Prompt::Test.new
 
-    # Simulate all inputs in order
     prompt.input << "myapp\n"           # app name
     prompt.input << "\r"                # select hetzner (first option)
     prompt.input << "fake_token\n"      # api token
@@ -73,12 +70,11 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "y\n"               # confirm discard
     prompt.input.rewind
 
-    with_hetzner_mock do
-      cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
-      cmd.run
-    end
+    stub_hetzner_api
 
-    # Verify output contains expected text
+    cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
+    cmd.run
+
     output = prompt.output.string
     assert_match(/myapp/, output)
     assert_match(/Hetzner/i, output)
@@ -107,33 +103,28 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "y\n"               # confirm discard
     prompt.input.rewind
 
-    call_count = 0
+    # First two tokens fail, third succeeds
+    stub_request(:get, "https://api.hetzner.cloud/v1/server_types")
+      .with(headers: { "Authorization" => "Bearer bad_token" })
+      .to_return(status: 401, body: { error: { message: "invalid token" } }.to_json, headers: json_headers)
 
-    # First two calls fail, third succeeds
-    Nvoi::External::Cloud::Hetzner.stub :new, ->(_token) {
-      call_count += 1
-      mock = Minitest::Mock.new
-      if call_count < 3
-        mock.expect :validate_credentials, nil do
-          raise Nvoi::Errors::ValidationError, "Invalid token"
-        end
-      else
-        mock.expect :validate_credentials, true
-        mock.expect :list_server_types, [{
-          name: "cx22", description: "test", cores: 2, memory: 4, disk: 40,
-          locations: ["fsn1"],
-          prices: [{ "location" => "fsn1", "price_monthly" => { "gross" => "4.35" } }],
-          architecture: "x86"
-        }]
-        mock.expect :list_locations, [{ name: "fsn1", city: "Falkenstein", country: "DE", description: "test" }]
-      end
-      mock
-    } do
-      cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
-      cmd.run
-    end
+    stub_request(:get, "https://api.hetzner.cloud/v1/server_types")
+      .with(headers: { "Authorization" => "Bearer bad_token2" })
+      .to_return(status: 401, body: { error: { message: "invalid token" } }.to_json, headers: json_headers)
 
-    assert_equal 3, call_count, "Should have tried 3 times"
+    stub_request(:get, "https://api.hetzner.cloud/v1/server_types")
+      .with(headers: { "Authorization" => "Bearer good_token" })
+      .to_return(status: 200, body: hetzner_server_types_response.to_json, headers: json_headers)
+
+    stub_request(:get, "https://api.hetzner.cloud/v1/datacenters")
+      .with(headers: { "Authorization" => "Bearer good_token" })
+      .to_return(status: 200, body: hetzner_datacenters_response.to_json, headers: json_headers)
+
+    cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
+    cmd.run
+
+    output = prompt.output.string
+    assert_match(/Invalid/, output)
   end
 
   def test_aws_flow
@@ -157,10 +148,10 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "y\n"               # confirm discard
     prompt.input.rewind
 
-    with_aws_mock do
-      cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
-      cmd.run
-    end
+    stub_aws_api
+
+    cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
+    cmd.run
 
     output = prompt.output.string
     assert_match(/myapp/, output)
@@ -187,18 +178,14 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "y\n"               # confirm discard
     prompt.input.rewind
 
-    with_scaleway_mock do
-      cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
-      cmd.run
-    end
+    stub_scaleway_api
+
+    cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
+    cmd.run
 
     output = prompt.output.string
     assert_match(/myapp/, output)
   end
-
-  # Note: Ctrl+C handling is difficult to test with TTY::Prompt::Test
-  # because empty input just blocks rather than raising InputInterrupt.
-  # The error handling in the command is tested manually.
 
   def test_multiple_apps
     prompt = TTY::Prompt::Test.new
@@ -225,10 +212,10 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "y\n"               # confirm discard
     prompt.input.rewind
 
-    with_hetzner_mock do
-      cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
-      cmd.run
-    end
+    stub_hetzner_api
+
+    cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
+    cmd.run
 
     output = prompt.output.string
     assert_match(/web/, output)
@@ -259,23 +246,19 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "y\n"               # confirm discard
     prompt.input.rewind
 
-    with_hetzner_mock do
-      with_cloudflare_mock do
-        cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
-        cmd.run
-      end
-    end
+    stub_hetzner_api
+    stub_cloudflare_api
+
+    cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
+    cmd.run
 
     output = prompt.output.string
-    # Verify cloudflare was configured and domain selection happened
     assert_match(/Cloudflare/, output)
     assert_match(/example\.com/, output)
     assert_match(/staging/, output)
   end
 
   def test_worker_no_port_skips_domain_selection
-    # When cloudflare is configured but app has no port (background worker),
-    # domain selection should be skipped entirely
     prompt = TTY::Prompt::Test.new
 
     prompt.input << "myapp\n"
@@ -289,7 +272,6 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "solid_worker\n"    # app name (background worker)
     prompt.input << "bin/solid_queue\n" # command
     prompt.input << "\n"                # NO port (worker doesn't need one)
-    # Domain selection should be SKIPPED - no input needed for domain
     prompt.input << "\n"                # no pre-run
     prompt.input << "n\n"               # no more apps
     prompt.input << "\e[B\e[B\e[B\r"    # no database
@@ -298,21 +280,18 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "y\n"               # confirm discard
     prompt.input.rewind
 
-    with_hetzner_mock do
-      with_cloudflare_mock do
-        cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
-        cmd.run
-      end
-    end
+    stub_hetzner_api
+    stub_cloudflare_api
+
+    cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
+    cmd.run
 
     output = prompt.output.string
     assert_match(/solid_worker/, output)
-    # Should NOT have domain in output since no port was provided
     refute_match(/example\.com.*solid_worker/, output)
   end
 
   def test_cloudflare_skip_domain
-    # Test that user can choose "Skip (no domain)" when domain selection appears
     prompt = TTY::Prompt::Test.new
 
     prompt.input << "myapp\n"
@@ -335,15 +314,13 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "y\n"               # confirm discard
     prompt.input.rewind
 
-    with_hetzner_mock do
-      with_cloudflare_mock do
-        cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
-        cmd.run
-      end
-    end
+    stub_hetzner_api
+    stub_cloudflare_api
+
+    cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
+    cmd.run
 
     output = prompt.output.string
-    # Verify cloudflare setup and skip domain flow
     assert_match(/Cloudflare/, output)
     assert_match(/Skip.*no domain/i, output)
   end
@@ -364,7 +341,6 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "n\n"               # no more apps
     prompt.input << "\e[B\e[B\e[B\r"    # no database
     prompt.input << "\e[B\e[B\r"        # done with env
-    # Now at summary menu
     prompt.input << "\e[B\e[B\e[B\e[B\r" # Edit apps (5th option)
     prompt.input << "\r"                # Select "web" app
     prompt.input << "\r"                # Select "Edit" action
@@ -377,10 +353,10 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "y\n"               # confirm discard
     prompt.input.rewind
 
-    with_hetzner_mock do
-      cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
-      cmd.run
-    end
+    stub_hetzner_api
+
+    cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
+    cmd.run
 
     output = prompt.output.string
     assert_match(/webserver/, output)
@@ -408,7 +384,6 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "n\n"               # done with apps
     prompt.input << "\e[B\e[B\e[B\r"    # no database
     prompt.input << "\e[B\e[B\r"        # done with env
-    # Summary menu - delete web app
     prompt.input << "\e[B\e[B\e[B\e[B\r" # Edit apps (5th option)
     prompt.input << "\r"                # Select "web" app
     prompt.input << "\e[B\r"            # Select "Delete" action
@@ -418,13 +393,12 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "y\n"               # confirm discard
     prompt.input.rewind
 
-    with_hetzner_mock do
-      cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
-      cmd.run
-    end
+    stub_hetzner_api
+
+    cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
+    cmd.run
 
     output = prompt.output.string
-    # After deletion, summary should only show worker
     assert_match(/worker/, output)
   end
 
@@ -453,128 +427,184 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "y\n"               # confirm discard
     prompt.input.rewind
 
-    with_hetzner_mock do
-      with_cloudflare_mock_subdomain_taken do
-        cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
-        cmd.run
-      end
-    end
+    stub_hetzner_api
+    stub_cloudflare_api_with_subdomain_taken
+
+    cmd = Nvoi::Cli::Onboard::Command.new(prompt:)
+    cmd.run
 
     output = prompt.output.string
-    # Verify retry flow - first "taken" then "available" subdomain
     assert_match(/taken/, output)
     assert_match(/available/, output)
   end
 
   private
 
-    def with_hetzner_mock
-      mock = Minitest::Mock.new
-      mock.expect :validate_credentials, true
-      mock.expect :list_server_types, [
-        {
-          name: "cx22", description: "CX22", cores: 2, memory: 4, disk: 40,
-          locations: ["fsn1", "nbg1"],
-          prices: [
-            { "location" => "fsn1", "price_monthly" => { "gross" => "4.35" } },
-            { "location" => "nbg1", "price_monthly" => { "gross" => "4.35" } }
-          ],
-          architecture: "x86"
-        },
-        {
-          name: "cx32", description: "CX32", cores: 4, memory: 8, disk: 80,
-          locations: ["fsn1", "nbg1"],
-          prices: [
-            { "location" => "fsn1", "price_monthly" => { "gross" => "8.79" } },
-            { "location" => "nbg1", "price_monthly" => { "gross" => "8.79" } }
-          ],
-          architecture: "x86"
+    def json_headers
+      { "Content-Type" => "application/json" }
+    end
+
+    # Hetzner API stubs
+
+    def stub_hetzner_api
+      stub_request(:get, "https://api.hetzner.cloud/v1/server_types")
+        .to_return(status: 200, body: hetzner_server_types_response.to_json, headers: json_headers)
+
+      stub_request(:get, "https://api.hetzner.cloud/v1/datacenters")
+        .to_return(status: 200, body: hetzner_datacenters_response.to_json, headers: json_headers)
+    end
+
+    def hetzner_server_types_response
+      {
+        server_types: [
+          { id: 1, name: "cx22", description: "CX22", cores: 2, memory: 4, disk: 40, cpu_type: "shared", architecture: "x86",
+            prices: [{ "location" => "fsn1", "price_monthly" => { "gross" => "4.35" } }] },
+          { id: 2, name: "cx32", description: "CX32", cores: 4, memory: 8, disk: 80, cpu_type: "shared", architecture: "x86",
+            prices: [{ "location" => "fsn1", "price_monthly" => { "gross" => "8.79" } }] }
+        ]
+      }
+    end
+
+    def hetzner_datacenters_response
+      {
+        datacenters: [
+          { name: "fsn1-dc14", description: "Falkenstein DC14",
+            location: { name: "fsn1", city: "Falkenstein", country: "DE" },
+            server_types: { available: [1, 2], supported: [1, 2] } },
+          { name: "nbg1-dc3", description: "Nuremberg DC3",
+            location: { name: "nbg1", city: "Nuremberg", country: "DE" },
+            server_types: { available: [1, 2], supported: [1, 2] } }
+        ]
+      }
+    end
+
+    # AWS API stubs
+
+    def stub_aws_api
+      # DescribeRegions
+      stub_request(:post, /ec2\..*\.amazonaws\.com/)
+        .with(body: /Action=DescribeRegions/)
+        .to_return(status: 200, body: aws_describe_regions_response, headers: { "Content-Type" => "text/xml" })
+
+      # DescribeInstanceTypes
+      stub_request(:post, /ec2\..*\.amazonaws\.com/)
+        .with(body: /Action=DescribeInstanceTypes/)
+        .to_return(status: 200, body: aws_describe_instance_types_response, headers: { "Content-Type" => "text/xml" })
+    end
+
+    def aws_describe_regions_response
+      <<~XML
+        <DescribeRegionsResponse xmlns="http://ec2.amazonaws.com/doc/2016-11-15/">
+          <requestId>test</requestId>
+          <regionInfo>
+            <item>
+              <regionName>us-east-1</regionName>
+              <regionEndpoint>ec2.us-east-1.amazonaws.com</regionEndpoint>
+            </item>
+            <item>
+              <regionName>us-west-2</regionName>
+              <regionEndpoint>ec2.us-west-2.amazonaws.com</regionEndpoint>
+            </item>
+          </regionInfo>
+        </DescribeRegionsResponse>
+      XML
+    end
+
+    def aws_describe_instance_types_response
+      <<~XML
+        <DescribeInstanceTypesResponse xmlns="http://ec2.amazonaws.com/doc/2016-11-15/">
+          <requestId>test</requestId>
+          <instanceTypeSet>
+            <item>
+              <instanceType>t3.micro</instanceType>
+              <currentGeneration>true</currentGeneration>
+              <vCpuInfo>
+                <defaultVCpus>2</defaultVCpus>
+              </vCpuInfo>
+              <memoryInfo>
+                <sizeInMiB>1024</sizeInMiB>
+              </memoryInfo>
+              <processorInfo>
+                <supportedArchitectures>
+                  <item>x86_64</item>
+                </supportedArchitectures>
+              </processorInfo>
+            </item>
+            <item>
+              <instanceType>t3.small</instanceType>
+              <currentGeneration>true</currentGeneration>
+              <vCpuInfo>
+                <defaultVCpus>2</defaultVCpus>
+              </vCpuInfo>
+              <memoryInfo>
+                <sizeInMiB>2048</sizeInMiB>
+              </memoryInfo>
+              <processorInfo>
+                <supportedArchitectures>
+                  <item>x86_64</item>
+                </supportedArchitectures>
+              </processorInfo>
+            </item>
+          </instanceTypeSet>
+        </DescribeInstanceTypesResponse>
+      XML
+    end
+
+    # Scaleway API stubs
+
+    def stub_scaleway_api
+      stub_request(:get, %r{api\.scaleway\.com/instance/v1/zones/.*/products/servers})
+        .to_return(status: 200, body: scaleway_server_types_response.to_json, headers: json_headers)
+    end
+
+    def scaleway_server_types_response
+      {
+        servers: {
+          "DEV1-S" => { ncpus: 2, ram: 2_147_483_648, arch: "x86_64", hourly_price: 0.01 },
+          "DEV1-M" => { ncpus: 3, ram: 4_294_967_296, arch: "x86_64", hourly_price: 0.02 }
         }
-      ]
-      mock.expect :list_locations, [
-        { name: "fsn1", city: "Falkenstein", country: "DE", description: "DC14" },
-        { name: "nbg1", city: "Nuremberg", country: "DE", description: "DC3" }
-      ]
-
-      Nvoi::External::Cloud::Hetzner.stub :new, mock do
-        yield
-      end
+      }
     end
 
-    def with_aws_mock
-      mock = Minitest::Mock.new
-      mock.expect :validate_credentials, true
-      mock.expect :list_regions, [
-        { name: "us-east-1", endpoint: "ec2.us-east-1.amazonaws.com" },
-        { name: "us-west-2", endpoint: "ec2.us-west-2.amazonaws.com" }
-      ]
-      mock.expect :list_instance_types, [
-        { name: "t3.micro", vcpus: 2, memory: 1024, architecture: "x86" },
-        { name: "t3.small", vcpus: 2, memory: 2048, architecture: "x86" }
-      ]
+    # Cloudflare API stubs
 
-      Nvoi::External::Cloud::Aws.stub :new, mock do
-        yield
-      end
+    def stub_cloudflare_api
+      stub_request(:get, "https://api.cloudflare.com/client/v4/user/tokens/verify")
+        .to_return(status: 200, body: { success: true, result: { status: "active" } }.to_json, headers: json_headers)
+
+      stub_request(:get, "https://api.cloudflare.com/client/v4/zones")
+        .to_return(status: 200, body: cloudflare_zones_response.to_json, headers: json_headers)
+
+      # subdomain_available? checks for existing DNS records - stub all zones
+      stub_request(:get, %r{api\.cloudflare\.com/client/v4/zones/[^/]+/dns_records})
+        .to_return(status: 200, body: { success: true, result: [] }.to_json, headers: json_headers)
     end
 
-    def with_scaleway_mock
-      mock = Minitest::Mock.new
-      mock.expect :list_zones, [
-        { name: "fr-par-1", city: "Paris" },
-        { name: "nl-ams-1", city: "Amsterdam" }
-      ]
-      mock.expect :validate_credentials, true
-      mock.expect :list_server_types, [
-        { name: "DEV1-S", cores: 2, ram: 2048, hourly_price: 0.01, architecture: "x86" }
-      ]
+    def stub_cloudflare_api_with_subdomain_taken
+      stub_request(:get, "https://api.cloudflare.com/client/v4/user/tokens/verify")
+        .to_return(status: 200, body: { success: true, result: { status: "active" } }.to_json, headers: json_headers)
 
-      Nvoi::External::Cloud::Scaleway.stub :new, mock do
-        yield
-      end
+      stub_request(:get, "https://api.cloudflare.com/client/v4/zones")
+        .to_return(status: 200, body: cloudflare_zones_response.to_json, headers: json_headers)
+
+      # find_dns_record fetches ALL records, filters locally
+      # Return "taken.example.com" record so it appears taken, "available.example.com" won't match
+      stub_request(:get, %r{api\.cloudflare\.com/client/v4/zones/[^/]+/dns_records})
+        .to_return(status: 200, body: {
+          success: true,
+          result: [
+            { id: "123", name: "taken.example.com", type: "CNAME", content: "target.com" }
+          ]
+        }.to_json, headers: json_headers)
     end
 
-    def with_cloudflare_mock
-      mock = Minitest::Mock.new
-      mock.expect :validate_credentials, true
-      mock.expect :list_zones, [
-        { id: "zone_123", name: "example.com", status: "active" },
-        { id: "zone_456", name: "mysite.io", status: "active" }
-      ]
-      # subdomain_available? will be called for validation
-      mock.expect :subdomain_available?, true, [String, String, String]
-
-      Nvoi::External::Dns::Cloudflare.stub :new, mock do
-        yield
-      end
-    end
-
-    def with_cloudflare_mock_subdomain_taken
-      call_count = 0
-      mock = Minitest::Mock.new
-      mock.expect :validate_credentials, true
-      mock.expect :list_zones, [
-        { id: "zone_123", name: "example.com", status: "active" }
-      ]
-
-      # First call returns false (taken), second returns true (available)
-      Nvoi::External::Dns::Cloudflare.stub :new, ->(_token, _account_id) {
-        fake_client = Object.new
-        def fake_client.validate_credentials; true; end
-        def fake_client.list_zones
-          [{ id: "zone_123", name: "example.com", status: "active" }]
-        end
-
-        # Track calls to subdomain_available?
-        @subdomain_calls ||= 0
-        fake_client.define_singleton_method(:subdomain_available?) do |_zone_id, subdomain, _domain|
-          # "taken" subdomain is not available, others are
-          subdomain != "taken"
-        end
-
-        fake_client
-      } do
-        yield
-      end
+    def cloudflare_zones_response
+      {
+        success: true,
+        result: [
+          { id: "zone_123", name: "example.com", status: "active" },
+          { id: "zone_456", name: "mysite.io", status: "active" }
+        ]
+      }
     end
 end

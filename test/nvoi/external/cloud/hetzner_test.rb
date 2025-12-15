@@ -197,20 +197,20 @@ class HetznerCloudTest < Minitest::Test
   end
 
   def test_validate_region_success
-    stub_request(:get, "https://api.hetzner.cloud/v1/locations")
+    stub_request(:get, "https://api.hetzner.cloud/v1/datacenters")
       .to_return(status: 200, body: {
-        locations: [{ name: "fsn1" }]
+        datacenters: [{ name: "fsn1-dc14", location: { name: "fsn1", city: "Falkenstein", country: "DE" } }]
       }.to_json, headers: { "Content-Type" => "application/json" })
 
-    assert @provider.validate_region("fsn1")
+    assert @provider.validate_region("fsn1-dc14")
   end
 
   def test_validate_region_failure
-    stub_request(:get, "https://api.hetzner.cloud/v1/locations")
-      .to_return(status: 200, body: { locations: [] }.to_json, headers: { "Content-Type" => "application/json" })
+    stub_request(:get, "https://api.hetzner.cloud/v1/datacenters")
+      .to_return(status: 200, body: { datacenters: [] }.to_json, headers: { "Content-Type" => "application/json" })
 
     assert_raises(Nvoi::Errors::ValidationError) do
-      @provider.validate_region("invalid-location")
+      @provider.validate_region("invalid-datacenter")
     end
   end
 
@@ -353,12 +353,8 @@ class HetznerCloudTest < Minitest::Test
         images: [{ id: 100, name: "ubuntu-22.04" }]
       }.to_json, headers: { "Content-Type" => "application/json" })
 
-    stub_request(:get, "https://api.hetzner.cloud/v1/locations")
-      .to_return(status: 200, body: {
-        locations: [{ id: 1, name: "fsn1" }]
-      }.to_json, headers: { "Content-Type" => "application/json" })
-
     stub_request(:post, "https://api.hetzner.cloud/v1/servers")
+      .with(body: hash_including("datacenter" => "fsn1-dc14"))
       .to_return(status: 201, body: {
         server: {
           id: 999,
@@ -372,7 +368,7 @@ class HetznerCloudTest < Minitest::Test
       name: "new-server",
       type: "cpx11",
       image: "ubuntu-22.04",
-      location: "fsn1"
+      location: "fsn1-dc14"
     )
     server = @provider.create_server(opts)
 
@@ -440,5 +436,80 @@ class HetznerCloudTest < Minitest::Test
     assert_raises(Nvoi::Errors::AuthenticationError) do
       @provider.list_servers
     end
+  end
+
+  # list_locations returns datacenters
+
+  def test_list_locations_returns_datacenters
+    stub_request(:get, "https://api.hetzner.cloud/v1/datacenters")
+      .to_return(status: 200, body: {
+        datacenters: [
+          { name: "fsn1-dc14", description: "Falkenstein 1 DC14", location: { name: "fsn1", city: "Falkenstein", country: "DE" } },
+          { name: "nbg1-dc3", description: "Nuremberg 1 DC3", location: { name: "nbg1", city: "Nuremberg", country: "DE" } }
+        ]
+      }.to_json, headers: { "Content-Type" => "application/json" })
+
+    locations = @provider.list_locations
+
+    assert_equal 2, locations.size
+    assert_equal "fsn1-dc14", locations[0][:name]
+    assert_equal "Falkenstein", locations[0][:city]
+    assert_equal "DE", locations[0][:country]
+  end
+
+  # list_server_types tests
+
+  def test_list_server_types_without_location
+    stub_request(:get, "https://api.hetzner.cloud/v1/server_types")
+      .to_return(status: 200, body: {
+        server_types: [
+          { id: 1, name: "cx11", cores: 1, memory: 2, disk: 20, cpu_type: "shared", architecture: "x86", prices: [] },
+          { id: 45, name: "cax11", cores: 2, memory: 4, disk: 40, cpu_type: "shared", architecture: "arm", prices: [] }
+        ]
+      }.to_json, headers: { "Content-Type" => "application/json" })
+
+    types = @provider.list_server_types
+
+    assert_equal 2, types.size
+    assert_equal "cx11", types.find { |t| t[:id] == 1 }[:name]
+    assert_equal "cax11", types.find { |t| t[:id] == 45 }[:name]
+  end
+
+  def test_list_server_types_with_location_filters_by_availability
+    stub_request(:get, "https://api.hetzner.cloud/v1/server_types")
+      .to_return(status: 200, body: {
+        server_types: [
+          { id: 1, name: "cx11", cores: 1, memory: 2, disk: 20, cpu_type: "shared", architecture: "x86", prices: [] },
+          { id: 45, name: "cax11", cores: 2, memory: 4, disk: 40, cpu_type: "shared", architecture: "arm", prices: [] }
+        ]
+      }.to_json, headers: { "Content-Type" => "application/json" })
+
+    stub_request(:get, "https://api.hetzner.cloud/v1/datacenters")
+      .to_return(status: 200, body: {
+        datacenters: [
+          { name: "fsn1-dc14", server_types: { available: [1], supported: [1, 45] } }
+        ]
+      }.to_json, headers: { "Content-Type" => "application/json" })
+
+    types = @provider.list_server_types(location: "fsn1-dc14")
+
+    # Only cx11 (id: 1) is available, not cax11 (id: 45)
+    assert_equal 1, types.size
+    assert_equal "cx11", types[0][:name]
+    assert_equal 1, types[0][:id]
+  end
+
+  def test_list_server_types_with_invalid_location_returns_empty
+    stub_request(:get, "https://api.hetzner.cloud/v1/server_types")
+      .to_return(status: 200, body: {
+        server_types: [{ id: 1, name: "cx11", cores: 1, memory: 2, disk: 20, cpu_type: "shared", architecture: "x86", prices: [] }]
+      }.to_json, headers: { "Content-Type" => "application/json" })
+
+    stub_request(:get, "https://api.hetzner.cloud/v1/datacenters")
+      .to_return(status: 200, body: { datacenters: [] }.to_json, headers: { "Content-Type" => "application/json" })
+
+    types = @provider.list_server_types(location: "nonexistent-dc")
+
+    assert_empty types
   end
 end

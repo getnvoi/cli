@@ -69,11 +69,11 @@ module Nvoi
           url = "accounts/#{@account_id}/cfd_tunnel/#{tunnel_id}/configurations"
 
           ingress_rules = hostnames.map do |hostname|
-            {
-              hostname:,
-              service: service_url,
-              originRequest: { httpHostHeader: hostname.sub(/^\*\./, "") } # Use apex for wildcard
-            }
+            rule = { hostname:, service: service_url }
+            # Only set httpHostHeader for non-wildcard hostnames
+            # Wildcards should pass through the original Host header
+            rule[:originRequest] = { httpHostHeader: hostname } unless hostname.start_with?("*.")
+            rule
           end
           ingress_rules << { service: "http_status:404" }
 
