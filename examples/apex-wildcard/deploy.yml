@@ -19,6 +19,7 @@ application:
       api_token: $HETZNER_API_TOKEN
       server_type: cx22
       server_location: fsn1
+      architecture: x86
 
   servers:
     master:

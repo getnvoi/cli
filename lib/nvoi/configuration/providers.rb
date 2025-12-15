@@ -38,19 +38,20 @@ module Nvoi
 
       # Hetzner contains Hetzner-specific configuration
       class Hetzner
-        attr_accessor :api_token, :server_type, :server_location
+        attr_accessor :api_token, :server_type, :server_location, :architecture
 
         def initialize(data = nil)
           data ||= {}
           @api_token = data["api_token"]
           @server_type = data["server_type"]
           @server_location = data["server_location"]
+          @architecture = data["architecture"]
         end
       end
 
       # AwsCfg contains AWS-specific configuration
       class AwsCfg
-        attr_accessor :access_key_id, :secret_access_key, :region, :instance_type
+        attr_accessor :access_key_id, :secret_access_key, :region, :instance_type, :architecture
 
         def initialize(data = nil)
           data ||= {}
@@ -58,12 +59,13 @@ module Nvoi
           @secret_access_key = data["secret_access_key"]
           @region = data["region"]
           @instance_type = data["instance_type"]
+          @architecture = data["architecture"]
         end
       end
 
       # Scaleway contains Scaleway-specific configuration
       class Scaleway
-        attr_accessor :secret_key, :project_id, :zone, :server_type
+        attr_accessor :secret_key, :project_id, :zone, :server_type, :architecture
 
         def initialize(data = nil)
           data ||= {}
@@ -71,6 +73,7 @@ module Nvoi
           @project_id = data["project_id"]
           @zone = data["zone"] || "fr-par-1"
           @server_type = data["server_type"]
+          @architecture = data["architecture"]
         end
       end
     end

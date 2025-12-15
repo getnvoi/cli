@@ -28,11 +28,12 @@ module Nvoi
             def build_image(working_dir, tag)
               cache_from = @config.namer.latest_image_tag
               cache_args = "--cache-from #{cache_from}"
+              platform = @config.docker_platform
 
               build_cmd = [
                 "cd #{working_dir} &&",
                 "DOCKER_BUILDKIT=1 docker build",
-                "--platform linux/amd64",
+                "--platform #{platform}",
                 cache_args,
                 "--build-arg BUILDKIT_INLINE_CACHE=1",
                 "-t #{tag} ."

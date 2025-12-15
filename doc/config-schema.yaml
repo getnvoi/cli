@@ -127,6 +127,7 @@ components:
       description: Hetzner Cloud provider configuration
       required:
         - api_token
+        - architecture
       properties:
         api_token:
           type: string
@@ -141,6 +142,11 @@ components:
           description: Default datacenter location
           enum: [fsn1, nbg1, hel1, ash, hil]
           example: fsn1
+        architecture:
+          type: string
+          description: CPU architecture for Docker builds
+          enum: [x86, arm64]
+          example: x86
 
     AWSConfig:
       type: object
@@ -149,6 +155,7 @@ components:
         - access_key_id
         - secret_access_key
         - region
+        - architecture
       properties:
         access_key_id:
           type: string
@@ -164,6 +171,11 @@ components:
           type: string
           description: Default EC2 instance type
           example: t3.medium
+        architecture:
+          type: string
+          description: CPU architecture for Docker builds
+          enum: [x86, arm64]
+          example: x86
 
     ServerConfig:
       type: object

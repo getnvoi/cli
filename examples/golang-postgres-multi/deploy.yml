@@ -13,6 +13,7 @@ application:
       api_token: $HETZNER_API_TOKEN
       server_type: cx22 # Default for all servers
       server_location: nbg1
+      architecture: x86
 
   # Multi-instance server configuration: 3 servers total
   # 1 master (K3s control plane) + 2 workers (app + database)

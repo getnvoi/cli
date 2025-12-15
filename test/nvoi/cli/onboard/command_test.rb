@@ -122,7 +122,8 @@ class TestOnboardCommand < Minitest::Test
         mock.expect :list_server_types, [{
           name: "cx22", description: "test", cores: 2, memory: 4, disk: 40,
           locations: ["fsn1"],
-          prices: [{ "location" => "fsn1", "price_monthly" => { "gross" => "4.35" } }]
+          prices: [{ "location" => "fsn1", "price_monthly" => { "gross" => "4.35" } }],
+          architecture: "x86"
         }]
         mock.expect :list_locations, [{ name: "fsn1", city: "Falkenstein", country: "DE", description: "test" }]
       end
@@ -477,7 +478,8 @@ class TestOnboardCommand < Minitest::Test
           prices: [
             { "location" => "fsn1", "price_monthly" => { "gross" => "4.35" } },
             { "location" => "nbg1", "price_monthly" => { "gross" => "4.35" } }
-          ]
+          ],
+          architecture: "x86"
         },
         {
           name: "cx32", description: "CX32", cores: 4, memory: 8, disk: 80,
@@ -485,7 +487,8 @@ class TestOnboardCommand < Minitest::Test
           prices: [
             { "location" => "fsn1", "price_monthly" => { "gross" => "8.79" } },
             { "location" => "nbg1", "price_monthly" => { "gross" => "8.79" } }
-          ]
+          ],
+          architecture: "x86"
         }
       ]
       mock.expect :list_locations, [
@@ -506,8 +509,8 @@ class TestOnboardCommand < Minitest::Test
         { name: "us-west-2", endpoint: "ec2.us-west-2.amazonaws.com" }
       ]
       mock.expect :list_instance_types, [
-        { name: "t3.micro", vcpus: 2, memory: 1024 },
-        { name: "t3.small", vcpus: 2, memory: 2048 }
+        { name: "t3.micro", vcpus: 2, memory: 1024, architecture: "x86" },
+        { name: "t3.small", vcpus: 2, memory: 2048, architecture: "x86" }
       ]
 
       Nvoi::External::Cloud::Aws.stub :new, mock do
@@ -523,7 +526,7 @@ class TestOnboardCommand < Minitest::Test
       ]
       mock.expect :validate_credentials, true
       mock.expect :list_server_types, [
-        { name: "DEV1-S", cores: 2, ram: 2048, hourly_price: 0.01 }
+        { name: "DEV1-S", cores: 2, ram: 2048, hourly_price: 0.01, architecture: "x86" }
       ]
 
       Nvoi::External::Cloud::Scaleway.stub :new, mock do

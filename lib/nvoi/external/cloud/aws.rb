@@ -346,19 +346,29 @@ module Nvoi
 
         # List available instance types for onboarding
         def list_instance_types
-          # Common instance types (full list is huge)
-          common_types = %w[t3.micro t3.small t3.medium t3.large t3.xlarge m5.large m5.xlarge c5.large c5.xlarge]
+          # Common instance types including ARM (Graviton)
+          common_types = %w[
+            t3.micro t3.small t3.medium t3.large t3.xlarge
+            t4g.micro t4g.small t4g.medium t4g.large t4g.xlarge
+            m5.large m5.xlarge m6g.large m6g.xlarge
+            c5.large c5.xlarge c6g.large c6g.xlarge
+          ]
           resp = @client.describe_instance_types(instance_types: common_types)
           resp.instance_types.map do |t|
+            arch = t.processor_info&.supported_architectures&.first || "x86_64"
             {
               name: t.instance_type,
               vcpus: t.v_cpu_info.default_v_cpus,
-              memory: t.memory_info.size_in_mi_b
+              memory: t.memory_info.size_in_mi_b,
+              architecture: arch.include?("arm") ? "arm64" : "x86"
             }
           end
         rescue StandardError
           # Fallback to static list if API fails
-          common_types.map { |t| { name: t, vcpus: nil, memory: nil } }
+          common_types.map do |t|
+            arch = t.include?("g.") ? "arm64" : "x86"  # Graviton types have 'g' suffix
+            { name: t, vcpus: nil, memory: nil, architecture: arch }
+          end
         end
 
         # List available regions for onboarding

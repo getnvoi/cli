@@ -114,6 +114,7 @@ module Nvoi
         option :api_token, desc: "API token (hetzner)"
         option :server_type, desc: "Server type (cx22, etc)"
         option :server_location, desc: "Location (fsn1, etc)"
+        option :architecture, desc: "CPU architecture (x86, arm64)"
         option :access_key_id, desc: "AWS access key ID"
         option :secret_access_key, desc: "AWS secret access key"
         option :region, desc: "AWS region"
@@ -123,7 +124,7 @@ module Nvoi
         option :zone, desc: "Scaleway zone"
         def set(provider)
           Nvoi::Cli::Config::Command.new(options).provider_set(provider, **options.slice(
-            :api_token, :server_type, :server_location,
+            :api_token, :server_type, :server_location, :architecture,
             :access_key_id, :secret_access_key, :region, :instance_type,
             :secret_key, :project_id, :zone
           ).transform_keys(&:to_sym).compact)

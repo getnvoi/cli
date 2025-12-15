@@ -313,11 +313,13 @@ module Nvoi
         # List available server types for onboarding
         def list_server_types
           list_server_types_api.map do |name, info|
+            arch = info.dig("arch") || "x86_64"
             {
               name:,
               cores: info.dig("ncpus"),
               ram: info.dig("ram"),
-              hourly_price: info.dig("hourly_price")
+              hourly_price: info.dig("hourly_price"),
+              architecture: arch.include?("arm") ? "arm64" : "x86"
             }
           end
         end

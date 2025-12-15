@@ -17,7 +17,8 @@ class ConfigurationTest < Minitest::Test
           "hetzner" => {
             "api_token" => "hz-token",
             "server_type" => "cpx11",
-            "server_location" => "fsn1"
+            "server_location" => "fsn1",
+            "architecture" => "x86"
           }
         },
         "servers" => {
@@ -50,7 +51,8 @@ class ConfigurationTest < Minitest::Test
             "access_key_id" => "aws-key",
             "secret_access_key" => "aws-secret",
             "region" => "us-east-1",
-            "instance_type" => "t3.micro"
+            "instance_type" => "t3.micro",
+            "architecture" => "x86"
           }
         },
         "servers" => {
@@ -80,7 +82,8 @@ class ConfigurationTest < Minitest::Test
           "scaleway" => {
             "secret_key" => "scw-secret",
             "project_id" => "scw-project",
-            "server_type" => "DEV1-S"
+            "server_type" => "DEV1-S",
+            "architecture" => "x86"
           }
         },
         "servers" => {
@@ -147,7 +150,8 @@ class ConfigurationTest < Minitest::Test
           "hetzner" => {
             "api_token" => "hz-token",
             "server_type" => "cpx11",
-            "server_location" => "fsn1"
+            "server_location" => "fsn1",
+            "architecture" => "x86"
           }
         },
         "servers" => { "master" => { "master" => true } },

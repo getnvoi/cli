@@ -128,6 +128,7 @@ class Nvoi::Cli::Credentials::Edit::CommandTest < Minitest::Test
           hetzner:
             server_type: "cx22"
             server_location: "fsn1"
+            architecture: "x86"
     YAML
     error = @command.send(:validate, content)
     assert_match(/hetzner.api_token is required/, error)
@@ -147,6 +148,7 @@ class Nvoi::Cli::Credentials::Edit::CommandTest < Minitest::Test
             secret_access_key: "secret"
             region: "us-east-1"
             instance_type: "t3.micro"
+            architecture: "x86"
     YAML
     error = @command.send(:validate, content)
     assert_match(/aws.access_key_id is required/, error)
@@ -165,6 +167,7 @@ class Nvoi::Cli::Credentials::Edit::CommandTest < Minitest::Test
           scaleway:
             project_id: "test-project"
             server_type: "DEV1-S"
+            architecture: "x86"
     YAML
     error = @command.send(:validate, content)
     assert_match(/scaleway.secret_key is required/, error)
@@ -183,6 +186,7 @@ class Nvoi::Cli::Credentials::Edit::CommandTest < Minitest::Test
           scaleway:
             secret_key: "test-secret"
             server_type: "DEV1-S"
+            architecture: "x86"
     YAML
     error = @command.send(:validate, content)
     assert_match(/scaleway.project_id is required/, error)
@@ -206,6 +210,7 @@ class Nvoi::Cli::Credentials::Edit::CommandTest < Minitest::Test
             api_token: "test-token"
             server_type: "cx22"
             server_location: "fsn1"
+            architecture: "x86"
         app:
           web:
             servers: [master]
@@ -232,6 +237,7 @@ class Nvoi::Cli::Credentials::Edit::CommandTest < Minitest::Test
             api_token: "test-token"
             server_type: "cx22"
             server_location: "fsn1"
+            architecture: "x86"
         servers:
           master:
             type: cx22
@@ -271,6 +277,7 @@ class Nvoi::Cli::Credentials::Edit::CommandTest < Minitest::Test
             api_token: "test-token"
             server_type: "cx22"
             server_location: "fsn1"
+            architecture: "x86"
         servers:
           master:
             type: cx22
@@ -311,6 +318,7 @@ class Nvoi::Cli::Credentials::Edit::CommandTest < Minitest::Test
             api_token: "test-token"
             server_type: "cx22"
             server_location: "fsn1"
+            architecture: "x86"
         servers:
           master:
             type: cx22
@@ -339,6 +347,7 @@ class Nvoi::Cli::Credentials::Edit::CommandTest < Minitest::Test
             api_token: "test-token"
             server_type: "cx22"
             server_location: "fsn1"
+            architecture: "x86"
         servers:
           master:
             type: cx22
@@ -367,6 +376,7 @@ class Nvoi::Cli::Credentials::Edit::CommandTest < Minitest::Test
             api_token: "test-token"
             server_type: "cx22"
             server_location: "fsn1"
+            architecture: "x86"
         servers:
           master:
             type: cx22
@@ -413,6 +423,7 @@ class Nvoi::Cli::Credentials::Edit::CommandTest < Minitest::Test
             api_token: "test-token"
             server_type: "cx22"
             server_location: "fsn1"
+            architecture: "x86"
         servers:
           master:
             type: cx22
@@ -438,6 +449,7 @@ class Nvoi::Cli::Credentials::Edit::CommandTest < Minitest::Test
             secret_access_key: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
             region: "us-east-1"
             instance_type: "t3.micro"
+            architecture: "x86"
         servers:
           master:
             type: t3.micro
@@ -462,6 +474,7 @@ class Nvoi::Cli::Credentials::Edit::CommandTest < Minitest::Test
             secret_key: "test-secret"
             project_id: "test-project"
             server_type: "DEV1-S"
+            architecture: "x86"
         servers:
           master:
             type: DEV1-S
@@ -486,6 +499,7 @@ class Nvoi::Cli::Credentials::Edit::CommandTest < Minitest::Test
             api_token: "test-token"
             server_type: "cx22"
             server_location: "fsn1"
+            architecture: "x86"
         servers:
           master:
             type: cx22
@@ -506,6 +520,7 @@ class Nvoi::Cli::Credentials::Edit::CommandTest < Minitest::Test
             api_token: "test-token"
             server_type: "cx22"
             server_location: "fsn1"
+            architecture: "x86"
         servers:
           master:
             type: cx22
@@ -533,6 +548,7 @@ class Nvoi::Cli::Credentials::Edit::CommandTest < Minitest::Test
             api_token: "test-token"
             server_type: "cx22"
             server_location: "fsn1"
+            architecture: "x86"
         servers:
           master:
             type: cx22

@@ -61,7 +61,7 @@ class DeployServiceSqliteMountTest < Minitest::Test
           "app" => { "web" => { "servers" => ["master"], "port" => 3000 } },
           "database" => { "adapter" => "sqlite3", "servers" => ["master"], "mount" => { "db" => "/app/data" } },
           "domain_provider" => { "cloudflare" => { "api_token" => "x", "account_id" => "y" } },
-          "compute_provider" => { "scaleway" => { "secret_key" => "x", "project_id" => "y", "server_type" => "DEV1-S" } }
+          "compute_provider" => { "scaleway" => { "secret_key" => "x", "project_id" => "y", "server_type" => "DEV1-S", "architecture" => "x86" } }
         }
       }
       deploy = Nvoi::Configuration::Deploy.new(data)
@@ -76,7 +76,7 @@ class DeployServiceSqliteMountTest < Minitest::Test
           "app" => { "web" => { "servers" => ["master"], "port" => 3000 } },
           "database" => { "adapter" => "postgres", "servers" => ["master"], "mount" => { "db" => "/var/lib/postgresql" } },
           "domain_provider" => { "cloudflare" => { "api_token" => "x", "account_id" => "y" } },
-          "compute_provider" => { "scaleway" => { "secret_key" => "x", "project_id" => "y", "server_type" => "DEV1-S" } }
+          "compute_provider" => { "scaleway" => { "secret_key" => "x", "project_id" => "y", "server_type" => "DEV1-S", "architecture" => "x86" } }
         }
       }
       deploy = Nvoi::Configuration::Deploy.new(data)
@@ -91,7 +91,7 @@ class DeployServiceSqliteMountTest < Minitest::Test
           "app" => { "web" => { "servers" => ["master"], "port" => 3000, "mounts" => { "uploads" => "/app/uploads" } } },
           "database" => { "adapter" => "sqlite3", "servers" => ["master"], "mount" => { "db" => "/app/data" } },
           "domain_provider" => { "cloudflare" => { "api_token" => "x", "account_id" => "y" } },
-          "compute_provider" => { "scaleway" => { "secret_key" => "x", "project_id" => "y", "server_type" => "DEV1-S" } }
+          "compute_provider" => { "scaleway" => { "secret_key" => "x", "project_id" => "y", "server_type" => "DEV1-S", "architecture" => "x86" } }
         }
       }
       deploy = Nvoi::Configuration::Deploy.new(data)
@@ -106,7 +106,7 @@ class DeployServiceSqliteMountTest < Minitest::Test
           "app" => { "web" => { "servers" => ["master"], "port" => 3000, "mounts" => { "db" => "/custom/path" } } },
           "database" => { "adapter" => "sqlite3", "servers" => ["master"], "mount" => { "db" => "/app/data" } },
           "domain_provider" => { "cloudflare" => { "api_token" => "x", "account_id" => "y" } },
-          "compute_provider" => { "scaleway" => { "secret_key" => "x", "project_id" => "y", "server_type" => "DEV1-S" } }
+          "compute_provider" => { "scaleway" => { "secret_key" => "x", "project_id" => "y", "server_type" => "DEV1-S", "architecture" => "x86" } }
         }
       }
       deploy = Nvoi::Configuration::Deploy.new(data)

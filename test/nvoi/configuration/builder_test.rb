@@ -90,7 +90,7 @@ class TestConfigurationBuilder < Minitest::Test
 
   def test_compute_provider_hetzner
     builder = Nvoi::Configuration::Builder.new
-    result = builder.compute_provider("hetzner", api_token: "tok", server_type: "cx22", server_location: "fsn1")
+    result = builder.compute_provider("hetzner", api_token: "tok", server_type: "cx22", server_location: "fsn1", architecture: "x86")
 
     assert result.success?
     assert_equal "tok", builder.to_h["application"]["compute_provider"]["hetzner"]["api_token"]
@@ -99,7 +99,7 @@ class TestConfigurationBuilder < Minitest::Test
 
   def test_compute_provider_aws
     builder = Nvoi::Configuration::Builder.new
-    result = builder.compute_provider("aws", access_key_id: "AKIA...", secret_access_key: "secret", region: "us-east-1", instance_type: "t3.micro")
+    result = builder.compute_provider("aws", access_key_id: "AKIA...", secret_access_key: "secret", region: "us-east-1", instance_type: "t3.micro", architecture: "x86")
 
     assert result.success?
     assert builder.to_h["application"]["compute_provider"]["aws"]
@@ -107,7 +107,7 @@ class TestConfigurationBuilder < Minitest::Test
 
   def test_compute_provider_scaleway
     builder = Nvoi::Configuration::Builder.new
-    result = builder.compute_provider("scaleway", secret_key: "key", project_id: "proj", zone: "fr-par-1", server_type: "DEV1-S")
+    result = builder.compute_provider("scaleway", secret_key: "key", project_id: "proj", zone: "fr-par-1", server_type: "DEV1-S", architecture: "x86")
 
     assert result.success?
     assert builder.to_h["application"]["compute_provider"]["scaleway"]
@@ -124,7 +124,7 @@ class TestConfigurationBuilder < Minitest::Test
 
   def test_remove_compute_provider
     builder = Nvoi::Configuration::Builder.new
-    builder.compute_provider("hetzner", api_token: "tok", server_type: "cx22", server_location: "fsn1")
+    builder.compute_provider("hetzner", api_token: "tok", server_type: "cx22", server_location: "fsn1", architecture: "x86")
 
     result = builder.remove_compute_provider
     assert result.success?

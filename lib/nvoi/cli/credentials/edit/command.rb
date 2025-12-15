@@ -206,6 +206,7 @@ module Nvoi
                 return "application.compute_provider.hetzner.api_token is required" if h["api_token"].blank?
                 return "application.compute_provider.hetzner.server_type is required" if h["server_type"].blank?
                 return "application.compute_provider.hetzner.server_location is required" if h["server_location"].blank?
+                return "application.compute_provider.hetzner.architecture is required" if h["architecture"].blank?
               end
 
               if (a = compute_provider&.dig("aws"))
@@ -213,12 +214,14 @@ module Nvoi
                 return "application.compute_provider.aws.secret_access_key is required" if a["secret_access_key"].blank?
                 return "application.compute_provider.aws.region is required" if a["region"].blank?
                 return "application.compute_provider.aws.instance_type is required" if a["instance_type"].blank?
+                return "application.compute_provider.aws.architecture is required" if a["architecture"].blank?
               end
 
               if (s = compute_provider&.dig("scaleway"))
                 return "application.compute_provider.scaleway.secret_key is required" if s["secret_key"].blank?
                 return "application.compute_provider.scaleway.project_id is required" if s["project_id"].blank?
                 return "application.compute_provider.scaleway.server_type is required" if s["server_type"].blank?
+                return "application.compute_provider.scaleway.architecture is required" if s["architecture"].blank?
               end
 
               # Servers (if any services defined)
@@ -317,6 +320,7 @@ module Nvoi
                     api_token: YOUR_HETZNER_API_TOKEN
                     server_type: cx22
                     server_location: fsn1
+                    architecture: x86
 
                 servers:
                   master:

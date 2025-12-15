@@ -53,6 +53,21 @@ module Nvoi
         @deploy.application.domain_provider.cloudflare
       end
 
+      def architecture
+        case provider_name
+        when "hetzner" then hetzner&.architecture
+        when "aws" then aws&.architecture
+        when "scaleway" then scaleway&.architecture
+        end
+      end
+
+      def docker_platform
+        case architecture
+        when "arm", "arm64" then "linux/arm64"
+        else "linux/amd64"
+        end
+      end
+
       def keep_count_value
         count = @deploy.application.keep_count
         count && count.positive? ? count : 2
@@ -144,6 +159,7 @@ module Nvoi
             raise Errors::ConfigValidationError, "hetzner api_token is required" if h.api_token.blank?
             raise Errors::ConfigValidationError, "hetzner server_type is required" if h.server_type.blank?
             raise Errors::ConfigValidationError, "hetzner server_location is required" if h.server_location.blank?
+            raise Errors::ConfigValidationError, "hetzner architecture is required" if h.architecture.blank?
           end
 
           if app.compute_provider.aws
@@ -153,6 +169,7 @@ module Nvoi
             raise Errors::ConfigValidationError, "aws secret_access_key is required" if a.secret_access_key.blank?
             raise Errors::ConfigValidationError, "aws region is required" if a.region.blank?
             raise Errors::ConfigValidationError, "aws instance_type is required" if a.instance_type.blank?
+            raise Errors::ConfigValidationError, "aws architecture is required" if a.architecture.blank?
           end
 
           if app.compute_provider.scaleway
@@ -161,6 +178,7 @@ module Nvoi
             raise Errors::ConfigValidationError, "scaleway secret_key is required" if s.secret_key.blank?
             raise Errors::ConfigValidationError, "scaleway project_id is required" if s.project_id.blank?
             raise Errors::ConfigValidationError, "scaleway server_type is required" if s.server_type.blank?
+            raise Errors::ConfigValidationError, "scaleway architecture is required" if s.architecture.blank?
           end
 
           raise Errors::ConfigValidationError, "compute provider required: hetzner, aws, or scaleway must be configured" unless has_provider

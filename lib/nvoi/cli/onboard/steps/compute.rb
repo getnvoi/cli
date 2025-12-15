@@ -64,11 +64,16 @@ module Nvoi
 
               server_type = @prompt.select("Server type:", type_choices, per_page: 10, filter: true)
 
+              # Get architecture for selected server type
+              selected_type = available_types.find { |t| t[:name] == server_type }
+              arch = selected_type&.dig(:architecture) || "x86"
+
               {
                 "hetzner" => {
                   "api_token" => token,
                   "server_type" => server_type,
-                  "server_location" => location
+                  "server_location" => location,
+                  "architecture" => arch
                 }
               }
             end
@@ -112,17 +117,23 @@ module Nvoi
 
               type_choices = types.map do |t|
                 mem = t[:memory] ? " #{t[:memory] / 1024}GB" : ""
-                { name: "#{t[:name]} (#{t[:vcpus]} vCPU#{mem})", value: t[:name] }
+                arch_label = t[:architecture] == "arm64" ? " ARM" : ""
+                { name: "#{t[:name]} (#{t[:vcpus]} vCPU#{mem}#{arch_label})", value: t[:name] }
               end
 
               instance_type = @prompt.select("Instance type:", type_choices)
+
+              # Get architecture for selected instance type
+              selected_type = types.find { |t| t[:name] == instance_type }
+              arch = selected_type&.dig(:architecture) || "x86"
 
               {
                 "aws" => {
                   "access_key_id" => access_key,
                   "secret_access_key" => secret_key,
                   "region" => region,
-                  "instance_type" => instance_type
+                  "instance_type" => instance_type,
+                  "architecture" => arch
                 }
               }
             end
@@ -144,17 +155,23 @@ module Nvoi
               end
 
               type_choices = types.map do |t|
-                { name: "#{t[:name]} (#{t[:cores]} cores)", value: t[:name] }
+                arch_label = t[:architecture] == "arm64" ? " ARM" : ""
+                { name: "#{t[:name]} (#{t[:cores]} cores#{arch_label})", value: t[:name] }
               end
 
               server_type = @prompt.select("Server type:", type_choices, per_page: 10, filter: true)
+
+              # Get architecture for selected server type
+              selected_type = types.find { |t| t[:name] == server_type }
+              arch = selected_type&.dig(:architecture) || "x86"
 
               {
                 "scaleway" => {
                   "secret_key" => secret_key,
                   "project_id" => project_id,
                   "zone" => zone,
-                  "server_type" => server_type
+                  "server_type" => server_type,
+                  "architecture" => arch
                 }
               }
             end

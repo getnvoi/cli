@@ -3,7 +3,7 @@
 require "test_helper"
 
 class BuildImageTest < Minitest::Test
-  MockConfig = Struct.new(:namer, :container_prefix, keyword_init: true)
+  MockConfig = Struct.new(:namer, :container_prefix, :docker_platform, keyword_init: true)
   MockNamer = Struct.new(:prefix, keyword_init: true) do
     def latest_image_tag
       "#{prefix}:latest"
@@ -16,7 +16,7 @@ class BuildImageTest < Minitest::Test
 
   def test_run_builds_and_pushes_image
     namer = MockNamer.new(prefix: "myapp")
-    config = MockConfig.new(namer:, container_prefix: "myapp")
+    config = MockConfig.new(namer:, container_prefix: "myapp", docker_platform: "linux/amd64")
 
     @log.expect(:info, nil, ["Building Docker image: %s", "myapp:20240101"])
     @log.expect(:info, nil, ["Tagging for registry: %s", String])
@@ -40,7 +40,7 @@ class BuildImageTest < Minitest::Test
 
   def test_run_raises_on_build_failure
     namer = MockNamer.new(prefix: "myapp")
-    config = MockConfig.new(namer:, container_prefix: "myapp")
+    config = MockConfig.new(namer:, container_prefix: "myapp", docker_platform: "linux/amd64")
 
     @log.expect(:info, nil, ["Building Docker image: %s", "myapp:20240101"])
 

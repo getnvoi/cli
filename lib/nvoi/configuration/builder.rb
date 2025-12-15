@@ -357,21 +357,24 @@ module Nvoi
             {
               "api_token" => opts[:api_token],
               "server_type" => opts[:server_type],
-              "server_location" => opts[:server_location]
+              "server_location" => opts[:server_location],
+              "architecture" => opts[:architecture]
             }.compact
           when "aws"
             {
               "access_key_id" => opts[:access_key_id],
               "secret_access_key" => opts[:secret_access_key],
               "region" => opts[:region],
-              "instance_type" => opts[:instance_type]
+              "instance_type" => opts[:instance_type],
+              "architecture" => opts[:architecture]
             }.compact
           when "scaleway"
             {
               "secret_key" => opts[:secret_key],
               "project_id" => opts[:project_id],
               "zone" => opts[:zone],
-              "server_type" => opts[:server_type]
+              "server_type" => opts[:server_type],
+              "architecture" => opts[:architecture]
             }.compact
           end
         end
