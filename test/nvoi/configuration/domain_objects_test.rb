@@ -392,6 +392,20 @@ class ApplicationTest < Minitest::Test
     assert_equal "postgres", app.database.adapter
     assert_equal "admin", app.database.secrets["POSTGRES_USER"]
   end
+
+  def test_parses_ssh_keys
+    data = {
+      "ssh_keys" => {
+        "private_key" => "-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----",
+        "public_key" => "ssh-rsa AAAA... user@host"
+      }
+    }
+
+    app = Nvoi::Configuration::Application.new(data)
+
+    assert_instance_of Nvoi::Configuration::SshKey, app.ssh_keys
+    assert_equal "ssh-rsa AAAA... user@host", app.ssh_keys.public_key
+  end
 end
 
 class ServerConfigTest < Minitest::Test
@@ -481,6 +495,24 @@ class ServiceConfigTest < Minitest::Test
     assert_equal "redis:7", spec.image
     assert_equal 6379, spec.port
     assert_equal ["master"], spec.servers
+  end
+
+  def test_ssh_key_autoloads_separately
+    # SshKey must be in its own file for Zeitwerk autoloading
+    config = Nvoi::Configuration::SshKey.new({
+      "private_key" => "-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----",
+      "public_key" => "ssh-rsa AAAA... user@host"
+    })
+
+    assert_equal "-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----", config.private_key
+    assert_equal "ssh-rsa AAAA... user@host", config.public_key
+  end
+
+  def test_ssh_key_defaults
+    config = Nvoi::Configuration::SshKey.new({})
+
+    assert_nil config.private_key
+    assert_nil config.public_key
   end
 
   def test_infers_port_from_redis_image

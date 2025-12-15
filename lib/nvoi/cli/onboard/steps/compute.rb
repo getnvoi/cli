@@ -44,17 +44,25 @@ module Nvoi
                 [@client.list_server_types, @client.list_locations]
               end
 
-              type_choices = types.sort_by { |t| t[:name] }.map do |t|
-                price = t[:price] ? " - #{t[:price]}/mo" : ""
-                { name: "#{t[:name]} (#{t[:cores]} vCPU, #{t[:memory] / 1024}GB#{price})", value: t[:name] }
-              end
-
+              # Step 1: Pick location first
               location_choices = locations.map do |l|
                 { name: "#{l[:name]} (#{l[:city]}, #{l[:country]})", value: l[:name] }
               end
 
-              server_type = @prompt.select("Server type:", type_choices, per_page: 10)
               location = @prompt.select("Location:", location_choices)
+
+              # Step 2: Filter server types available at selected location
+              available_types = types.select { |t| t[:locations].include?(location) }
+
+              type_choices = available_types.sort_by { |t| t[:name] }.map do |t|
+                price = price_for_location(t[:prices], location)
+                price_str = price ? " - €#{price}/mo" : ""
+                memory_gb = t[:memory].to_f.round(1)
+                cpu_info = cpu_label(t[:cpu_type], t[:architecture])
+                { name: "#{t[:name]} (#{t[:cores]} vCPU, #{memory_gb}GB, #{cpu_info}#{price_str})", value: t[:name] }
+              end
+
+              server_type = @prompt.select("Server type:", type_choices, per_page: 10, filter: true)
 
               {
                 "hetzner" => {
@@ -63,6 +71,24 @@ module Nvoi
                   "server_location" => location
                 }
               }
+            end
+
+            def price_for_location(prices, location)
+              return nil unless prices
+
+              price_entry = prices.find { |p| p["location"] == location }
+              return nil unless price_entry
+
+              gross = price_entry.dig("price_monthly", "gross")
+              return nil unless gross
+
+              gross.to_f.round(2)
+            end
+
+            def cpu_label(cpu_type, architecture)
+              arch = architecture == "arm" ? "ARM" : "x86"
+              type = cpu_type == "dedicated" ? "dedicated" : "shared"
+              "#{arch}/#{type}"
             end
 
             def setup_aws

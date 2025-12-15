@@ -20,6 +20,16 @@ class NamerTest < Minitest::Test
     assert_equal "myapp-workers-3", @namer.server_name("workers", 3)
   end
 
+  def test_server_name_sanitizes_underscores
+    # Hetzner and other cloud providers reject underscores in server names
+    app = MockApplication.new(name: "aeno_app")
+    deploy = MockDeploy.new(application: app)
+    config = MockConfig.new(deploy:, container_prefix: "nvoi-aeno_app")
+    namer = Nvoi::Utils::Namer.new(config)
+
+    assert_equal "aeno-app-main-1", namer.server_name("main", 1)
+  end
+
   def test_firewall_name
     assert_equal "user-repo-myapp-firewall", @namer.firewall_name
   end

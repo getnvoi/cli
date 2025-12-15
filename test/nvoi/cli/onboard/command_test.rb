@@ -119,7 +119,11 @@ class TestOnboardCommand < Minitest::Test
         end
       else
         mock.expect :validate_credentials, true
-        mock.expect :list_server_types, [{ name: "cx22", description: "test", cores: 2, memory: 4096, disk: 40, price: "4.35" }]
+        mock.expect :list_server_types, [{
+          name: "cx22", description: "test", cores: 2, memory: 4, disk: 40,
+          locations: ["fsn1"],
+          prices: [{ "location" => "fsn1", "price_monthly" => { "gross" => "4.35" } }]
+        }]
         mock.expect :list_locations, [{ name: "fsn1", city: "Falkenstein", country: "DE", description: "test" }]
       end
       mock
@@ -467,8 +471,22 @@ class TestOnboardCommand < Minitest::Test
       mock = Minitest::Mock.new
       mock.expect :validate_credentials, true
       mock.expect :list_server_types, [
-        { name: "cx22", description: "CX22", cores: 2, memory: 4096, disk: 40, price: "4.35" },
-        { name: "cx32", description: "CX32", cores: 4, memory: 8192, disk: 80, price: "8.79" }
+        {
+          name: "cx22", description: "CX22", cores: 2, memory: 4, disk: 40,
+          locations: ["fsn1", "nbg1"],
+          prices: [
+            { "location" => "fsn1", "price_monthly" => { "gross" => "4.35" } },
+            { "location" => "nbg1", "price_monthly" => { "gross" => "4.35" } }
+          ]
+        },
+        {
+          name: "cx32", description: "CX32", cores: 4, memory: 8, disk: 80,
+          locations: ["fsn1", "nbg1"],
+          prices: [
+            { "location" => "fsn1", "price_monthly" => { "gross" => "8.79" } },
+            { "location" => "nbg1", "price_monthly" => { "gross" => "8.79" } }
+          ]
+        }
       ]
       mock.expect :list_locations, [
         { name: "fsn1", city: "Falkenstein", country: "DE", description: "DC14" },

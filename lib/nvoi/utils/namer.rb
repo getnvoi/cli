@@ -33,7 +33,7 @@ module Nvoi
 
       # ServerName returns the server name for a given group and index
       def server_name(group, index)
-        "#{@config.deploy.application.name}-#{group}-#{index}"
+        "#{sanitize_name(@config.deploy.application.name)}-#{group}-#{index}"
       end
 
       def firewall_name
@@ -195,6 +195,11 @@ module Nvoi
       end
 
       private
+
+        # Sanitize name for cloud provider compatibility (no underscores, lowercase, etc.)
+        def sanitize_name(name)
+          name.to_s.gsub("_", "-").downcase
+        end
 
         def hash_string(str)
           Digest::SHA256.hexdigest(str)[0, 16]

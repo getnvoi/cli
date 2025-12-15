@@ -252,7 +252,10 @@ module Nvoi
               cores: t["cores"],
               memory: t["memory"],
               disk: t["disk"],
-              price: t.dig("prices", 0, "price_monthly", "gross")
+              cpu_type: t["cpu_type"],
+              architecture: t["architecture"],
+              prices: t["prices"],
+              locations: t["locations"]&.map { |l| l["name"] } || []
             }
           end
         end
