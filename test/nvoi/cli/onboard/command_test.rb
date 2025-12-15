@@ -33,7 +33,7 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "3000\n"
     prompt.input << "\n"
     prompt.input << "n\n"               # no more apps
-    prompt.input << "\e[B\e[B\e[B\r"    # no database
+    prompt.input << "\e[B\e[B\e[B\e[B\r"    # no database (5th option)
     prompt.input << "\e[B\e[B\r"        # done with env
     prompt.input << "\r"                # Save configuration (1st option)
     prompt.input.rewind
@@ -97,7 +97,7 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "3000\n"            # port
     prompt.input << "\n"                # pre-run
     prompt.input << "n\n"               # no more apps
-    prompt.input << "\e[B\e[B\e[B\r"    # None for db (down 3x)
+    prompt.input << "\e[B\e[B\e[B\e[B\r"    # None for db (5th option) (down 3x)
     prompt.input << "\e[B\e[B\r"        # Done for env
     prompt.input << "\e[B\e[B\e[B\e[B\e[B\e[B\e[B\e[B\r"  # Cancel (9th option)
     prompt.input << "y\n"               # confirm discard
@@ -142,7 +142,7 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "8080\n"
     prompt.input << "\n"
     prompt.input << "n\n"
-    prompt.input << "\e[B\e[B\e[B\r"    # None for db
+    prompt.input << "\e[B\e[B\e[B\e[B\r"    # None for db (5th option)
     prompt.input << "\e[B\e[B\r"        # Done for env
     prompt.input << "\e[B\e[B\e[B\e[B\e[B\e[B\e[B\e[B\r"  # Cancel (9th option)
     prompt.input << "y\n"               # confirm discard
@@ -172,7 +172,7 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "5000\n"
     prompt.input << "\n"
     prompt.input << "n\n"
-    prompt.input << "\e[B\e[B\e[B\r"    # None for db
+    prompt.input << "\e[B\e[B\e[B\e[B\r"    # None for db (5th option)
     prompt.input << "\e[B\e[B\r"        # Done for env
     prompt.input << "\e[B\e[B\e[B\e[B\e[B\e[B\e[B\e[B\r"  # Cancel (9th option)
     prompt.input << "y\n"               # confirm discard
@@ -206,7 +206,7 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "\n"                # no port
     prompt.input << "\n"
     prompt.input << "n\n"               # done with apps
-    prompt.input << "\e[B\e[B\e[B\r"    # no database
+    prompt.input << "\e[B\e[B\e[B\e[B\r"    # no database (5th option)
     prompt.input << "\e[B\e[B\r"        # done with env
     prompt.input << "\e[B\e[B\e[B\e[B\e[B\e[B\e[B\e[B\r"  # Cancel (9th option)
     prompt.input << "y\n"               # confirm discard
@@ -240,7 +240,7 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "staging\n"         # subdomain
     prompt.input << "\n"                # no pre-run
     prompt.input << "n\n"               # no more apps
-    prompt.input << "\e[B\e[B\e[B\r"    # no database
+    prompt.input << "\e[B\e[B\e[B\e[B\r"    # no database (5th option)
     prompt.input << "\e[B\e[B\r"        # done with env
     prompt.input << "\e[B\e[B\e[B\e[B\e[B\e[B\e[B\e[B\r"  # Cancel (9th option)
     prompt.input << "y\n"               # confirm discard
@@ -274,7 +274,7 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "\n"                # NO port (worker doesn't need one)
     prompt.input << "\n"                # no pre-run
     prompt.input << "n\n"               # no more apps
-    prompt.input << "\e[B\e[B\e[B\r"    # no database
+    prompt.input << "\e[B\e[B\e[B\e[B\r"    # no database (5th option)
     prompt.input << "\e[B\e[B\r"        # done with env
     prompt.input << "\e[B\e[B\e[B\e[B\e[B\e[B\e[B\e[B\r"  # Cancel (9th option)
     prompt.input << "y\n"               # confirm discard
@@ -308,7 +308,7 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "\e[B\e[B\r"        # Skip domain (3rd option)
     prompt.input << "\n"                # no pre-run
     prompt.input << "n\n"               # no more apps
-    prompt.input << "\e[B\e[B\e[B\r"    # no database
+    prompt.input << "\e[B\e[B\e[B\e[B\r"    # no database (5th option)
     prompt.input << "\e[B\e[B\r"        # done with env
     prompt.input << "\e[B\e[B\e[B\e[B\e[B\e[B\e[B\e[B\r"  # Cancel (9th option)
     prompt.input << "y\n"               # confirm discard
@@ -339,7 +339,7 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "3000\n"
     prompt.input << "\n"
     prompt.input << "n\n"               # no more apps
-    prompt.input << "\e[B\e[B\e[B\r"    # no database
+    prompt.input << "\e[B\e[B\e[B\e[B\r"    # no database (5th option)
     prompt.input << "\e[B\e[B\r"        # done with env
     prompt.input << "\e[B\e[B\e[B\e[B\r" # Edit apps (5th option)
     prompt.input << "\r"                # Select "web" app
@@ -382,7 +382,7 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "\n"                # no port
     prompt.input << "\n"
     prompt.input << "n\n"               # done with apps
-    prompt.input << "\e[B\e[B\e[B\r"    # no database
+    prompt.input << "\e[B\e[B\e[B\e[B\r"    # no database (5th option)
     prompt.input << "\e[B\e[B\r"        # done with env
     prompt.input << "\e[B\e[B\e[B\e[B\r" # Edit apps (5th option)
     prompt.input << "\r"                # Select "web" app
@@ -421,7 +421,7 @@ class TestOnboardCommand < Minitest::Test
     prompt.input << "available\n"       # subdomain - will succeed
     prompt.input << "\n"                # no pre-run
     prompt.input << "n\n"               # no more apps
-    prompt.input << "\e[B\e[B\e[B\r"    # no database
+    prompt.input << "\e[B\e[B\e[B\e[B\r"    # no database (5th option)
     prompt.input << "\e[B\e[B\r"        # done with env
     prompt.input << "\e[B\e[B\e[B\e[B\e[B\e[B\e[B\e[B\r"  # Cancel (9th option)
     prompt.input << "y\n"               # confirm discard

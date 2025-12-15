@@ -8,10 +8,11 @@ module Nvoi
         class Database
           include Onboard::Ui
 
-          ADAPTERS = [
-            { name: "PostgreSQL", value: "postgres" },
-            { name: "MySQL", value: "mysql" },
-            { name: "SQLite", value: "sqlite3" },
+          DATABASES = [
+            { name: "PostgreSQL", value: { adapter: "postgresql", image: "postgres:17-alpine" } },
+            { name: "PostgreSQL + pgvector", value: { adapter: "postgresql", image: "pgvector/pgvector:pg17" } },
+            { name: "MySQL", value: { adapter: "mysql", image: "mysql:8" } },
+            { name: "SQLite", value: { adapter: "sqlite3", image: nil } },
             { name: "None (skip)", value: nil }
           ].freeze
 
@@ -24,26 +25,27 @@ module Nvoi
           def call(app_name:, existing: nil)
             section "Database"
 
-            adapter = @prompt.select("Database:", ADAPTERS)
-            return [nil, nil] unless adapter
+            selection = @prompt.select("Database:", DATABASES)
+            return [nil, nil] unless selection
 
-            case adapter
-            when "postgres" then setup_postgres(app_name)
-            when "mysql"    then setup_mysql(app_name)
-            when "sqlite3"  then setup_sqlite
+            case selection[:adapter]
+            when "postgresql" then setup_postgres(app_name, selection[:image])
+            when "mysql"      then setup_mysql(app_name, selection[:image])
+            when "sqlite3"    then setup_sqlite
             end
           end
 
           private
 
-            def setup_postgres(app_name)
+            def setup_postgres(app_name, image)
               db_name = @prompt.ask("Database name:", default: "#{app_name}_production")
               user = @prompt.ask("Database user:", default: app_name)
               password = @prompt.mask("Database password:") { |q| q.required true }
 
               config = {
                 "servers" => ["main"],
-                "adapter" => "postgres",
+                "adapter" => "postgresql",
+                "image" => image,
                 "secrets" => {
                   "POSTGRES_DB" => db_name,
                   "POSTGRES_USER" => user,
@@ -51,12 +53,12 @@ module Nvoi
                 }
               }
 
-              volume = { "postgres_data" => { "size" => 10 } }
+              volume = { "db" => { "size" => 10 } }
 
               [config, volume]
             end
 
-            def setup_mysql(app_name)
+            def setup_mysql(app_name, image)
               db_name = @prompt.ask("Database name:", default: "#{app_name}_production")
               user = @prompt.ask("Database user:", default: app_name)
               password = @prompt.mask("Database password:") { |q| q.required true }
@@ -64,6 +66,7 @@ module Nvoi
               config = {
                 "servers" => ["main"],
                 "adapter" => "mysql",
+                "image" => image,
                 "secrets" => {
                   "MYSQL_DATABASE" => db_name,
                   "MYSQL_USER" => user,
@@ -71,7 +74,7 @@ module Nvoi
                 }
               }
 
-              volume = { "mysql_data" => { "size" => 10 } }
+              volume = { "db" => { "size" => 10 } }
 
               [config, volume]
             end
